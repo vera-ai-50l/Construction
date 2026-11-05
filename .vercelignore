@@ -1,0 +1,6 @@
+# Private team tracker stays off the public site.
+/app/hq
+/app/api/hq
+# Workflow sources and build output are not part of the website.
+/n8n
+/infra

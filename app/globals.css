@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+
+/* Vera design tokens: warm paper, espresso ink, site-orange accent, sage for "safe". */
+@theme {
+  --color-paper: #f6f1e7;
+  --color-paper-2: #efe8da;
+  --color-card: #fdfbf7;
+  --color-ink: #1d1813;
+  --color-ink-2: #4a4038;
+  --color-ink-3: #7d7166;
+  --color-line: rgb(29 24 19 / 0.08);
+  --color-rust: #b4532a;
+  --color-rust-2: #d9784b;
+  --color-sage: #6f7f62;
+  --color-sage-2: #dfe5d6;
+  --color-ochre: #c08a2b;
+  --color-ochre-2: #f3e3c2;
+  --color-espresso: #241d17;
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-ochre-2);
+  color: var(--color-ink);
+}
+
+/* Film grain: fixed, non-interactive, never on a scrolling layer. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Scroll reveal: heavy fade-up. Driven by IntersectionObserver in <Reveal>. */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 4rem, 0);
+  filter: blur(10px);
+  transition:
+    opacity 900ms var(--ease-out-soft),
+    transform 1100ms var(--ease-out-soft),
+    filter 900ms var(--ease-out-soft);
+  transition-delay: var(--delay, 0ms);
+}
+.reveal[data-shown='true'] {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.035em;
+  font-variation-settings: 'SOFT' 50, 'WONK' 0;
+}
+
+/* Flow rail packet */
+@keyframes packet {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translate3d(var(--travel, 100%), 0, 0); opacity: 0; }
+}
+@keyframes packet-y {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { transform: translate3d(0, var(--travel, 100%), 0); opacity: 0; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes type-in {
+  from { opacity: 0; transform: translate3d(0, 0.6rem, 0); }
+  to { opacity: 1; transform: none; }
+}
