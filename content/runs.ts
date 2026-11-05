@@ -21,14 +21,6 @@ export const runs: Record<string, RunRow[]> = {
     { source: 'WhatsApp · Kharadi', before: '“Cement 60 bag bacha hai”', issue: 'Tomorrow’s pour needs 220', after: 'Shortage flagged before the pour', step: 3 },
     { source: 'WhatsApp · Baner', before: 'No message yesterday', issue: 'A silent site goes unnoticed', after: 'In the 8 AM brief: no report', step: 4 },
   ],
-  'free-issue': [
-    { source: 'Issue slips', before: 'Cement slips FI/TC/0121–0138', issue: 'Never set against the measurement book', after: '1,629 bags used · 1,500 allowed · 129 over', step: 2 },
-    { source: 'Bar bending schedule', before: 'Steel for floors L9 and L10', issue: 'Wastage estimated, not measured', after: '3.054 MT beyond BBS + 3%', step: 2 },
-    { source: 'Scrap yard', before: 'Two weighbridge slips of scrap', issue: 'Expected scrap never worked out', after: '3.523 MT not returned · ₹1,19,782', step: 3 },
-    { source: 'RA-02 bill', before: '₹31,937.50 already deducted', issue: 'Could be deducted twice', after: 'Netted off · RA-01 line now ₹2,737.50', step: 4 },
-    { source: 'Issue slips', before: '2 slips with no contractor signature', issue: 'Would be disputed', after: 'Marked Check · ₹54,750 held back', step: 5 },
-    { source: 'RA-04 bill', before: 'Deduction for the month', issue: 'Argued from estimates', after: 'Debit note ₹4,04,699.50 with every reference', step: 6 },
-  ],
   'plant-desk': [
     { source: 'Operator WhatsApp', before: 'DG 125 kVA diesel log', issue: 'Litres never set against hours', after: '3.9 L/h vs 3.1 norm · check diesel', step: 1 },
     { source: 'Hour-meter photo', before: 'Transit mixer TM-04 · 262 h', issue: 'Service was due at 250 h', after: 'Overdue · mechanic booked Tuesday', step: 2 },

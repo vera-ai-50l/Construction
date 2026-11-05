@@ -19,5 +19,5 @@ export function firmName(slug?: string) {
     .join(' ')
 }
 
-// contractor: sales view. developer: free-issue pilot. review: shared for feedback, no prices or pilot.
-export type Audience = 'contractor' | 'developer' | 'review'
+// contractor: sales view. review: shared for feedback, no prices or pilot.
+export type Audience = 'contractor' | 'review'

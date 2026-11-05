@@ -41,22 +41,6 @@ export const chats: Record<string, Chat> = {
       { from: 'vera', text: 'Done. Reminder for Thursday 10 AM to chase the JMR signature.' },
     ],
   },
-  'free-issue': {
-    routes: [
-      { icon: 'Calculator', role: 'QS / billing engineer', gets: 'Recovery pack: draft debit note, CSV for the RA bill', when: 'WhatsApp + PDF + CSV' },
-      { icon: 'Handshake', role: 'Contractor’s PM', gets: 'Statement with every slip, for acknowledgement before the bill', when: 'WhatsApp + PDF' },
-      { icon: 'Crown', role: 'Project manager', gets: 'Wastage by contractor vs contract allowance', when: 'Each RA period' },
-      { icon: 'Warehouse', role: 'Stores', gets: 'Slips still unsigned, scrap yet to come back', when: 'WhatsApp' },
-    ],
-    phone: { who: 'Vera · Free-issue', sub: 'to QS · RA-04 recovery pack' },
-    msgs: [
-      { from: 'vera', text: 'RA-04 recovery pack ready for Contractor A.\nHigh ₹4,04,699.50 · Check ₹54,750\nCheck lines need the contractor’s signature before deduction.', files: ['DN draft RA-04.pdf', 'RA-04 recovery.csv'] },
-      { from: 'them', text: 'Scrap ₹1.19 L kaise aaya?' },
-      { from: 'vera', text: 'Steel cutting loss within the 3% allowance should come back as weighed scrap: 3.523 MT for RA-01 to RA-03. The store received none against it. 3.523 MT × ₹34,000 = ₹1,19,782.', files: ['BBS L7–L10.pdf', 'Yard counts.pdf'] },
-      { from: 'them', text: 'Check wale contractor ko bhejo' },
-      { from: 'vera', text: 'Sent to Contractor A’s PM with the two unsigned slips. I’ll move them to High once they are signed.' },
-    ],
-  },
   'plant-desk': {
     routes: [
       { icon: 'Wrench', role: 'Mechanic', gets: 'Service bookings: TM-04 overdue at 262 h', when: 'WhatsApp, Monday 8 AM' },

@@ -14,6 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function Page({ params, searchParams }: Props) {
   const [{ firm }, sp] = await Promise.all([params, searchParams])
-  const audience: Audience = sp.for === 'developer' ? 'developer' : 'contractor'
+  // ?for=developer was the developer view; it now shows the feedback view.
+  const audience: Audience = sp.for === 'developer' ? 'review' : 'contractor'
   return <DemoPage firm={firmName(firm?.[0])} audience={audience} />
 }

@@ -9,7 +9,7 @@ import { BeforeAfter, RunButton, RunProvider, RunReveal } from './run/Run'
 import { RunChat } from './run/RunChat'
 import { Nav } from './Nav'
 import { HeroVisual } from './mocks/HeroVisual'
-import { BriefPhone, Comparison, DebitNote, LeakSummary, PlantBoard, SurplusMatch } from './mocks/Outputs'
+import { BriefPhone, LeakSummary, PlantBoard, SurplusMatch } from './mocks/Outputs'
 import { desks, type Desk } from '@/content/desks'
 import { runs } from '@/content/runs'
 import { chats } from '@/content/chats'
@@ -18,17 +18,9 @@ import { contact, type Audience } from '@/content/site'
 const MOCKS: Record<string, ReactNode> = {
   'leak-check': <LeakSummary />,
   'site-desk': <BriefPhone />,
-  'free-issue': (
-    <div className="space-y-6">
-      <DebitNote />
-      <Comparison />
-    </div>
-  ),
   'plant-desk': <PlantBoard />,
   surplus: <SurplusMatch />,
 }
-
-const DEV_ORDER = ['free-issue', 'site-desk', 'surplus']
 
 function contactHref() {
   if (contact.whatsapp) return `https://wa.me/${contact.whatsapp}`
@@ -47,7 +39,6 @@ function Section({ id, children, className = '' }: { id?: string; children: Reac
 /* ───────────── Hero ───────────── */
 
 function Hero({ firm, audience }: { firm: string; audience: Audience }) {
-  const dev = audience === 'developer'
   const review = audience === 'review'
   return (
     <section id="top" className="relative overflow-hidden px-4 pb-20 pt-32 md:px-8 md:pb-32 md:pt-44">
@@ -66,10 +57,6 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
                 <>
                   A back office for the contractors <em className="text-rust">who build your projects</em>.
                 </>
-              ) : dev ? (
-                <>
-                  Recover every bag <em className="text-rust">you issued free</em>, with the evidence.
-                </>
               ) : (
                 <>
                   Your sites already send the data. <em className="text-rust">We turn it into money</em> you can recover.
@@ -81,8 +68,6 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-2">
               {review
                 ? 'Vera reads a contractor’s registers, challans and WhatsApp site groups, reconciles them in code, and gives them daily records, material reconciliations and the money they are losing. Contractors with clean records bill correctly, report on time and waste less, which shows up on your projects.'
-                : dev
-                ? 'Vera reconciles the cement and steel you supply to each contractor against certified work, contract wastage and earlier deductions, and drafts the debit note for the next RA bill.'
                 : 'Vera is a back office that reads your registers, challans and WhatsApp site groups, reconciles them in code, and hands you the rupees: what to claim from suppliers, what to stop on site, and what is idle.'}
             </p>
           </Reveal>
@@ -94,7 +79,7 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
               </PillButton>
             ) : (
               <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
-                {dev ? 'Talk to us about a pilot' : 'Book a Leak Check'}
+                Book a Leak Check
               </PillButton>
             )}
           </Reveal>
@@ -112,20 +97,12 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
 
       <Reveal delay={120} className="relative mx-auto mt-24 max-w-[1240px]">
         <dl className="grid grid-cols-2 gap-y-10 border-t border-ink/[0.08] pt-10 md:grid-cols-4">
-          {(dev
-            ? [
-                ['2–3%', 'wastage your contracts allow'],
-                ['1.25×', 'typical recovery rate on the excess'],
-                ['3', 'confidence labels on every line'],
-                ['1 week', 'from registers to debit note'],
-              ]
-            : [
-                ['6.3%', 'of material spend leaking on an illustrative site'],
-                ['8 AM', 'WhatsApp brief, every morning'],
-                ['0', 'new apps for your site team'],
-                ['100%', 'of rupee maths done in code, not AI'],
-              ]
-          ).map(([a, b]) => (
+          {[
+            ['6.3%', 'of material spend leaking on an illustrative site'],
+            ['8 AM', 'WhatsApp brief, every morning'],
+            ['0', 'new apps for your site team'],
+            ['100%', 'of rupee maths done in code, not AI'],
+          ].map(([a, b]) => (
             <div key={b} className="pr-6">
               <dt className="display text-4xl text-ink md:text-5xl">{a}</dt>
               <dd className="mt-2 max-w-[14rem] text-sm text-ink-3">{b}</dd>
@@ -144,7 +121,7 @@ const LEAKS: { icon: string; title: string; text: string; size: string; tone?: '
   { icon: 'Scales', title: 'Short at the weighbridge', text: 'The truck weighs 1.2 MT light. The bill is for the full load.', size: 'md:col-span-5' },
   { icon: 'TrendUp', title: 'Rate above the PO', text: '₹16 a bag more, quietly, on every challan for a quarter.', size: 'md:col-span-5' },
   { icon: 'Users', title: 'Labour idle on a breakdown', text: '16 people sit for four hours. It is never claimed as a hindrance.', size: 'md:col-span-4' },
-  { icon: 'Package', title: 'Free-issue wastage', text: 'Steel beyond the 3% allowance, never recovered in the RA bill.', size: 'md:col-span-4', tone: 'tint' },
+  { icon: 'Warning', title: 'A pour stopped for 60 bags', text: 'Cement runs out the evening before a slab. Labour and the pump wait half a day.', size: 'md:col-span-4', tone: 'tint' },
   { icon: 'Hourglass', title: 'Hired plant on rent, idle', text: 'A backhoe idles nine days at ₹2,800 a day.', size: 'md:col-span-4' },
   { icon: 'Stack', title: 'Formwork that never comes back', text: 'Every project ends 5–10% short on plates and props.', size: 'md:col-span-6' },
   { icon: 'Warehouse', title: 'Stock bought twice', text: 'One site holds 340 bags while another, 12 km away, raises a PO.', size: 'md:col-span-6' },
@@ -189,7 +166,7 @@ function How() {
   const stages = [
     { icon: 'WhatsappLogo', k: 'Capture', t: 'Nothing new to learn', d: 'Supervisors keep sending voice notes, photos and texts to the site group. Stores keep their registers. You share exports from Tally or Excel.' },
     { icon: 'Calculator', k: 'Reconcile', t: 'Maths in code, not in AI', d: 'AI only reads messages and documents. Every rupee is computed by fixed rules you can check: PO against challan against gate, issue against BOQ norm.' },
-    { icon: 'PaperPlaneTilt', k: 'Act', t: 'A list you can use today', d: 'Claims for suppliers, deductions for contractors, an 8 AM brief, a Tally import. Each line carries its challan, slip or MB reference.' },
+    { icon: 'PaperPlaneTilt', k: 'Act', t: 'A list you can use today', d: 'Claims for suppliers, hindrances you can claim, an 8 AM brief, a Tally import. Each line carries its challan, slip or bill reference.' },
   ]
   const trust = [
     ['ShieldCheck', 'Your data under NDA, deleted on request'],
@@ -253,7 +230,7 @@ function DeskIndex({ list, review = false }: { list: Desk[]; review?: boolean })
       <Reveal>
         <Eyebrow>{review ? 'What Vera does' : 'What we sell'}</Eyebrow>
         <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">
-          {review ? 'Five desks we are building for contractors.' : list.length === 5 ? 'Five desks. Start with one, add the rest when it proves itself.' : 'Three desks for the developer’s side of the table.'}
+          {review ? 'Four desks we are building for contractors.' : 'Four desks. Start with one, add the rest when it proves itself.'}
         </h2>
       </Reveal>
       <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-5">
@@ -378,11 +355,11 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
 /* ───────────── Review: what it changes for the developer ───────────── */
 
 const FOR_DEVELOPER: { icon: string; title: string; text: string }[] = [
-  { icon: 'Scales', title: 'Free-issue settled on evidence', text: 'Contractor and developer work from the same slips, measurement book, BBS and stock counts. RA-bill deductions stop being an argument about estimates.' },
+  { icon: 'Receipt', title: 'RA bills that arrive complete', text: 'Measurements, JMRs and hindrances come dated, with photos and references. Fewer bills go back for missing papers, and reviews start from the same facts.' },
   { icon: 'Notebook', title: 'A daily record from every package', text: 'Labour, progress, receipts and hindrances, dated and with photos, from each contractor. Planning sees the site as it was yesterday, not as it was at the monthly review.' },
   { icon: 'Clock', title: 'Delays with timestamps', text: 'Crane down four hours, drawing pending, client hold: logged when it happens. Extension and claim discussions start from the same facts.' },
   { icon: 'Warning', title: 'Fewer stoppages', text: 'Cement that will not last tomorrow’s pour, a machine past its service, a certificate about to lapse: flagged to the contractor before work stops.' },
-  { icon: 'Recycle', title: 'Less waste across sites', text: 'Overuse beyond the norm, scrap that never returned, stock bought at one site while it lies at another. The same material, used once.' },
+  { icon: 'Recycle', title: 'Less waste across sites', text: 'Overuse beyond the norm, formwork that never came back, stock bought at one site while it lies at another. The same material, used once.' },
   { icon: 'Users', title: 'Nothing new for site teams', text: 'Supervisors keep sending WhatsApp voice notes and photos. No app to roll out, no training for your engineers or the contractor’s.' },
 ]
 
@@ -422,7 +399,7 @@ function ForDeveloper() {
 }
 
 const QUESTIONS = [
-  ['Free-issue', 'On your projects, which record settles a free-issue dispute: the stores slip, the contractor’s acknowledgement, or the yard count?'],
+  ['Delays', 'When a contractor reports a delay or hindrance, what record would your team accept without argument?'],
   ['RA bills', 'Where do RA-bill disagreements with contractors usually start, and what evidence ends them?'],
   ['Site records', 'What makes a contractor’s DPR useful to your planning team, and what makes it ignored?'],
   ['Biggest losses', 'Which contractor problems cost your projects the most: material, labour, plant and formwork, or paperwork?'],
@@ -461,27 +438,19 @@ function Feedback() {
 
 /* ───────────── Engagement ───────────── */
 
-function Engagement({ audience }: { audience: Audience }) {
-  const dev = audience === 'developer'
-  const steps = dev
-    ? [
-        ['Day 0', 'Sign the NDA. Pick one contractor package where you supply cement or steel.'],
-        ['Day 1–3', 'Share three months of free-issue slips, returns, yard counts, MB and RA bills. Excel or scans are fine.'],
-        ['Day 7', 'Recovery pack: draft debit note, evidence trail, confidence on every line, contractor comparison.'],
-        ['Then', 'You review every line with the contractor before anything is deducted.'],
-      ]
-    : [
+function Engagement() {
+  const steps = [
         ['Day 0', 'Sign the NDA. Pick one site and three months.'],
         ['Day 1–3', 'Share POs, challans, gate book, issue slips and BOQ progress. Excel, Tally exports or photos.'],
         ['Day 7', 'One-page ₹ summary for the MD, supplier claim list and overuse by wing.'],
         ['Then', 'You check every line against its challan or slip before anything goes to a supplier.'],
-      ]
+  ]
   return (
     <Section id="engage">
       <div className="grid gap-16 md:grid-cols-[1fr_1.1fr] md:gap-20">
         <Reveal>
-          <Eyebrow>{dev ? 'Pilot' : 'How we start'}</Eyebrow>
-          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">{dev ? 'One package, in a week.' : 'Start with one site and one week.'}</h2>
+          <Eyebrow>How we start</Eyebrow>
+          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">Start with one site and one week.</h2>
           <ol className="mt-12 space-y-0">
             {steps.map(([k, t], i) => (
               <li key={k} className="grid grid-cols-[6rem_1fr] gap-4 border-t border-ink/[0.08] py-5">
@@ -493,14 +462,11 @@ function Engagement({ audience }: { audience: Audience }) {
         </Reveal>
         <Reveal delay={120}>
           <Bezel tone="dark" inner="p-8 md:p-12">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-paper/50">{dev ? 'Pilot · one contractor package' : 'Material Leak Check · one site'}</p>
-            <p className="display mt-4 text-5xl leading-tight md:text-6xl">{dev ? 'One package. One week.' : 'One site. One week.'}</p>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-paper/50">Material Leak Check · one site</p>
+            <p className="display mt-4 text-5xl leading-tight md:text-6xl">One site. One week.</p>
             <p className="mt-10 text-[11px] uppercase tracking-[0.2em] text-paper/45">What you get</p>
             <ul className="mt-5 space-y-4 text-[15px] text-paper/75">
-              {(dev
-                ? ['Draft debit note ready for the next RA bill', 'Evidence trail: slips, MB entries, BBS, RA numbers', 'High / Medium / Check on every line', 'Wastage comparison across your contractors']
-                : ['1-page ₹ summary for the MD', 'Supplier claim list with challan numbers', 'Overuse by wing and supervisor', 'Extra and short stock, valued']
-              ).map((x) => (
+              {['1-page ₹ summary for the MD', 'Supplier claim list with challan numbers', 'Overuse by wing and supervisor', 'Extra and short stock, valued'].map((x) => (
                 <li key={x} className="flex items-center gap-3">
                   <Icon name="Check" size={16} className="text-rust-2" /> {x}
                 </li>
@@ -509,7 +475,7 @@ function Engagement({ audience }: { audience: Audience }) {
             <p className="mt-10 text-sm leading-relaxed text-paper/60">Registers are shared under NDA, used only for your report, and deleted on request.</p>
             <div className="mt-10">
               <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
-                {dev ? 'Talk to us about a pilot' : 'Book a Leak Check'}
+                Book a Leak Check
               </PillButton>
             </div>
           </Bezel>
@@ -524,13 +490,11 @@ function Engagement({ audience }: { audience: Audience }) {
 function Faq({ audience }: { audience: Audience }) {
   const qs: [string, string][] = [
     ['Does my site team have to install anything?', 'No. Supervisors keep using the WhatsApp groups they use today. Vera reads the group; the team does not change how it works.'],
-    ['Is the AI deciding how much we recover?', 'No. AI reads voice notes, photos and scanned documents. Every rupee figure comes from fixed rules in code: quantities, rates, allowances and earlier deductions. You can check each line against the document it cites.'],
-    ['What if a message or a register entry is unclear?', 'It is listed as unclear, with the original attached, for a person to confirm. Vera does not fill gaps with guesses; on the free-issue desk such lines are marked Check.'],
+    ['Is the AI deciding the rupee figures?', 'No. AI reads voice notes, photos and scanned documents. Every rupee figure comes from fixed rules in code: quantities, rates, norms and allowances. You can check each line against the document it cites.'],
+    ['What if a message or a register entry is unclear?', 'It is listed as unclear, with the original attached, for a person to confirm. Vera does not fill gaps with guesses.'],
     ['What data do you need, and who sees it?', 'Exports or photos of the registers you already keep. Everything is covered by an NDA, used only for your reports, and deleted on request.'],
     ['Does it work with Tally?', 'Yes. Receipts and stock journals come out as Tally import files, so your accountant does not re-enter anything.'],
-    audience === 'developer'
-      ? ['Will contractors accept the deductions?', 'Each line carries the slip numbers, the measurement book entry, the BBS and the RA bill it relates to, and a confidence label. High lines are backed by signed slips and certified quantities; Check lines go to the contractor for acknowledgement first.']
-      : ['What are Plant & Formwork and Surplus Stock?', 'Two add-ons we are building with our first customers. They use the same WhatsApp and register data to catch overdue services, hired machines idling on rent, missing formwork, and stock that one site holds while another buys it again.'],
+    ['What are Plant & Formwork and Surplus Stock?', 'Two add-ons we are building with our first customers. They use the same WhatsApp and register data to catch overdue services, hired machines idling on rent, missing formwork, and stock that one site holds while another buys it again.'],
   ]
   return (
     <Section id="faq" className="bg-paper-2/60">
@@ -570,7 +534,7 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
         <Bezel tone="tint" inner="relative overflow-hidden px-7 py-16 text-center md:px-16 md:py-24">
           <Eyebrow>{audience === 'review' ? 'Thank you' : firm ? `Next step for ${firm}` : 'Next step'}</Eyebrow>
           <h2 className="display mx-auto mt-6 max-w-3xl text-4xl leading-[1.05] text-ink md:text-6xl">
-            {audience === 'review' ? 'Tell us what we have got wrong.' : audience === 'developer' ? 'Pick one package. We will show you the recovery in a week.' : 'Pick one site. We will show you the leak in a week.'}
+            {audience === 'review' ? 'Tell us what we have got wrong.' : 'Pick one site. We will show you the leak in a week.'}
           </h2>
           {has ? (
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -606,7 +570,7 @@ function Footer() {
       <div className="mx-auto flex max-w-[1240px] flex-col gap-4 border-t border-ink/[0.08] pt-8 text-xs leading-relaxed text-ink-3 md:flex-row md:items-start md:justify-between">
         <p className="display text-lg text-ink">Vera</p>
         <p className="max-w-2xl">
-          Sample data: every site, contractor, supplier and person named on this page is fictional. Figures are illustrative of a ₹100–300 Cr contractor and are not results from any client. Desks 04 and 05 are being built with first customers.
+          Sample data: every site, contractor, supplier and person named on this page is fictional. Figures are illustrative of a ₹100–300 Cr contractor and are not results from any client. Desks 03 and 04 are being built with first customers.
         </p>
       </div>
     </footer>
@@ -617,12 +581,12 @@ function Footer() {
 
 export function DemoPage({ firm, audience }: { firm: string; audience: Audience }) {
   const review = audience === 'review'
-  const list = audience === 'developer' ? DEV_ORDER.map((id) => desks.find((d) => d.id === id)!).filter(Boolean) : desks
+  const list = desks
   const links = [
     { href: '#problem', label: 'Problem' },
     { href: '#how', label: 'How it works' },
     { href: '#desks', label: 'Desks' },
-    review ? { href: '#feedback', label: 'Your view' } : { href: '#engage', label: audience === 'developer' ? 'Pilot' : 'How we start' },
+    review ? { href: '#feedback', label: 'Your view' } : { href: '#engage', label: 'How we start' },
     { href: '#faq', label: 'FAQ' },
   ]
   return (
@@ -637,7 +601,7 @@ export function DemoPage({ firm, audience }: { firm: string; audience: Audience 
         {list.map((d, i) => (
           <DeskSection key={d.id} d={d} index={i} />
         ))}
-        {review ? <Feedback /> : <Engagement audience={audience} />}
+        {review ? <Feedback /> : <Engagement />}
         <Faq audience={audience} />
         <Contact firm={firm} audience={audience} />
       </main>
