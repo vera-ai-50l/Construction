@@ -29,40 +29,52 @@ Keep both terminals open while you play. The address changes every time you
 start the tunnel, and the browser keeps your crew save per address, so a new
 address starts a fresh crew. Use the VPS if you want your progress to stick.
 
-## Permanent: your VPS (next to n8n)
+## Permanent: the n8n server (Google Cloud)
 
-One command from your own computer builds the game, copies it to the VPS,
-starts it next to n8n and adds its address to Caddy, which gets the HTTPS
-certificate. Running it again updates the game. It never touches n8n.
+The game runs next to n8n on the same server, behind the same Caddy, at its own
+subdomain. Running the install again updates the game. It never touches n8n.
 
-Before the first run:
+1. **DNS.** In Namecheap, open Domain List, then Manage for `getveraai.com`,
+   then Advanced DNS. Add an A record with Host `game` and Value set to the
+   server's static IP (the same IP as the `n8n` record). Wait until
+   dnschecker.org shows that IP for `game.getveraai.com`.
+2. **Build the upload file** on your computer, in the `inside-job` folder:
 
-1. The VPS runs the n8n stack from `infra/` (Docker, with containers called
-   `n8n` and `caddy`). See `infra/README.md`.
-2. Add a DNS A record for the game's address (for example `game.example.com`)
-   pointing at the VPS IP.
-3. You can log in with `ssh user@your-vps-ip` without typing a password
-   (an SSH key), the same login the n8n deploy uses.
+   ```
+   npm ci
+   npm run build
+   node deploy/deploy.mjs --package
+   ```
 
-Then, from the `inside-job` folder (Windows PowerShell):
+   This writes `inside-job.tgz`.
+3. **Upload it.** Google Cloud console, Compute Engine, VM instances, then
+   **SSH** on `n8n-server`. In the SSH window, click **UPLOAD FILE** and pick
+   `inside-job.tgz`. It lands in your home folder.
+4. **Install.** Paste this one line in the SSH window and press Enter:
+
+   ```
+   cd ~ && rm -rf inside-job-deploy && tar -xzf inside-job.tgz && sh inside-job-deploy/install.sh game.getveraai.com
+   ```
+
+5. Open `https://game.getveraai.com`. The first load can take up to a minute
+   while Caddy gets the certificate.
+
+To update the game later, repeat steps 2 to 4.
+
+If something fails: `docker logs inside-job` shows the game's log, and
+`cd ~/n8n && docker compose logs caddy` shows certificate problems (usually
+DNS not pointing at the server yet).
+
+### With an SSH key
+
+If your computer can log in with `ssh you@server-ip` without a password,
+one command does steps 2 to 4:
 
 ```
-$env:VERA_SSH = 'root@203.0.113.10'
-$env:IJ_DOMAIN = 'game.example.com'
+$env:VERA_SSH = 'you@35.255.23.220'
+$env:IJ_DOMAIN = 'game.getveraai.com'
 node deploy/deploy.mjs
 ```
-
-macOS or Linux: `VERA_SSH=root@203.0.113.10 IJ_DOMAIN=game.example.com node deploy/deploy.mjs`.
-
-Add `$env:VERA_SUDO = '1'` if Docker needs sudo on the VPS. The script waits
-for the live address and prints it. Both players open it and use the same
-crew code. `node deploy/deploy.mjs --check` checks the address again later.
-
-No domain yet? Leave `IJ_DOMAIN` empty. The game then runs on
-`http://your-vps-ip:8080` (open port 8080 in the VPS firewall), without Caddy.
-
-If you ever copy `infra/Caddyfile` over the server's copy again, rerun the
-deploy: it adds the game's block back.
 
 ### By hand
 
