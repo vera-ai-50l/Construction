@@ -1,0 +1,16 @@
+{
+  "name": "inside-job",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inside Job - a two-player co-op heist game for the browser",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "start": "node server.js",
+    "dev": "node tools/build.mjs && node server.js"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "three": "0.170.0"
+  }
+}
