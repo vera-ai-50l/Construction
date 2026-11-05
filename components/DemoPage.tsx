@@ -44,6 +44,7 @@ function Section({ id, children, className = '' }: { id?: string; children: Reac
 
 function Hero({ firm, audience }: { firm: string; audience: Audience }) {
   const dev = audience === 'developer'
+  const review = audience === 'review'
   return (
     <section id="top" className="relative overflow-hidden px-4 pb-20 pt-32 md:px-8 md:pb-32 md:pt-44">
       <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full bg-[radial-gradient(closest-side,rgba(192,138,43,0.16),transparent)]" />
@@ -51,11 +52,17 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
       <div className="relative mx-auto grid max-w-[1240px] items-center gap-16 md:grid-cols-[1.15fr_1fr] md:gap-20">
         <div>
           <Reveal>
-            <Eyebrow tone={firm ? 'rust' : 'light'}>{firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}</Eyebrow>
+            <Eyebrow tone={firm || review ? 'rust' : 'light'}>
+              {review ? 'Built for contractors · shared for your feedback' : firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}
+            </Eyebrow>
           </Reveal>
           <Reveal delay={80}>
             <h1 className="display mt-7 text-[2.75rem] leading-[1.02] text-ink sm:text-6xl md:text-[5.25rem]">
-              {dev ? (
+              {review ? (
+                <>
+                  A back office for the contractors <em className="text-rust">who build your projects</em>.
+                </>
+              ) : dev ? (
                 <>
                   Recover every bag <em className="text-rust">you issued free</em>, with the evidence.
                 </>
@@ -68,16 +75,24 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
           </Reveal>
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-2">
-              {dev
+              {review
+                ? 'Vera reads a contractor’s registers, challans and WhatsApp site groups, reconciles them in code, and gives them daily records, material reconciliations and the money they are losing. Contractors with clean records bill correctly, report on time and waste less, which shows up on your projects.'
+                : dev
                 ? 'Vera reconciles the cement and steel you supply to each contractor against certified work, contract wastage and earlier deductions, and drafts the debit note for the next RA bill.'
                 : 'Vera is a back office that reads your registers, challans and WhatsApp site groups, reconciles them in code, and hands you the rupees: what to claim from suppliers, what to stop on site, and what is idle.'}
             </p>
           </Reveal>
           <Reveal delay={240} className="mt-10 flex flex-wrap items-center gap-3">
             <PillButton href="#desks">See what Vera does</PillButton>
-            <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
-              {dev ? 'Start the free pilot' : 'Book a Leak Check'}
-            </PillButton>
+            {review ? (
+              <PillButton href="#feedback" variant="light">
+                Where we need your view
+              </PillButton>
+            ) : (
+              <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
+                {dev ? 'Talk to us about a pilot' : 'Book a Leak Check'}
+              </PillButton>
+            )}
           </Reveal>
           <Reveal delay={320}>
             <p className="mt-8 flex max-w-md items-start gap-2 text-xs leading-relaxed text-ink-3">
@@ -227,14 +242,14 @@ function StatusChip({ status }: { status: Desk['status'] }) {
   </span>
 }
 
-function DeskIndex({ list }: { list: Desk[] }) {
+function DeskIndex({ list, review = false }: { list: Desk[]; review?: boolean }) {
   const spans = list.length === 5 ? ['md:col-span-7', 'md:col-span-5', 'md:col-span-4', 'md:col-span-4', 'md:col-span-4'] : ['md:col-span-6', 'md:col-span-6', 'md:col-span-12']
   return (
     <Section id="desks">
       <Reveal>
-        <Eyebrow>What we sell</Eyebrow>
+        <Eyebrow>{review ? 'What Vera does' : 'What we sell'}</Eyebrow>
         <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">
-          {list.length === 5 ? 'Five desks. Start with one, add the rest as they pay.' : 'Three desks for the developer’s side of the table.'}
+          {review ? 'Five desks we are building for contractors.' : list.length === 5 ? 'Five desks. Start with one, add the rest when it proves itself.' : 'Three desks for the developer’s side of the table.'}
         </h2>
       </Reveal>
       <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-5">
@@ -336,16 +351,94 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
               ))}
             </dl>
           </Reveal>
-          <Reveal delay={180}>
-            <div className="flex items-start gap-3 rounded-2xl bg-ink/[0.035] p-5 text-sm leading-relaxed text-ink-2">
-              <Icon name="Handshake" size={18} className="mt-0.5 shrink-0 text-ink" />
-              <span>{d.terms}</span>
-            </div>
-          </Reveal>
         </div>
         <Reveal delay={120} className="md:sticky md:top-28 md:self-start">
           {MOCKS[d.id]}
         </Reveal>
+      </div>
+    </Section>
+  )
+}
+
+/* ───────────── Review: what it changes for the developer ───────────── */
+
+const FOR_DEVELOPER: { icon: string; title: string; text: string }[] = [
+  { icon: 'Scales', title: 'Free-issue settled on evidence', text: 'Contractor and developer work from the same slips, measurement book, BBS and stock counts. RA-bill deductions stop being an argument about estimates.' },
+  { icon: 'Notebook', title: 'A daily record from every package', text: 'Labour, progress, receipts and hindrances, dated and with photos, from each contractor. Planning sees the site as it was yesterday, not as it was at the monthly review.' },
+  { icon: 'Clock', title: 'Delays with timestamps', text: 'Crane down four hours, drawing pending, client hold: logged when it happens. Extension and claim discussions start from the same facts.' },
+  { icon: 'Warning', title: 'Fewer stoppages', text: 'Cement that will not last tomorrow’s pour, a machine past its service, a certificate about to lapse: flagged to the contractor before work stops.' },
+  { icon: 'Recycle', title: 'Less waste across sites', text: 'Overuse beyond the norm, scrap that never returned, stock bought at one site while it lies at another. The same material, used once.' },
+  { icon: 'Users', title: 'Nothing new for site teams', text: 'Supervisors keep sending WhatsApp voice notes and photos. No app to roll out, no training for your engineers or the contractor’s.' },
+]
+
+const FD_SPANS = ['md:col-span-4', 'md:col-span-2', 'md:col-span-2', 'md:col-span-4', 'md:col-span-3', 'md:col-span-3']
+
+function ForDeveloper() {
+  return (
+    <Section id="for-you">
+      <div className="grid gap-10 md:grid-cols-[1fr_1.3fr] md:items-end">
+        <Reveal>
+          <Eyebrow>On your projects</Eyebrow>
+          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">What changes when your contractors run on it.</h2>
+        </Reveal>
+        <Reveal delay={100}>
+          <p className="max-w-xl text-lg leading-relaxed text-ink-2">
+            Vera is sold to contractors. The developer is not asked to buy anything or change any system. The benefit reaches the project because the contractor’s records are complete, on time and checkable.
+          </p>
+        </Reveal>
+      </div>
+      <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-6 md:gap-5">
+        {FOR_DEVELOPER.map((x, i) => (
+          <Reveal key={x.title} delay={(i % 3) * 80} className={FD_SPANS[i]}>
+            <Bezel className="h-full" inner="flex h-full flex-col gap-8 p-7 md:p-8">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-ink/[0.04] text-rust">
+                <Icon name={x.icon} size={20} />
+              </span>
+              <div>
+                <h3 className={`display leading-tight text-ink ${FD_SPANS[i] === 'md:col-span-2' ? 'text-2xl' : 'text-3xl'}`}>{x.title}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{x.text}</p>
+              </div>
+            </Bezel>
+          </Reveal>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
+const QUESTIONS = [
+  ['Free-issue', 'On your projects, which record settles a free-issue dispute: the stores slip, the contractor’s acknowledgement, or the yard count?'],
+  ['RA bills', 'Where do RA-bill disagreements with contractors usually start, and what evidence ends them?'],
+  ['Site records', 'What makes a contractor’s DPR useful to your planning team, and what makes it ignored?'],
+  ['Biggest losses', 'Which contractor problems cost your projects the most: material, labour, plant and formwork, or paperwork?'],
+  ['Plant & formwork', 'How are formwork shortages and idle hired equipment handled with contractors today?'],
+  ['Adoption', 'Who inside a contractor’s firm should own a tool like this, and what would stop them using it?'],
+]
+
+function Feedback() {
+  return (
+    <Section id="feedback">
+      <div className="grid gap-16 md:grid-cols-[1fr_1.3fr] md:gap-20">
+        <Reveal className="md:sticky md:top-28 md:self-start">
+          <Eyebrow tone="rust">Your guidance</Eyebrow>
+          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">Where we would value your view.</h2>
+          <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-2">
+            You see how contractors actually work on large projects. These are the questions we cannot answer from the outside.
+          </p>
+        </Reveal>
+        <ol className="space-y-4">
+          {QUESTIONS.map(([k, q], i) => (
+            <Reveal as="li" key={k} delay={(i % 3) * 70}>
+              <Bezel inner="flex gap-6 p-6 md:p-7">
+                <span className="num pt-1 text-sm text-rust">{String(i + 1).padStart(2, '0')}</span>
+                <span>
+                  <span className="block text-[11px] uppercase tracking-[0.18em] text-ink-3">{k}</span>
+                  <span className="mt-2 block text-lg leading-snug text-ink">{q}</span>
+                </span>
+              </Bezel>
+            </Reveal>
+          ))}
+        </ol>
       </div>
     </Section>
   )
@@ -360,20 +453,20 @@ function Engagement({ audience }: { audience: Audience }) {
         ['Day 0', 'Sign the NDA. Pick one contractor package where you supply cement or steel.'],
         ['Day 1–3', 'Share three months of free-issue slips, returns, yard counts, MB and RA bills. Excel or scans are fine.'],
         ['Day 7', 'Recovery pack: draft debit note, evidence trail, confidence on every line, contractor comparison.'],
-        ['Then', 'If the pack is useful, we agree a monthly fee across packages. If not, you keep the pack.'],
+        ['Then', 'You review every line with the contractor before anything is deducted.'],
       ]
     : [
         ['Day 0', 'Sign the NDA. Pick one site and three months.'],
         ['Day 1–3', 'Share POs, challans, gate book, issue slips and BOQ progress. Excel, Tally exports or photos.'],
         ['Day 7', 'One-page ₹ summary for the MD, supplier claim list and overuse by wing.'],
-        ['Day 7–22', 'You check the lines. Anything not disputed in 15 days counts as confirmed.'],
+        ['Then', 'You check every line against its challan or slip before anything goes to a supplier.'],
       ]
   return (
     <Section id="engage">
       <div className="grid gap-16 md:grid-cols-[1fr_1.1fr] md:gap-20">
         <Reveal>
           <Eyebrow>{dev ? 'Pilot' : 'How we start'}</Eyebrow>
-          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">{dev ? 'One package, free, in a week.' : 'Start with one site and one week.'}</h2>
+          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">{dev ? 'One package, in a week.' : 'Start with one site and one week.'}</h2>
           <ol className="mt-12 space-y-0">
             {steps.map(([k, t], i) => (
               <li key={k} className="grid grid-cols-[6rem_1fr] gap-4 border-t border-ink/[0.08] py-5">
@@ -384,50 +477,27 @@ function Engagement({ audience }: { audience: Audience }) {
           </ol>
         </Reveal>
         <Reveal delay={120}>
-          {dev ? (
-            <Bezel tone="dark" inner="p-8 md:p-12">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-paper/50">Pilot</p>
-              <p className="display mt-4 text-5xl leading-tight md:text-6xl">One contractor package, free.</p>
-              <ul className="mt-10 space-y-4 text-[15px] text-paper/75">
-                {['Three months of registers, under NDA', 'Draft debit note ready for the next RA bill', 'High / Medium / Check on every line', 'Wastage comparison across your contractors'].map((x) => (
-                  <li key={x} className="flex items-center gap-3">
-                    <Icon name="Check" size={16} className="text-rust-2" /> {x}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-12">
-                <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
-                  Start the pilot
-                </PillButton>
-              </div>
-            </Bezel>
-          ) : (
-            <Bezel tone="dark" inner="p-8 md:p-12">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-paper/50">Material Leak Check · one site</p>
-              <p className="display mt-4 text-6xl md:text-7xl">₹50,000</p>
-              <p className="mt-2 text-paper/60">fixed fee, plus a share of findings you confirm</p>
-              <div className="mt-10 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-white/[0.05] p-5">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-paper/45">Share</p>
-                  <p className="display mt-1 text-3xl">10%</p>
-                  <p className="mt-1 text-xs text-paper/50">of confirmed recoverable</p>
-                </div>
-                <div className="rounded-2xl bg-white/[0.05] p-5">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-paper/45">On the sample site</p>
-                  <p className="display mt-1 text-3xl">₹0.88–1.25 L</p>
-                  <p className="mt-1 text-xs text-paper/50">total, against ₹16.1 L found</p>
-                </div>
-              </div>
-              <p className="mt-8 text-sm leading-relaxed text-paper/60">
-                After the check: the Site Record Desk monthly per site, with Plant &amp; Formwork and Surplus Stock as add-ons.
-              </p>
-              <div className="mt-10">
-                <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
-                  Book a Leak Check
-                </PillButton>
-              </div>
-            </Bezel>
-          )}
+          <Bezel tone="dark" inner="p-8 md:p-12">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-paper/50">{dev ? 'Pilot · one contractor package' : 'Material Leak Check · one site'}</p>
+            <p className="display mt-4 text-5xl leading-tight md:text-6xl">{dev ? 'One package. One week.' : 'One site. One week.'}</p>
+            <p className="mt-10 text-[11px] uppercase tracking-[0.2em] text-paper/45">What you get</p>
+            <ul className="mt-5 space-y-4 text-[15px] text-paper/75">
+              {(dev
+                ? ['Draft debit note ready for the next RA bill', 'Evidence trail: slips, MB entries, BBS, RA numbers', 'High / Medium / Check on every line', 'Wastage comparison across your contractors']
+                : ['1-page ₹ summary for the MD', 'Supplier claim list with challan numbers', 'Overuse by wing and supervisor', 'Extra and short stock, valued']
+              ).map((x) => (
+                <li key={x} className="flex items-center gap-3">
+                  <Icon name="Check" size={16} className="text-rust-2" /> {x}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-10 text-sm leading-relaxed text-paper/60">Registers are shared under NDA, used only for your report, and deleted on request.</p>
+            <div className="mt-10">
+              <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
+                {dev ? 'Talk to us about a pilot' : 'Book a Leak Check'}
+              </PillButton>
+            </div>
+          </Bezel>
         </Reveal>
       </div>
     </Section>
@@ -452,7 +522,7 @@ function Faq({ audience }: { audience: Audience }) {
       <div className="grid gap-12 md:grid-cols-[1fr_1.6fr] md:gap-20">
         <Reveal>
           <Eyebrow>Questions</Eyebrow>
-          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">What owners ask first.</h2>
+          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">{audience === 'review' ? 'What contractors ask first.' : 'What owners ask first.'}</h2>
         </Reveal>
         <Reveal delay={100}>
           <div className="divide-y divide-ink/[0.08] border-y border-ink/[0.08]">
@@ -483,9 +553,9 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
     <Section id="contact">
       <Reveal>
         <Bezel tone="tint" inner="relative overflow-hidden px-7 py-16 text-center md:px-16 md:py-24">
-          <Eyebrow>{firm ? `Next step for ${firm}` : 'Next step'}</Eyebrow>
+          <Eyebrow>{audience === 'review' ? 'Thank you' : firm ? `Next step for ${firm}` : 'Next step'}</Eyebrow>
           <h2 className="display mx-auto mt-6 max-w-3xl text-4xl leading-[1.05] text-ink md:text-6xl">
-            {audience === 'developer' ? 'Pick one package. We will show you the recovery in a week.' : 'Pick one site. We will show you the leak in a week.'}
+            {audience === 'review' ? 'Tell us what we have got wrong.' : audience === 'developer' ? 'Pick one package. We will show you the recovery in a week.' : 'Pick one site. We will show you the leak in a week.'}
           </h2>
           {has ? (
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -502,9 +572,13 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
               )}
             </div>
           ) : (
-            <p className="mx-auto mt-8 max-w-lg text-ink-2">Reply on the thread this link came in, and we will set up a 20-minute walkthrough on your own numbers.</p>
+            <p className="mx-auto mt-8 max-w-lg text-ink-2">
+              {audience === 'review'
+                ? 'Reply on the thread this link came in. You are welcome to forward it to colleagues who work with contractors.'
+                : 'Reply on the thread this link came in, and we will set up a 20-minute walkthrough on your own numbers.'}
+            </p>
           )}
-          <p className="mx-auto mt-8 max-w-md text-xs text-ink-3">We will not ask for real project data until an NDA is signed.</p>
+          <p className="mx-auto mt-8 max-w-md text-xs text-ink-3">{audience === 'review' ? 'This page uses fictional sample data only. We are not asking for any project data.' : 'We will not ask for real project data until an NDA is signed.'}</p>
         </Bezel>
       </Reveal>
     </Section>
@@ -527,26 +601,28 @@ function Footer() {
 /* ───────────── Page ───────────── */
 
 export function DemoPage({ firm, audience }: { firm: string; audience: Audience }) {
+  const review = audience === 'review'
   const list = audience === 'developer' ? DEV_ORDER.map((id) => desks.find((d) => d.id === id)!).filter(Boolean) : desks
   const links = [
     { href: '#problem', label: 'Problem' },
     { href: '#how', label: 'How it works' },
     { href: '#desks', label: 'Desks' },
-    { href: '#engage', label: audience === 'developer' ? 'Pilot' : 'Pricing' },
+    review ? { href: '#feedback', label: 'Your view' } : { href: '#engage', label: audience === 'developer' ? 'Pilot' : 'How we start' },
     { href: '#faq', label: 'FAQ' },
   ]
   return (
     <>
-      <Nav links={links} cta={{ href: '#contact', label: 'Talk to us' }} />
+      <Nav links={links} cta={review ? { href: '#feedback', label: 'Share your view' } : { href: '#contact', label: 'Talk to us' }} />
       <main>
         <Hero firm={firm} audience={audience} />
         <Leaks />
         <How />
-        <DeskIndex list={list} />
+        {review && <ForDeveloper />}
+        <DeskIndex list={list} review={review} />
         {list.map((d, i) => (
           <DeskSection key={d.id} d={d} index={i} />
         ))}
-        <Engagement audience={audience} />
+        {review ? <Feedback /> : <Engagement audience={audience} />}
         <Faq audience={audience} />
         <Contact firm={firm} audience={audience} />
       </main>

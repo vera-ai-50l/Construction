@@ -16,7 +16,6 @@ export type Desk = {
   steps: Step[]
   outputs: string[]
   helps: { figure: string; text: string }[]
-  terms: string
 }
 
 export const desks: Desk[] = [
@@ -50,7 +49,6 @@ export const desks: Desk[] = [
       { figure: '₹7.5 L', text: 'recoverable from suppliers: duplicates, short supply, above-PO rates' },
       { figure: '₹8.6 L', text: 'stoppable on site: issue beyond what the work needed' },
     ],
-    terms: 'Fixed fee of ₹50,000, plus a share of findings you confirm as recoverable. Lines you do not dispute within 15 days count as confirmed.',
   },
   {
     id: 'site-desk',
@@ -81,7 +79,6 @@ export const desks: Desk[] = [
       { figure: '₹63.8 L', text: 'at risk surfaced before 8 AM: an unpaid RA bill, a returned bill, idle crews, a no-PO delivery' },
       { figure: '0', text: 'new apps for site teams. They keep using WhatsApp' },
     ],
-    terms: 'Monthly subscription per site. Setup of the site master is included.',
   },
   {
     id: 'free-issue',
@@ -116,7 +113,6 @@ export const desks: Desk[] = [
       { figure: '₹0', text: 'counted twice: a recovery already taken in RA-02 is subtracted, line by line' },
       { figure: '1 week', text: 'from three months of registers to a ready deduction, under NDA' },
     ],
-    terms: 'Pilot: one contractor package where you supply cement or steel. Three months of registers under NDA. Result in one week, free.',
   },
   {
     id: 'plant-desk',
@@ -150,7 +146,6 @@ export const desks: Desk[] = [
       { figure: '250 h', text: 'service intervals tracked from the hour-meter photos operators already send' },
       { figure: '5–10%', text: 'of formwork that typically goes missing at the end of a project, now tallied by site and contractor' },
     ],
-    terms: 'Add-on to the Site Record Desk, priced per asset group. Setup of the asset register is included.',
   },
   {
     id: 'surplus',
@@ -182,6 +177,5 @@ export const desks: Desk[] = [
       { figure: '90 days', text: 'cement ageing caught before strength is lost, and used first' },
       { figure: '1 check', text: 'before every PO: “do we already have this somewhere?”' },
     ],
-    terms: 'Add-on across all sites, priced with the Site Record Desk.',
   },
 ]

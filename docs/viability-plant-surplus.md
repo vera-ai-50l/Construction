@@ -25,7 +25,7 @@ Short answer: **yes, as add-ons to the Site Record Desk. Not as standalone produ
 - It depends on a daily hour-meter photo. It must be part of the existing site group habit, or it stops after a month.
 
 **Recommendation:**
-- Sell it as an add-on to the Site Record Desk, priced per asset group.
+- Offer it as an add-on to the Site Record Desk.
 - First features to build: off-hire alerts, the owned-idle vs hiring-elsewhere check, and the formwork tally. These pay for the month on their own.
 - Add service due and certificates on top, since they reuse the same hour data.
 
