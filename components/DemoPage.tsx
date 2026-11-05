@@ -6,11 +6,13 @@ import { Reveal } from './ui/Reveal'
 import { Icon } from './ui/icons'
 import { Flow } from './Flow'
 import { BeforeAfter, RunButton, RunProvider, RunReveal } from './run/Run'
+import { RunChat } from './run/RunChat'
 import { Nav } from './Nav'
 import { HeroVisual } from './mocks/HeroVisual'
 import { BriefPhone, Comparison, DebitNote, LeakSummary, PlantBoard, SurplusMatch } from './mocks/Outputs'
 import { desks, type Desk } from '@/content/desks'
 import { runs } from '@/content/runs'
+import { chats } from '@/content/chats'
 import { contact, type Audience } from '@/content/site'
 
 const MOCKS: Record<string, ReactNode> = {
@@ -363,6 +365,11 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
           <RunReveal>{MOCKS[d.id]}</RunReveal>
         </Reveal>
       </div>
+      {chats[d.id] && (
+        <Reveal className="mt-20 border-t border-ink/[0.07] pt-16 md:mt-28 md:pt-24">
+          <RunChat chat={chats[d.id]} />
+        </Reveal>
+      )}
       </RunProvider>
     </Section>
   )

@@ -6,7 +6,7 @@ export type RunRow = { source: string; before: string; issue: string; after: str
 
 export const runs: Record<string, RunRow[]> = {
   'leak-check': [
-    { source: 'Challan register', before: 'SBS/0712 and SBS/0712-R · TMT 8.2 MT', issue: 'Both passed for payment', after: '2 challans billed twice · recover ₹4.8 L', step: 1 },
+    { source: 'Challan register', before: 'Challan SBS/0712 on INV-SBS-012 and 012-R', issue: 'Both passed for payment', after: '2 challans billed twice · recover ₹4.8 L', step: 1 },
     { source: 'Gate book', before: '4 steel loads under challan weight', issue: 'Paid at challan weight', after: 'Short beyond 0.5% · recover ₹2.2 L', step: 1 },
     { source: 'Supplier bills', before: 'Cement billed at ₹396 a bag', issue: 'PO rate is ₹372', after: '₹24 a bag above PO · recover ₹0.5 L', step: 1 },
     { source: 'Stores issue slips', before: 'Wing B issued 52.0 MT steel', issue: 'Never compared with the work done', after: '7.2 MT beyond allowance · ₹4.5 L', step: 2 },
