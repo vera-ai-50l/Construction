@@ -117,6 +117,10 @@ body::after {
   0% { transform: scale(0.9); opacity: 0.55; }
   100% { transform: scale(1.9); opacity: 0; }
 }
+@keyframes dot {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
 @keyframes marquee {
   from { transform: translate3d(0, 0, 0); }
   to { transform: translate3d(-50%, 0, 0); }

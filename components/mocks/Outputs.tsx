@@ -31,13 +31,13 @@ function Plate({ children, title, sub }: { children: React.ReactNode; title: str
 
 export function LeakSummary() {
   const groups = [
-    ['Duplicate challans', '2 challans billed twice', '4.9'],
+    ['Duplicate challans', '2 challans billed twice', '4.8'],
     ['Short supply at the gate', '4 loads short beyond 0.5%', '2.2'],
     ['Billed above PO rate', '5 cement challans, ₹24/bag', '0.5'],
   ]
   const over = [
     ['Steel', 'Wing B', '7.2 MT beyond allowance', '4.5'],
-    ['Cement', 'Wing A', '620 bags beyond allowance', '2.4'],
+    ['Cement', 'Wing A', '620 bags beyond allowance', '2.3'],
     ['AAC blocks', 'Wing B', '2,850 nos beyond allowance', '1.8'],
   ]
   return (

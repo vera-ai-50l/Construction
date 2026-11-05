@@ -5,10 +5,12 @@ import { PillButton } from './ui/PillButton'
 import { Reveal } from './ui/Reveal'
 import { Icon } from './ui/icons'
 import { Flow } from './Flow'
+import { BeforeAfter, RunButton, RunProvider, RunReveal } from './run/Run'
 import { Nav } from './Nav'
 import { HeroVisual } from './mocks/HeroVisual'
 import { BriefPhone, Comparison, DebitNote, LeakSummary, PlantBoard, SurplusMatch } from './mocks/Outputs'
 import { desks, type Desk } from '@/content/desks'
+import { runs } from '@/content/runs'
 import { contact, type Audience } from '@/content/site'
 
 const MOCKS: Record<string, ReactNode> = {
@@ -290,6 +292,7 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
   const flip = index % 2 === 1
   return (
     <Section id={d.id} className={index % 2 === 1 ? 'bg-paper-2/60' : ''}>
+      <RunProvider n={d.steps.length}>
       {/* Header */}
       <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-end">
         <Reveal>
@@ -310,10 +313,14 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
       <Reveal delay={60} className="mt-16 md:mt-20">
         <Bezel inner="px-6 py-10 md:px-10 md:py-12">
           <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">The flow · {d.steps.length} steps</p>
-            <p className="hidden text-xs text-ink-3 md:block">Hover a step to see what happens there</p>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">The flow · {d.steps.length} steps</p>
+              <p className="mt-2 text-sm text-ink-2">Sample data. Press run and watch each step fix what it catches.</p>
+            </div>
+            <RunButton />
           </div>
           <Flow steps={d.steps} />
+          {runs[d.id] && <BeforeAfter rows={runs[d.id]} steps={d.steps} />}
         </Bezel>
       </Reveal>
 
@@ -353,9 +360,10 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
           </Reveal>
         </div>
         <Reveal delay={120} className="md:sticky md:top-28 md:self-start">
-          {MOCKS[d.id]}
+          <RunReveal>{MOCKS[d.id]}</RunReveal>
         </Reveal>
       </div>
+      </RunProvider>
     </Section>
   )
 }

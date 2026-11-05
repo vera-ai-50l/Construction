@@ -3,24 +3,28 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './ui/icons'
 import { useInView } from './ui/Reveal'
+import { useRun } from './run/Run'
 import type { Step } from '@/content/desks'
 
-// Animated workflow: steps light up one after another while the diagram is on screen.
-// Hover or tap a step to hold it and read what happens there.
+// Animated workflow. Inside a <RunProvider> the steps light up only when the visitor presses
+// "Run the flow"; on its own it loops while on screen. Hover or tap a step to read it.
 export function Flow({ steps, tone = 'light' }: { steps: Step[]; tone?: 'light' | 'dark' }) {
   const [ref, inView] = useInView<HTMLDivElement>()
   const [active, setActive] = useState(-1)
   const [held, setHeld] = useState<number | null>(null)
   const n = steps.length
+  const run = useRun()
 
   useEffect(() => {
-    if (!inView || held !== null) return
+    if (run || !inView || held !== null) return
     const t = setInterval(() => setActive((a) => (a >= n + 1 ? 0 : a + 1)), 1100)
     return () => clearInterval(t)
-  }, [inView, held, n])
+  }, [run, inView, held, n])
 
-  const shown = held ?? Math.min(Math.max(active, 0), n - 1)
-  const lit = held ?? active
+  const runLit = run ? (run.phase === 'idle' ? -1 : run.step) : active
+  const shown = held ?? Math.min(Math.max(runLit, 0), n - 1)
+  const lit = run ? runLit : held ?? active
+  const hint = run && run.phase === 'idle' && held === null
   const dark = tone === 'dark'
   const progress = n > 1 ? Math.min(Math.max(lit, 0), n - 1) / (n - 1) : 1
 
@@ -70,10 +74,16 @@ export function Flow({ steps, tone = 'light' }: { steps: Step[]; tone?: 'light' 
           })}
         </ol>
         <div className={`mx-auto mt-8 max-w-2xl rounded-2xl px-6 py-5 text-center ${dark ? 'bg-white/[0.04] ring-1 ring-white/10' : 'bg-paper-2/70 ring-1 ring-ink/[0.05]'}`}>
-          <p key={shown} className={`text-[15px] leading-relaxed [animation:type-in_600ms_cubic-bezier(0.16,1,0.3,1)] ${dark ? 'text-paper/80' : 'text-ink-2'}`}>
-            <span className={`font-medium ${dark ? 'text-paper' : 'text-ink'}`}>{steps[shown].title}. </span>
-            {steps[shown].detail}
-          </p>
+          {hint ? (
+            <p className={`text-[15px] leading-relaxed ${dark ? 'text-paper/70' : 'text-ink-3'}`}>
+              Press <span className={dark ? 'text-paper' : 'text-ink'}>Run the flow</span> to watch {n} steps clear the problems below. Hover a step to read it first.
+            </p>
+          ) : (
+            <p key={shown} className={`text-[15px] leading-relaxed [animation:type-in_600ms_cubic-bezier(0.16,1,0.3,1)] ${dark ? 'text-paper/80' : 'text-ink-2'}`}>
+              <span className={`font-medium ${dark ? 'text-paper' : 'text-ink'}`}>{steps[shown].title}. </span>
+              {steps[shown].detail}
+            </p>
+          )}
         </div>
       </div>
 
