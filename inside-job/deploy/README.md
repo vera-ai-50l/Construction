@@ -31,39 +31,51 @@ address starts a fresh crew. Use the VPS if you want your progress to stick.
 
 ## Permanent: your VPS (next to n8n)
 
-The VPS already runs Caddy for n8n (see `infra/`). Caddy forwards WebSocket
-connections without extra settings and gets the HTTPS certificate on its own.
+One command from your own computer builds the game, copies it to the VPS,
+starts it next to n8n and adds its address to Caddy, which gets the HTTPS
+certificate. Running it again updates the game. It never touches n8n.
 
-1. Point an A record for a game subdomain (for example `game.example.com`) at
-   the VPS.
-2. Copy this `inside-job` folder to the server, for example `/opt/inside-job`.
-3. Add the game to `infra/docker-compose.yml` on the server, under `services:`:
+Before the first run:
 
-   ```yaml
-     inside-job:
-       build: /opt/inside-job
-       container_name: inside-job
-       restart: unless-stopped
-       expose:
-         - '8080'
-       logging: *logs
-   ```
+1. The VPS runs the n8n stack from `infra/` (Docker, with containers called
+   `n8n` and `caddy`). See `infra/README.md`.
+2. Add a DNS A record for the game's address (for example `game.example.com`)
+   pointing at the VPS IP.
+3. You can log in with `ssh user@your-vps-ip` without typing a password
+   (an SSH key), the same login the n8n deploy uses.
 
-4. Add a block for the subdomain to `infra/Caddyfile`:
+Then, from the `inside-job` folder (Windows PowerShell):
 
-   ```
-   game.example.com {
-   	encode zstd gzip
-   	reverse_proxy inside-job:8080
-   }
-   ```
+```
+$env:VERA_SSH = 'root@203.0.113.10'
+$env:IJ_DOMAIN = 'game.example.com'
+node deploy/deploy.mjs
+```
 
-5. From the `infra` folder on the server, run `docker compose up -d --build`.
-   Open `https://game.example.com`. Both of you use that address and the
-   same crew code.
+macOS or Linux: `VERA_SSH=root@203.0.113.10 IJ_DOMAIN=game.example.com node deploy/deploy.mjs`.
 
-To update the game later, copy the new `inside-job` folder over and run
-`docker compose up -d --build inside-job`.
+Add `$env:VERA_SUDO = '1'` if Docker needs sudo on the VPS. The script waits
+for the live address and prints it. Both players open it and use the same
+crew code. `node deploy/deploy.mjs --check` checks the address again later.
+
+No domain yet? Leave `IJ_DOMAIN` empty. The game then runs on
+`http://your-vps-ip:8080` (open port 8080 in the VPS firewall), without Caddy.
+
+If you ever copy `infra/Caddyfile` over the server's copy again, rerun the
+deploy: it adds the game's block back.
+
+### By hand
+
+Without the script: copy this folder to the server, `docker build -t
+inside-job .`, run it on Caddy's Docker network with `--name inside-job`, and
+add this block to the Caddyfile:
+
+```
+game.example.com {
+	encode zstd gzip
+	reverse_proxy inside-job:8080
+}
+```
 
 Without Docker, any Linux box with Node 18+ works: `npm ci && npm run build`,
 then keep `PORT=8080 node server.js` running (systemd or pm2) behind any
