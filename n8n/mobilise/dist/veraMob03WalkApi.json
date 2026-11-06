@@ -31,7 +31,9 @@
         "httpMethod": "GET",
         "path": "vera/mob/walk",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "allowedOrigins": "*"
+        }
       },
       "notes": "The page asks for this site's checklist.\nGuardrails: auth",
       "notesInFlow": false,
@@ -171,7 +173,9 @@
         "httpMethod": "POST",
         "path": "vera/mob/walk",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "allowedOrigins": "*"
+        }
       },
       "notes": "capture / trail / finish (body.action). The page retries until it gets an answer.\nGuardrails: auth",
       "notesInFlow": false,

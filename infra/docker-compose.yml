@@ -21,6 +21,20 @@ services:
       - EXECUTIONS_DATA_PRUNE=true
       - EXECUTIONS_DATA_MAX_AGE=168
       - EXECUTIONS_DATA_PRUNE_MAX_COUNT=5000
+      # Desk 05 (n8n/mobilise): Code nodes read $env and use crypto for signatures
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      - N8N_RUNNERS_ALLOWED_BUILT_IN_MODULES=crypto
+      - VERA_WA_APP_SECRET=${VERA_WA_APP_SECRET}
+      - VERA_WA_VERIFY_TOKEN=${VERA_WA_VERIFY_TOKEN}
+      - VERA_WA_PHONE_NUMBER_ID=${VERA_WA_PHONE_NUMBER_ID}
+      - VERA_WALK_SECRET=${VERA_WALK_SECRET}
+      - VERA_WALK_URL=${VERA_WALK_URL}
+      - VERA_FILES_URL=${VERA_FILES_URL}
+      - VERA_S3_BUCKET=${VERA_S3_BUCKET}
+      - VERA_GOTENBERG_URL=http://gotenberg:3000
+      - VERA_OPS_EMAIL=${VERA_OPS_EMAIL}
+      - VERA_OPS_FROM=${VERA_OPS_FROM}
     volumes:
       - n8n_data:/home/node/.n8n
     expose:
@@ -28,6 +42,15 @@ services:
     logging: &logs
       driver: json-file
       options: { max-size: '10m', max-file: '3' }
+
+  # HTML -> PDF for the Desk 05 NOC report. Internal only (no published port).
+  gotenberg:
+    image: gotenberg/gotenberg:8.17.3 # pinned; bump deliberately
+    container_name: gotenberg
+    restart: unless-stopped
+    expose:
+      - '3000'
+    logging: *logs
 
   caddy:
     image: caddy:2.10.2-alpine

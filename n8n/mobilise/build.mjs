@@ -14,7 +14,7 @@ import crypto from 'node:crypto'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { workflows, IDS } from './workflows.mjs'
-import { lines as TEMPLATE, areas as AREAS, TEMPLATE_VERSION } from './checklist.mjs'
+import { lines as TEMPLATE, areas as AREAS, TEMPLATE_VERSION, linesFor } from './checklist.mjs'
 import { runTests } from './test.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -286,6 +286,15 @@ function build() {
   }
   fs.writeFileSync(path.join(dir, 'board.json'), JSON.stringify(boardData()))
   console.log('wrote', path.relative(process.cwd(), path.join(dir, 'board.json')))
+  // Sample checklist for the walk page's demo mode (no link token): the template, plant site.
+  const sample = {
+    project: 'Sample Tower B, Thane', visit_date: '2026-11-18', demo: true,
+    lines: linesFor({ concrete: 'plant', lifting: true, creche: false, excavation: true }).map(({ code, area, text, evidence, when, severity, hint }) => ({ code, area, text, evidence, when, severity, hint, status: when === 'paper' ? 'accepted' : 'open' })),
+    areas: AREAS.filter((a) => a.walk),
+    zones: [{ area: 'LC', name: 'Labour camp', polygon: [[19.2100, 72.9700], [19.2100, 72.9710], [19.2092, 72.9710], [19.2092, 72.9700]] }],
+  }
+  fs.writeFileSync(path.join(here, '..', '..', 'content', 'walk-sample.json'), JSON.stringify(sample, null, 1) + '\n')
+  console.log('wrote content/walk-sample.json')
   // The board page: same data, so the node map on the board is the workflow that runs.
   const page = fs.readFileSync(path.join(here, 'board.template.html'), 'utf8').replace('/*BOARD_DATA*/null', JSON.stringify(boardData()).replace(/</g, '\\u003c'))
   const out = path.join(here, '..', '..', 'docs', 'desk-05', 'board.html')

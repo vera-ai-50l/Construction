@@ -1,0 +1,809 @@
+{
+ "project": "Sample Tower B, Thane",
+ "visit_date": "2026-11-18",
+ "demo": true,
+ "lines": [
+  {
+   "code": "PAP-01",
+   "area": "PAP",
+   "text": "Establishment registration for this site (OSH Code; BOCW registration accepted during transition)",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Registration certificate showing the contractor name, this site address and the maximum number of workers.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-02",
+   "area": "PAP",
+   "text": "Contract labour licence (OSH Code single licence; CLRA Form VI accepted during transition)",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Licence with licence number, validity dates and the maximum workers allowed. Must cover the planned peak labour.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-03",
+   "area": "PAP",
+   "text": "Employees' compensation (WC) policy",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Policy schedule page: insured name, policy period, number of workers covered.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-04",
+   "area": "PAP",
+   "text": "Contractor's All Risks (CAR) policy with third-party liability",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Policy schedule: insured parties (developer named as principal), project address, period, sum insured, TPL limit.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-05",
+   "area": "PAP",
+   "text": "ESIC and PF registration codes",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "ESIC and EPFO registration letters or portal screenshots with the contractor name and codes.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-06",
+   "area": "PAP",
+   "text": "Batching plant calibration certificate (weigh batchers, admixture dispenser)",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Certificate from an accredited agency, plant serial number, date of calibration and next due date.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-07",
+   "area": "PAP",
+   "text": "Consent to Operate (MPCB) for the batching plant",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "MPCB consent order for this plant at this address, with validity date and capacity.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-09",
+   "area": "PAP",
+   "text": "Safety officer appointment letter and qualification",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Appointment letter naming the safety officer(s) for this site, with qualification certificate.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-10",
+   "area": "PAP",
+   "text": "Site EHS plan approved by developer EHS",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Site-specific safety plan with approval signature or approval email.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-11",
+   "area": "PAP",
+   "text": "Emergency plan: nearest hospital tie-up and ambulance contact",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Emergency plan with hospital name, distance, phone numbers and ambulance arrangement.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-12",
+   "area": "PAP",
+   "text": "Lifting appliances: load test certificates (tower crane, hoist) by competent person",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Test certificate per machine: serial number, safe working load, test date, next due date.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-13",
+   "area": "PAP",
+   "text": "Temporary power: connection approval and licensed electrical supervisor",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Power connection sanction or DG arrangement, and the licence of the electrical supervisor.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-14",
+   "area": "PAP",
+   "text": "Worker list with ID check (ID numbers masked) and induction plan",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "List of workers with contractor, trade and ID check status. Aadhaar numbers must be masked.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-15",
+   "area": "PAP",
+   "text": "Quality assurance plan and inspection test plan approved by developer QA",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "QAP / ITP document with developer QA approval.",
+   "status": "accepted"
+  },
+  {
+   "code": "PAP-16",
+   "area": "PAP",
+   "text": "Survey instruments calibration (total station, auto level)",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "minor",
+   "hint": "Calibration certificate per instrument with serial number and date.",
+   "status": "accepted"
+  },
+  {
+   "code": "DR-01",
+   "area": "DR",
+   "text": "Latest GFC drawings at site; drawing register matches the design register",
+   "evidence": "both",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Photo of the drawing register at site. Vera compares revisions with the design team register.",
+   "status": "open"
+  },
+  {
+   "code": "DR-02",
+   "area": "DR",
+   "text": "Superseded drawings stamped and removed from site",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Photo of the superseded-drawings file or stamp.",
+   "status": "open"
+  },
+  {
+   "code": "DR-03",
+   "area": "DR",
+   "text": "Structural consultant approvals for mix designs and design basis received",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Approval letter or email from the structural consultant.",
+   "status": "accepted"
+  },
+  {
+   "code": "DR-04",
+   "area": "DR",
+   "text": "Formwork / shoring scheme approved by structural consultant",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "critical",
+   "hint": "Approved formwork drawings or scheme with approval stamp.",
+   "status": "accepted"
+  },
+  {
+   "code": "DR-05",
+   "area": "DR",
+   "text": "Site logistics plan: crane positions, batching plant, material routes, as approved",
+   "evidence": "both",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Approved layout drawing, and a photo from the site showing it is set out that way.",
+   "status": "open"
+  },
+  {
+   "code": "DR-06",
+   "area": "DR",
+   "text": "Benchmark and grid lines established and recorded",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Photo of the benchmark pillar and the grid reference.",
+   "status": "open"
+  },
+  {
+   "code": "DR-07",
+   "area": "DR",
+   "text": "RFI log and design query contact agreed",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "minor",
+   "hint": "RFI register format and the named design contact.",
+   "status": "accepted"
+  },
+  {
+   "code": "DR-08",
+   "area": "DR",
+   "text": "Sample and mock-up approval plan",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "minor",
+   "hint": "List of samples and mock-ups with dates.",
+   "status": "accepted"
+  },
+  {
+   "code": "LC-01",
+   "area": "LC",
+   "text": "Camp location safe: not low-lying, not under power lines, layout as approved",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Wide photo of the camp with surroundings.",
+   "status": "open"
+  },
+  {
+   "code": "LC-02",
+   "area": "LC",
+   "text": "Rooms: ventilation, windows, space per person as per developer camp standard",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Inside one room, showing windows and beds.",
+   "status": "open"
+  },
+  {
+   "code": "LC-03",
+   "area": "LC",
+   "text": "Toilets: enough for the workforce, separate for women, clean, with water",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Toilet block from outside showing the count, and one inside.",
+   "status": "open"
+  },
+  {
+   "code": "LC-04",
+   "area": "LC",
+   "text": "Bathing and washing area with drainage",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Washing area and drain.",
+   "status": "open"
+  },
+  {
+   "code": "LC-05",
+   "area": "LC",
+   "text": "Drinking water: potable source, marked, away from toilets and washing areas",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Water point with its marking; test report if any.",
+   "status": "open"
+  },
+  {
+   "code": "LC-06",
+   "area": "LC",
+   "text": "Kitchen separate from rooms; gas cylinders not inside rooms",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Kitchen area and where cylinders are kept.",
+   "status": "open"
+  },
+  {
+   "code": "LC-07",
+   "area": "LC",
+   "text": "Electrical: RCCB/ELCB, earthing, no loose wiring",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Distribution board with RCCB, and a typical room wiring.",
+   "status": "open"
+  },
+  {
+   "code": "LC-08",
+   "area": "LC",
+   "text": "Fire extinguishers and fire buckets, charged, with dates",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Extinguisher with its tag showing the refill date.",
+   "status": "open"
+  },
+  {
+   "code": "LC-09",
+   "area": "LC",
+   "text": "First-aid box stocked; trained first-aider named",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Open first-aid box and the first-aider board.",
+   "status": "open"
+  },
+  {
+   "code": "LC-11",
+   "area": "LC",
+   "text": "Waste bins, drainage, mosquito control",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Waste collection point and drains.",
+   "status": "open"
+  },
+  {
+   "code": "LC-12",
+   "area": "LC",
+   "text": "Notice board: wage days, grievance contact, emergency numbers (Hindi / Marathi)",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Notice board, readable.",
+   "status": "open"
+  },
+  {
+   "code": "LC-13",
+   "area": "LC",
+   "text": "Lighting for night movement",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Camp lighting.",
+   "status": "open"
+  },
+  {
+   "code": "LC-14",
+   "area": "LC",
+   "text": "Boundary and security for the camp",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Camp gate and boundary.",
+   "status": "open"
+  },
+  {
+   "code": "SY-01",
+   "area": "SY",
+   "text": "Cement shed: weatherproof, raised floor, stacks within limit, away from walls",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Inside the shed showing floor, stack height and wall gap.",
+   "status": "open"
+  },
+  {
+   "code": "SY-02",
+   "area": "SY",
+   "text": "Cement stacked first-in first-out, week of manufacture visible",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Stack labels / bag dates.",
+   "status": "open"
+  },
+  {
+   "code": "SY-03",
+   "area": "SY",
+   "text": "Steel stacked off the ground, diameter-wise, tagged",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Steel yard with sleepers and tags.",
+   "status": "open"
+  },
+  {
+   "code": "SY-04",
+   "area": "SY",
+   "text": "Sand and aggregate bays on hard ground, separated",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Material bays.",
+   "status": "open"
+  },
+  {
+   "code": "SY-05",
+   "area": "SY",
+   "text": "Admixtures and chemicals stored with safety data sheets",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Chemical store with MSDS file.",
+   "status": "open"
+  },
+  {
+   "code": "SY-06",
+   "area": "SY",
+   "text": "Diesel and flammables stored apart, no-smoking signs, extinguisher",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Diesel store with signage and extinguisher.",
+   "status": "open"
+  },
+  {
+   "code": "SY-07",
+   "area": "SY",
+   "text": "Gate entry and stores registers set up (challan, gate book, issue slips)",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "First pages of the gate book and stores register.",
+   "status": "open"
+  },
+  {
+   "code": "SY-08",
+   "area": "SY",
+   "text": "Weighing arrangement for incoming material (weighbridge or tie-up)",
+   "evidence": "both",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Weighbridge or tie-up letter.",
+   "status": "open"
+  },
+  {
+   "code": "SY-09",
+   "area": "SY",
+   "text": "Fire extinguishers in stores",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Extinguisher with tag.",
+   "status": "open"
+  },
+  {
+   "code": "SY-10",
+   "area": "SY",
+   "text": "Truck access and turning space kept clear",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Access road.",
+   "status": "open"
+  },
+  {
+   "code": "BP-01",
+   "area": "BP",
+   "text": "Batching plant installed and running at planned capacity",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Plant with its name plate.",
+   "status": "open"
+  },
+  {
+   "code": "BP-02",
+   "area": "BP",
+   "text": "Calibration status on the plant matches the certificate",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Calibration sticker and serial plate.",
+   "status": "open"
+  },
+  {
+   "code": "BP-03",
+   "area": "BP",
+   "text": "Aggregate bins separated; moisture check arrangement",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Bins and moisture meter.",
+   "status": "open"
+  },
+  {
+   "code": "BP-04",
+   "area": "BP",
+   "text": "Water tank clean; water test report available",
+   "evidence": "both",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Tank and the water test report.",
+   "status": "open"
+  },
+  {
+   "code": "BP-05",
+   "area": "BP",
+   "text": "Cement silo with level indicator",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Silo and indicator.",
+   "status": "open"
+  },
+  {
+   "code": "BP-06",
+   "area": "BP",
+   "text": "Site lab: calibrated compression testing machine, cube moulds, curing tank, slump cone",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Lab with CTM calibration tag and moulds.",
+   "status": "open"
+  },
+  {
+   "code": "BP-07",
+   "area": "BP",
+   "text": "Dust control as per consent conditions (sprinklers, covered conveyors)",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Sprinklers / covers.",
+   "status": "open"
+  },
+  {
+   "code": "BP-08",
+   "area": "BP",
+   "text": "Transit mixers and concrete pump available as planned",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Transit mixers and pump at site.",
+   "status": "open"
+  },
+  {
+   "code": "BP-10",
+   "area": "BP",
+   "text": "Trial mix done for the first grade to be poured",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Trial mix report with cube results.",
+   "status": "accepted"
+  },
+  {
+   "code": "FW-01",
+   "area": "FW",
+   "text": "Formwork quantity at site matches the cycle plan",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Stacked formwork, countable.",
+   "status": "open"
+  },
+  {
+   "code": "FW-02",
+   "area": "FW",
+   "text": "Formwork panels cleaned, oiled, not damaged",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Close-up of panels.",
+   "status": "open"
+  },
+  {
+   "code": "FW-03",
+   "area": "FW",
+   "text": "Props and scaffold material in good condition, quantity as planned",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Props and scaffold stack.",
+   "status": "open"
+  },
+  {
+   "code": "FW-04",
+   "area": "FW",
+   "text": "Formwork storage area level and drained",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Storage area.",
+   "status": "open"
+  },
+  {
+   "code": "FW-05",
+   "area": "FW",
+   "text": "Scaffold tagging system in place (green / red tags)",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Tag samples.",
+   "status": "open"
+  },
+  {
+   "code": "SF-01",
+   "area": "SF",
+   "text": "Hoarding and barricading on the full boundary; signage",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Boundary hoarding and gate.",
+   "status": "open"
+  },
+  {
+   "code": "SF-02",
+   "area": "SF",
+   "text": "Main gate: security, visitor register, vehicle entry control",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Gate cabin and register.",
+   "status": "open"
+  },
+  {
+   "code": "SF-03",
+   "area": "SF",
+   "text": "Induction room and toolbox talk area; induction records started",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Induction room and register.",
+   "status": "open"
+  },
+  {
+   "code": "SF-04",
+   "area": "SF",
+   "text": "PPE stock for the planned workforce: helmets, shoes, full-body harness, jackets",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "PPE store showing quantities.",
+   "status": "open"
+  },
+  {
+   "code": "SF-05",
+   "area": "SF",
+   "text": "Safety nets and edge protection material at site",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Nets and edge protection stock.",
+   "status": "open"
+  },
+  {
+   "code": "SF-06",
+   "area": "SF",
+   "text": "Fire point and emergency assembly point marked",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "Assembly point sign.",
+   "status": "open"
+  },
+  {
+   "code": "SF-07",
+   "area": "SF",
+   "text": "First-aid room and ambulance arrangement",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "major",
+   "hint": "First-aid room.",
+   "status": "open"
+  },
+  {
+   "code": "SF-08",
+   "area": "SF",
+   "text": "Site electrical: main DB with RCCB, earthing pits, licensed electrician on site",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Main DB and earthing pit.",
+   "status": "open"
+  },
+  {
+   "code": "SF-09",
+   "area": "SF",
+   "text": "Lifting appliances: test tags on machine, operator licences",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Crane test tag and operator card.",
+   "status": "open"
+  },
+  {
+   "code": "SF-10",
+   "area": "SF",
+   "text": "Safety officer present on site (met in person)",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Engineer notes the name; photo optional.",
+   "status": "open"
+  },
+  {
+   "code": "SF-11",
+   "area": "SF",
+   "text": "Housekeeping and lighting of work areas",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "General site view.",
+   "status": "open"
+  },
+  {
+   "code": "SF-12",
+   "area": "SF",
+   "text": "Excavation edges protected, access ladders",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "critical",
+   "hint": "Excavation edge and ladder.",
+   "status": "open"
+  },
+  {
+   "code": "SF-13",
+   "area": "SF",
+   "text": "Emergency contact board at gate and camp",
+   "evidence": "photo",
+   "when": "walk",
+   "severity": "minor",
+   "hint": "Board, readable.",
+   "status": "open"
+  },
+  {
+   "code": "SF-14",
+   "area": "SF",
+   "text": "Permit-to-work system: hot work, work at height, confined space",
+   "evidence": "document",
+   "when": "paper",
+   "severity": "major",
+   "hint": "Permit formats and the permit register.",
+   "status": "accepted"
+  }
+ ],
+ "areas": [
+  {
+   "code": "DR",
+   "name": "Drawings and design readiness",
+   "icon": "Ruler",
+   "walk": true
+  },
+  {
+   "code": "LC",
+   "name": "Labour camp",
+   "icon": "Tent",
+   "walk": true
+  },
+  {
+   "code": "SY",
+   "name": "Stores yard",
+   "icon": "Warehouse",
+   "walk": true
+  },
+  {
+   "code": "BP",
+   "name": "Batching plant / RMC",
+   "icon": "Factory",
+   "walk": true
+  },
+  {
+   "code": "FW",
+   "name": "Formwork and scaffolding",
+   "icon": "Stack",
+   "walk": true
+  },
+  {
+   "code": "SF",
+   "name": "Safety set-up",
+   "icon": "HardHat",
+   "walk": true
+  }
+ ],
+ "zones": [
+  {
+   "area": "LC",
+   "name": "Labour camp",
+   "polygon": [
+    [
+     19.21,
+     72.97
+    ],
+    [
+     19.21,
+     72.971
+    ],
+    [
+     19.2092,
+     72.971
+    ],
+    [
+     19.2092,
+     72.97
+    ]
+   ]
+  }
+ ]
+}

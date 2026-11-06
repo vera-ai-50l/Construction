@@ -101,7 +101,7 @@ const respond = (name, status, body, pos, does, extra = {}) =>
       : { respondWith: 'json', responseBody: body, options: { responseCode: status } }, pos, does, extra)
 
 const hook = (name, method, path, pos, does, extra = {}) =>
-  n(name, 'webhook', { httpMethod: method, path, responseMode: 'responseNode', options: extra.raw ? { rawBody: true } : {} }, pos, does, extra)
+  n(name, 'webhook', { httpMethod: method, path, responseMode: 'responseNode', options: { ...(extra.raw ? { rawBody: true } : {}), ...(extra.cors ? { allowedOrigins: '*' } : {}) } }, pos, does, extra)
 
 // Call the Send sub-workflow. Everything that goes out on WhatsApp goes through it.
 const send = (name, pos, does, m, extra = {}) =>
@@ -467,7 +467,7 @@ from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $jso
   wf(IDS.walk, 'Vera 05 · 03 Walk page API',
     'Back end for the engineer\'s phone page on the visit day: load the checklist, take each capture (photo + GPS + status + voice), record the GPS trail, finish the walk.',
     (w) => w.add(
-      hook('Walk page opens (GET)', 'GET', 'vera/mob/walk', at(0, 0), 'The page asks for this site\'s checklist.', { guard: ['auth'] }),
+      hook('Walk page opens (GET)', 'GET', 'vera/mob/walk', at(0, 0), 'The page asks for this site\'s checklist.', { guard: ['auth'], cors: true }),
       snippet('Check walk link', WALK_CHECK, at(1, 0), 'Signed link, expires the day after the visit.', { onError: true, guard: ['auth', 'error-out'] }),
       iff('Link valid?', '={{ $json.walk_ok }}', at(2, 0), 'Forwarded or expired links stop here.'),
       respond('Respond 401', 401, '={{ { "error": "unauthorized", "message": "This walk link has expired. Ask Vera for a new one." } }}', at(3, 1), 'Clear message for the page.'),
@@ -476,7 +476,7 @@ from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $jso
 from walks w join mobilisations mo on mo.id = w.mobilisation_id join lines l on l.mobilisation_id = mo.id where w.id = $1 group by w.id, mo.id;`, '={{ $json.walk_id }}', at(3, 0), 'Lines, statuses, papers already accepted, and the drawn areas.', { onError: true, guard: ['error-out', 'retry'] }),
       respond('Send checklist', 200, '={{ $json }}', at(4, 0), 'The page caches it, so it works with no signal.'),
 
-      hook('Walk page posts (POST)', 'POST', 'vera/mob/walk', at(0, 2.5), 'capture / trail / finish (body.action). The page retries until it gets an answer.', { guard: ['auth'] }),
+      hook('Walk page posts (POST)', 'POST', 'vera/mob/walk', at(0, 2.5), 'capture / trail / finish (body.action). The page retries until it gets an answer.', { guard: ['auth'], cors: true }),
       snippet('Check walk link ', WALK_CHECK, at(1, 2.5), 'Same check.', { onError: true, guard: ['auth', 'error-out'] }),
       iff('Link valid? ', '={{ $json.walk_ok }}', at(2, 2.5), 'Forwarded or expired links stop here.'),
       respond('Respond 401 ', 401, '={{ { "error": "unauthorized" } }}', at(3, 3.5), 'Page shows "ask for a new link".'),
