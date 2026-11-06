@@ -44,7 +44,7 @@ export function RunChat({ chat, compact = false }: { chat: Chat; compact?: boole
     <>
       <div className="mx-auto w-full max-w-[340px] md:w-[340px]">
         <div className="rounded-[2.75rem] bg-ink p-2 shadow-[0_50px_100px_-40px_rgba(30,20,10,0.55)] ring-1 ring-black/40">
-          <div className="flex h-[600px] flex-col overflow-hidden rounded-[calc(2.75rem-0.5rem)] bg-[#efe7d9]">
+          <div className="flex h-[600px] flex-col overflow-hidden rounded-[calc(2.75rem-0.5rem)] bg-[#eeeeec]">
             <div className="flex shrink-0 items-center gap-3 bg-[#1f3a33] px-5 pb-3 pt-6 text-paper">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-paper/15">
                 <Icon name="Sparkle" size={14} />
@@ -64,7 +64,7 @@ export function RunChat({ chat, compact = false }: { chat: Chat; compact?: boole
               {chat.msgs.slice(0, count).map((m, i) => (
                 <div key={i} className={`flex [animation:type-in_500ms_cubic-bezier(0.16,1,0.3,1)] ${m.from === 'them' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(60,40,20,0.3)] ${
+                    className={`max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(0,0,0,0.3)] ${
                       m.from === 'them' ? 'rounded-tr-md bg-[#d9f2c9]' : 'rounded-tl-md bg-card'
                     }`}
                   >
@@ -91,7 +91,7 @@ export function RunChat({ chat, compact = false }: { chat: Chat; compact?: boole
                 </div>
               )}
             </div>
-            <div className="flex shrink-0 items-center gap-2 border-t border-ink/[0.06] bg-[#efe7d9] px-3 py-2.5">
+            <div className="flex shrink-0 items-center gap-2 border-t border-ink/[0.06] bg-[#eeeeec] px-3 py-2.5">
               <span className="flex-1 rounded-full bg-card px-4 py-2 text-[12px] text-ink-3">Ask Vera anything…</span>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1f3a33] text-paper">
                 <Icon name="Microphone" size={14} />

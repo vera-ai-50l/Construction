@@ -19,7 +19,7 @@ export function Nav({ links, cta }: { links: Link[]; cta: Link }) {
   return (
     <>
       <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-4 md:pt-6">
-        <nav className="pointer-events-auto flex w-full max-w-max items-center gap-1 rounded-full bg-card/75 p-1.5 pl-5 shadow-[0_10px_40px_-16px_rgba(60,40,20,0.35)] ring-1 ring-ink/[0.07] backdrop-blur-xl">
+        <nav className="pointer-events-auto flex w-full max-w-max items-center gap-1 rounded-full bg-card/75 p-1.5 pl-5 shadow-[0_10px_40px_-16px_rgba(0,0,0,0.35)] ring-1 ring-ink/[0.07] backdrop-blur-xl">
           <a href="#top" className="mr-3 flex items-center gap-2 text-[15px] font-medium tracking-tight text-ink">
             <span className="display text-xl leading-none">Vera</span>
             <span className="hidden text-[10px] uppercase tracking-[0.2em] text-ink-3 sm:inline">back office</span>
@@ -35,7 +35,7 @@ export function Nav({ links, cta }: { links: Link[]; cta: Link }) {
           </ul>
           <a
             href={cta.href}
-            className="group ml-1 hidden items-center gap-2 rounded-full bg-ink py-1.5 pl-4 pr-1.5 text-[13px] font-medium text-paper transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] md:flex"
+            className="group ml-1 hidden items-center gap-2 rounded-full bg-ink-2 py-1.5 pl-4 pr-1.5 text-[13px] font-medium text-paper transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] md:flex"
           >
             {cta.label}
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-y-[1px] group-hover:translate-x-0.5">

@@ -58,7 +58,7 @@ export function Flow({ steps, tone = 'light' }: { steps: Step[]; tone?: 'light' 
                   <span
                     className={`relative flex h-12 w-12 items-center justify-center rounded-full ring-1 transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                       on
-                        ? 'bg-rust text-paper ring-rust shadow-[0_10px_30px_-10px_rgba(180,83,42,0.7)]'
+                        ? 'bg-rust text-paper ring-rust shadow-[0_10px_30px_-10px_rgba(229,13,37,0.7)]'
                         : dark
                           ? 'bg-espresso text-paper/50 ring-white/15'
                           : 'bg-card text-ink-3 ring-ink/10'

@@ -63,8 +63,8 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
   const review = audience === 'review'
   return (
     <section id="top" className="relative overflow-hidden px-4 pb-20 pt-32 md:px-8 md:pb-32 md:pt-44">
-      <div aria-hidden className="pointer-events-none absolute -right-40 -top-40 h-[640px] w-[640px] rounded-full bg-[radial-gradient(closest-side,rgba(192,138,43,0.16),transparent)]" />
-      <div aria-hidden className="pointer-events-none absolute -left-60 top-80 h-[520px] w-[520px] rounded-full bg-[radial-gradient(closest-side,rgba(111,127,98,0.14),transparent)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(23,23,23,0.09)_1px,transparent_1.3px)] [background-size:26px_26px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
+      <div aria-hidden className="pointer-events-none absolute -right-24 -top-10 h-[560px] w-[560px] bg-[radial-gradient(rgba(229,13,37,0.55)_1.6px,transparent_1.9px)] [background-size:22px_22px] [mask-image:radial-gradient(closest-side,black,transparent)] hidden md:block md:-right-10" />
       <div className="relative mx-auto grid max-w-[1240px] items-center gap-16 md:grid-cols-[1.15fr_1fr] md:gap-20">
         <div>
           <Reveal>
@@ -324,44 +324,44 @@ function AiUse() {
     ['WarningCircle', 'Guessing', 'When AI is not sure what a note or a photo says, it is flagged for a person, with the original attached.'],
   ]
   return (
-    <section id="ai" className="scroll-mt-24 bg-espresso px-4 py-24 text-paper md:px-8 md:py-36">
+    <section id="ai" className="scroll-mt-24 bg-rust px-4 py-24 text-white md:px-8 md:py-36">
       <div className="mx-auto max-w-[1240px]">
         <Reveal>
-          <Eyebrow tone="dark">How the AI is used</Eyebrow>
+          <Eyebrow tone="onred">How the AI is used</Eyebrow>
           <h2 className="display mt-6 max-w-3xl text-4xl leading-[1.05] md:text-6xl">AI reads. Code counts. People decide.</h2>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/65">
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/80">
             Your teams do not have to learn AI. They keep using WhatsApp and their registers. AI only reads; it never decides a rupee figure.
           </p>
         </Reveal>
         <div className="mt-16 grid gap-5 md:grid-cols-[1.4fr_1fr]">
           <Reveal>
-            <Bezel tone="dark" className="h-full" inner="h-full p-8 md:p-10">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-rust-2">Where AI helps</p>
+            <Bezel tone="onred" className="h-full" inner="h-full p-8 md:p-10">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white">Where AI helps</p>
               <ul className="mt-8 grid gap-8 sm:grid-cols-2">
                 {helps.map(([ic, t, d]) => (
                   <li key={t}>
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-rust-2">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white">
                       <Icon name={ic} size={20} />
                     </span>
                     <p className="mt-5 text-lg text-paper">{t}</p>
-                    <p className="mt-2 text-[15px] leading-relaxed text-paper/60">{d}</p>
+                    <p className="mt-2 text-[15px] leading-relaxed text-white/75">{d}</p>
                   </li>
                 ))}
               </ul>
             </Bezel>
           </Reveal>
           <Reveal delay={110}>
-            <Bezel tone="dark" className="h-full" inner="h-full p-8 md:p-10">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-paper/45">Where AI is not used</p>
+            <Bezel tone="onred" className="h-full" inner="h-full p-8 md:p-10">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white/70">Where AI is not used</p>
               <ul className="mt-8 space-y-8">
                 {not.map(([ic, t, d]) => (
                   <li key={t} className="flex gap-5">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-paper/70">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white/85">
                       <Icon name={ic} size={20} />
                     </span>
                     <span>
                       <span className="block text-lg text-paper">{t}</span>
-                      <span className="mt-2 block text-[15px] leading-relaxed text-paper/60">{d}</span>
+                      <span className="mt-2 block text-[15px] leading-relaxed text-white/75">{d}</span>
                     </span>
                   </li>
                 ))}

@@ -1,14 +1,12 @@
 import type { ReactNode } from 'react'
 
-export function Eyebrow({ children, tone = 'light', className = '' }: { children: ReactNode; tone?: 'light' | 'dark' | 'rust'; className?: string }) {
-  const t =
-    tone === 'dark'
-      ? 'bg-white/[0.06] text-paper/70 ring-white/10'
-      : tone === 'rust'
-        ? 'bg-rust/10 text-rust ring-rust/15'
-        : 'bg-ink/[0.04] text-ink-2 ring-ink/[0.07]'
+// Section label in the house style: a small red dot, then wide-tracked capitals. No pill.
+export function Eyebrow({ children, tone = 'light', className = '' }: { children: ReactNode; tone?: 'light' | 'dark' | 'rust' | 'onred'; className?: string }) {
+  const t = tone === 'dark' ? 'text-paper/70' : tone === 'onred' ? 'text-white' : tone === 'rust' ? 'text-rust' : 'text-ink-2'
+  const dot = tone === 'onred' ? 'bg-white' : 'bg-rust'
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-medium uppercase tracking-[0.2em] ring-1 ${t} ${className}`}>
+    <span className={`inline-flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.28em] ${t} ${className}`}>
+      <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
       {children}
     </span>
   )

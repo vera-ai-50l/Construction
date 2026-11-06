@@ -50,7 +50,7 @@ export function RunButton({ compact = false, big = false, className = '' }: { co
   const { phase, step, n, run } = r
   const progress = phase === 'done' ? 1 : phase === 'running' ? Math.max(step + 1, 0) / n : 0
   const label = phase === 'running' ? `Running · step ${Math.min(Math.max(step + 1, 1), n)} of ${n}` : phase === 'done' ? 'Run again' : 'Run the flow'
-  const size = big ? 'justify-between py-2.5 pl-7 pr-2.5 text-base bg-rust shadow-[0_18px_40px_-16px_rgba(180,83,42,0.8)]' : compact ? 'py-2 pl-5 pr-2 text-[13px] bg-ink' : 'py-2 pl-6 pr-2 text-sm bg-ink'
+  const size = big ? 'justify-between py-2.5 pl-7 pr-2.5 text-base bg-rust shadow-[0_18px_40px_-16px_rgba(229,13,37,0.8)]' : compact ? 'py-2 pl-5 pr-2 text-[13px] bg-ink' : 'py-2 pl-6 pr-2 text-sm bg-ink'
   return (
     <button
       type="button"
@@ -184,7 +184,7 @@ export function RunReveal({ children }: { children: ReactNode }) {
       <div className={`transition-all duration-[1100ms] ${EASE} ${done ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-3 scale-[0.98] opacity-40'}`}>{children}</div>
       <div className={`absolute inset-0 flex items-start justify-center pt-24 transition-opacity duration-700 ${EASE} ${done ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
         <div className="rounded-[1.75rem] bg-ink/[0.04] p-1.5 ring-1 ring-ink/[0.06]">
-          <div className="flex flex-col items-center gap-4 rounded-[calc(1.75rem-0.375rem)] bg-card px-7 py-6 text-center shadow-[0_30px_60px_-30px_rgba(60,40,20,0.35)]">
+          <div className="flex flex-col items-center gap-4 rounded-[calc(1.75rem-0.375rem)] bg-card px-7 py-6 text-center shadow-[0_30px_60px_-30px_rgba(0,0,0,0.35)]">
             <p className="max-w-[16rem] text-sm text-ink-2">
               {phase === 'running' ? 'Vera is building this from the registers…' : 'This is what comes out. Run the flow to build it.'}
             </p>
@@ -192,7 +192,7 @@ export function RunReveal({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={run}
-                className={`group inline-flex cursor-pointer touch-manipulation items-center gap-3 rounded-full bg-rust py-2 pl-6 pr-2 text-sm font-medium text-paper shadow-[0_18px_40px_-16px_rgba(180,83,42,0.8)] transition-transform duration-500 ${EASE} active:scale-[0.98]`}
+                className={`group inline-flex cursor-pointer touch-manipulation items-center gap-3 rounded-full bg-rust py-2 pl-6 pr-2 text-sm font-medium text-paper shadow-[0_18px_40px_-16px_rgba(229,13,37,0.8)] transition-transform duration-500 ${EASE} active:scale-[0.98]`}
               >
                 Run the flow
                 <span className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/15 transition-transform duration-500 ${EASE} group-hover:translate-x-0.5`}>

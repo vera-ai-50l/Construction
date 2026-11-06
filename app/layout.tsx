@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Geist, Geist_Mono } from 'next/font/google'
+import { Fraunces, Geist, Geist_Mono, Poppins } from 'next/font/google'
 import './globals.css'
 
 const fraunces = Fraunces({ subsets: ['latin'], variable: '--font-fraunces', axes: ['SOFT', 'WONK', 'opsz'], display: 'swap' })
+const poppins = Poppins({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-poppins', display: 'swap' })
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' })
 
@@ -14,14 +15,14 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#f6f1e7',
+  themeColor: '#f7f7f7',
   width: 'device-width',
   initialScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${fraunces.variable} ${geist.variable} ${geistMono.variable}`}>
+    <html lang="en-IN" className={`${fraunces.variable} ${poppins.variable} ${geist.variable} ${geistMono.variable}`}>
       <body>{children}</body>
     </html>
   )

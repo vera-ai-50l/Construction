@@ -53,16 +53,16 @@ export function HeroVisual() {
   return (
     <div className="relative">
       <div className="rounded-[2.25rem] bg-ink/[0.035] p-1.5 ring-1 ring-ink/[0.06]">
-        <div className="overflow-hidden rounded-[calc(2.25rem-0.375rem)] bg-card shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_40px_80px_-40px_rgba(60,40,20,0.25)]">
+        <div className="overflow-hidden rounded-[calc(2.25rem-0.375rem)] bg-card shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_40px_80px_-40px_rgba(0,0,0,0.25)]">
           {/* WhatsApp side */}
-          <div className="bg-[#efe7d9] px-5 pb-5 pt-4 md:px-6">
+          <div className="bg-[#eeeeec] px-5 pb-5 pt-4 md:px-6">
             <div className="flex items-center justify-between text-[11px] text-ink-3">
               <span className="flex items-center gap-2">
                 <Icon name="WhatsappLogo" size={14} /> Site group · today
               </span>
               <span className="num">{['07:48', '09:15', '12:40'][i]}</span>
             </div>
-            <div key={i} className="mt-4 max-w-[92%] rounded-2xl rounded-tl-md bg-card px-4 py-3 shadow-[0_6px_18px_-10px_rgba(60,40,20,0.25)] [animation:type-in_700ms_cubic-bezier(0.16,1,0.3,1)]">
+            <div key={i} className="mt-4 max-w-[92%] rounded-2xl rounded-tl-md bg-card px-4 py-3 shadow-[0_6px_18px_-10px_rgba(0,0,0,0.25)] [animation:type-in_700ms_cubic-bezier(0.16,1,0.3,1)]">
               <div className="flex items-center gap-2 text-[11px] font-medium text-sage">
                 <Icon name={s.icon} size={13} /> {s.from} · <span className="font-normal text-ink-3">{s.kind}</span>
               </div>

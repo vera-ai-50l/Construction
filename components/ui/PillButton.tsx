@@ -15,9 +15,9 @@ export function PillButton({
 }) {
   const v =
     variant === 'dark'
-      ? 'bg-ink text-paper hover:bg-ink-2'
+      ? 'bg-ink-2 text-white hover:bg-ink'
       : 'bg-card text-ink ring-1 ring-ink/10 hover:ring-ink/20'
-  const dot = variant === 'dark' ? 'bg-white/10' : 'bg-ink/[0.06]'
+  const dot = variant === 'dark' ? 'bg-white/15' : 'bg-ink/[0.08]'
   return (
     <a
       href={href}

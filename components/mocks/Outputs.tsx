@@ -15,7 +15,7 @@ function Tag({ tone, children }: { tone: 'High' | 'Medium' | 'Check' | 'sage' | 
 function Plate({ children, title, sub }: { children: React.ReactNode; title: string; sub: string }) {
   return (
     <div className="rounded-[2rem] bg-ink/[0.035] p-1.5 ring-1 ring-ink/[0.06]">
-      <div className="rounded-[calc(2rem-0.375rem)] bg-card p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_30px_60px_-30px_rgba(60,40,20,0.2)] md:p-7">
+      <div className="rounded-[calc(2rem-0.375rem)] bg-card p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_30px_60px_-30px_rgba(0,0,0,0.2)] md:p-7">
         <div className="flex items-start justify-between gap-4 border-b border-ink/[0.06] pb-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.2em] text-ink-3">{sub}</p>
@@ -91,7 +91,7 @@ export function BriefPhone() {
   return (
     <div className="mx-auto w-full max-w-[340px]">
       <div className="rounded-[2.75rem] bg-ink p-2 shadow-[0_50px_100px_-40px_rgba(30,20,10,0.55)] ring-1 ring-black/40">
-        <div className="overflow-hidden rounded-[calc(2.75rem-0.5rem)] bg-[#efe7d9]">
+        <div className="overflow-hidden rounded-[calc(2.75rem-0.5rem)] bg-[#eeeeec]">
           <div className="flex items-center gap-3 bg-[#1f3a33] px-5 pb-3 pt-6 text-paper">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-paper/15">
               <Icon name="Sparkle" size={14} />
@@ -102,7 +102,7 @@ export function BriefPhone() {
             </span>
           </div>
           <div className="space-y-2 p-3">
-            <div className="rounded-2xl rounded-tl-md bg-card px-4 py-3 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(60,40,20,0.3)]">
+            <div className="rounded-2xl rounded-tl-md bg-card px-4 py-3 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(0,0,0,0.3)]">
               <p className="font-semibold">Fri, 6 Nov (for Thu, 5 Nov)</p>
               <p className="mt-1.5">
                 <b>3 of 4 sites reported</b> · 102 people · 13/15 messages read
@@ -120,7 +120,7 @@ export function BriefPhone() {
                 ))}
               </ol>
             </div>
-            <div className="rounded-2xl rounded-tl-md bg-card px-4 py-3 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(60,40,20,0.3)]">
+            <div className="rounded-2xl rounded-tl-md bg-card px-4 py-3 text-[12.5px] leading-relaxed text-ink shadow-[0_4px_14px_-8px_rgba(0,0,0,0.3)]">
               <p className="font-semibold">Sites</p>
               <p className="mt-1">• <b>Kharadi</b>: 56 people. Slab L3 shuttering 70%. Cement 400 bags in.</p>
               <p>• <b>Hinjewadi</b>: 16 people. PEB frames 18/24. Crane down 4 h.</p>
