@@ -238,8 +238,13 @@ begin
       return jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', 'review', 'line', ''));
     end if;
     update evidence set line_code = a->>'value', bind_method = case when bind_method = 'ai' then 'ai-confirmed' else 'confirmed' end where id = ev.id;
-    update lines set status = case when status = 'open' then 'filed' else status end where mobilisation_id = ev.mobilisation_id and code = a->>'value';
-    r := jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', 'filed', 'line', a->>'value', 'photo', ev.kind = 'photo'));
+    -- A paper confirmed by button has not been through the paper checks yet: a person runs them (v1).
+    update lines set status = case when evidence in ('document', 'both') and ev.kind = 'document' then 'review' when status in ('open', 'rejected') then 'filed' else status end
+      where mobilisation_id = ev.mobilisation_id and code = a->>'value';
+    if exists (select 1 from lines where mobilisation_id = ev.mobilisation_id and code = a->>'value' and status = 'review') then
+      insert into review_queue (mobilisation_id, evidence_id, reason) values (ev.mobilisation_id, ev.id, 'Paper filed by button: run the paper checks');
+    end if;
+    r := jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', case when ev.kind = 'document' then 'review' else 'filed' end, 'line', a->>'value', 'photo', ev.kind = 'photo'));
   elsif a->>'verb' = 'pick' then
     insert into pending_picks (contact_id, line_code, at) values ((a->>'by')::bigint, a->>'value', now())
       on conflict (contact_id) do update set line_code = excluded.line_code, at = now();

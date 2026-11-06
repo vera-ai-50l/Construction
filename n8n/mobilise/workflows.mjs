@@ -385,8 +385,12 @@ return { json: { ...ctx.json, message, transcript: t || '[voice note: transcript
       http('Claude: which line?', { url: CLAUDE, auth: 'claude', headers: { 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'content-type': 'application/json' }, json: '={{ JSON.stringify($json.request) }}', timeout: 90000 }, at(15, 1), 'AI chooses a line and gives an honest confidence. It never says whether the site is OK.', { guard: ['retry', 'error-out', 'timeout', 'schema'], onError: true }),
       code('Confidence gate', L.gateMatch, at(16, 1), '≥ 0.90 with a 0.30 lead: file it. 0.45–0.90: ask the sender. Unreadable, suspicious, refused or malformed: a person.', { guard: ['human', 'schema'], pre: "input = { ...$('Build classify request').item.json, request: undefined, ai: $input.item.json };" }),
       sw('Sure enough?', '={{ $json.decision }}', ['auto', 'confirm', 'human'], at(17, 1), 'File it / ask the sender / a person.', { guard: ['human'] }),
-      code('Build confirm buttons', L.buildConfirm, at(18, 2.1), 'Top 3 lines as one-tap buttons, plus "Something else".'),
-      send('Ask sender to confirm', at(19, 2.1), 'The answer comes back as a button reply and is applied in one transaction.', { kind: 'confirm', ref: "={{ String($json.message_id) }}" }),
+      pg('Save as unfiled evidence', `insert into evidence (mobilisation_id, line_code, message_id, kind, s3_key, sha256, mime, bytes, bind_method, ai, transcript, transcript_lang, created_by)
+values ($1, null, $2, $3, $4, $5, $6, $7, 'ai', $8::jsonb, nullif($9, ''), nullif($10, ''), $11) returning id as evidence_id;`,
+        "={{ $json.mobilisation_id }},={{ $json.message_id }},={{ $json.message.type === 'document' ? 'document' : $json.message.type === 'audio' ? 'audio' : 'photo' }},={{ $json.s3_key }},={{ $json.file.sha256 }},={{ $json.file.mime }},={{ $json.file.bytes }},={{ JSON.stringify($json.ai_answer || null) }},={{ $json.transcript || '' }},={{ $json.transcript_lang || '' }},={{ $json.contact_id }}",
+        at(18, 2.1), 'The file is kept, with no line yet, so the button answer has something to file.', { guard: ['audit', 'retry'] }),
+      code('Build confirm buttons', L.buildConfirm, at(19, 2.1), 'Top 3 lines as one-tap buttons, plus "Something else".', { pre: "input = { ...$('Save as unfiled evidence').item.json, ...input }; input = { ...input, ...($('Confidence gate').isExecuted ? $('Confidence gate').item.json : $('Bind to checklist line').item.json), evidence_id: $input.item.json.evidence_id, wamid: ($('Load and lock message').item.json.message || {}).wamid }; input.options = input.options && input.options.length ? input.options : ((input.binding && input.binding.ask && input.binding.candidates) || []);" }),
+      send('Ask sender to confirm', at(20, 2.1), 'The answer comes back as a button reply and is applied in one transaction.', { kind: 'confirm', ref: "={{ String($json.message_id) }}" }),
       pg('Send to review queue', SQL.review, "={{ $('Load and lock message').item.json.mobilisation_id }},={{ $('Load and lock message').item.json.message_id }},={{ $json.reason || ($json.error && $json.error.message) || 'Could not process automatically' }},={{ JSON.stringify($json.options || []) }}", at(18, 3.3), 'A person files it, usually within the hour. The sender is told it is being checked.', { guard: ['human', 'audit'] }),
       pg('Mark needs a person', SQL.needsHuman, "={{ $('Load and lock message').item.json.message_id }},={{ ($json.error && $json.error.message) || $json.reason || 'step failed' }}", at(19, 3.3), 'Any failed step lands here: download, storage, AI. The message is never dropped.', { guard: ['human', 'error-out'] }),
       iff('Is it a paper line?', "={{ ['document','both'].includes((($json.lines || []).find(l => l.code === ($json.binding.line || $json.line)) || {}).evidence) && $json.message.type !== 'audio' }}", at(18, -0.2), 'Papers get read and checked; site photos wait for the engineer.'),
@@ -433,19 +437,19 @@ from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $jso
       .link('From the router', 'Load and lock message').link('Load and lock message', 'What kind of message?')
       .link('What kind of message?', 'Get media link', 'media').link('What kind of message?', 'Read typed text', 'text')
       .link('What kind of message?', 'Read button answer', 'interactive').link('What kind of message?', 'Save location pin', 'location').link('What kind of message?', 'Build "what we accept"', 'Other')
-      .link('Get media link', 'Download the file').link('Get media link', 'Mark needs a person', 'error')
-      .link('Download the file', 'Hash and size check').link('Download the file', 'Mark needs a person', 'error')
+      .link('Get media link', 'Download the file').link('Get media link', 'Send to review queue', 'error')
+      .link('Download the file', 'Hash and size check').link('Download the file', 'Send to review queue', 'error')
       .link('Hash and size check', 'File OK?').link('File OK?', 'Voice note?', 'true').link('File OK?', 'Explain file problem', 'false').link('Explain file problem', 'Send file problem')
       .link('Voice note?', 'Transcribe voice (Sarvam)', 'true').link('Voice note?', 'Store in evidence bucket', 'false').link('Voice note?', 'Keep file after upload', 'false')
       .link('Transcribe voice (Sarvam)', 'Add transcript').link('Transcribe voice (Sarvam)', 'Add transcript', 'error')
       .link('Add transcript', 'Store in evidence bucket').link('Add transcript', 'Keep file after upload')
-      .link('Store in evidence bucket', 'Keep file after upload', 'in2').link('Store in evidence bucket', 'Mark needs a person', 'error')
+      .link('Store in evidence bucket', 'Keep file after upload', 'in2').link('Store in evidence bucket', 'Send to review queue', 'error')
       .link('Keep file after upload', 'Bind to checklist line').link('Bind to checklist line', 'How was it bound?')
-      .link('How was it bound?', 'Is it a paper line?', 'bound').link('How was it bound?', 'Build classify request', 'ai').link('How was it bound?', 'Build confirm buttons', 'ask').link('How was it bound?', 'Send to review queue', 'Other')
+      .link('How was it bound?', 'Is it a paper line?', 'bound').link('How was it bound?', 'Build classify request', 'ai').link('How was it bound?', 'Save as unfiled evidence', 'ask').link('How was it bound?', 'Send to review queue', 'Other')
       .link('Build classify request', 'Claude: which line?').link('Claude: which line?', 'Confidence gate').link('Claude: which line?', 'Send to review queue', 'error')
       .link('Confidence gate', 'Sure enough?')
-      .link('Sure enough?', 'Is it a paper line?', 'auto').link('Sure enough?', 'Build confirm buttons', 'confirm').link('Sure enough?', 'Send to review queue', 'human').link('Sure enough?', 'Send to review queue', 'Other')
-      .link('Build confirm buttons', 'Ask sender to confirm')
+      .link('Sure enough?', 'Is it a paper line?', 'auto').link('Sure enough?', 'Save as unfiled evidence', 'confirm').link('Sure enough?', 'Send to review queue', 'human').link('Sure enough?', 'Send to review queue', 'Other')
+      .link('Save as unfiled evidence', 'Build confirm buttons').link('Build confirm buttons', 'Ask sender to confirm')
       .link('Is it a paper line?', 'Build extract request', 'true').link('Is it a paper line?', 'Make reply fragment', 'false')
       .link('Build extract request', 'Claude: read the paper').link('Claude: read the paper', 'Parse the fields').link('Claude: read the paper', 'Send to review queue', 'error')
       .link('Parse the fields', 'Check paper rules').link('Check paper rules', 'Make reply fragment')
@@ -454,6 +458,8 @@ from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $jso
       .link('Read typed text', 'Which command?')
       .link('Which command?', 'Send the gap list now', 'gap_list').link('Which command?', 'Build help text', 'help').link('Which command?', 'Build N/A request', 'request_na').link('Which command?', 'Save remark', 'remark').link('Which command?', 'Save remark', 'Other')
       .link('Build help text', 'Send help').link('Build N/A request', 'Ask engineer about N/A')
+      .link('Send the gap list now', 'Mark done').link('Send help', 'Mark done').link('Ask engineer about N/A', 'Mark done').link('Save remark', 'Mark done')
+      .link('Ask sender to confirm', 'Mark done').link('Send file problem', 'Mark done').link('Apply answer', 'Mark done').link('Save location pin', 'Mark done').link('Send "what we accept"', 'Mark done')
       .link('Read button answer', 'Allowed?').link('Allowed?', 'Apply answer', 'true').link('Allowed?', 'Build "what we accept"', 'false')
       .link('Build "what we accept"', 'Send "what we accept"')),
 
@@ -467,7 +473,7 @@ from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $jso
       respond('Respond 401', 401, '={{ { "error": "unauthorized", "message": "This walk link has expired. Ask Vera for a new one." } }}', at(3, 1), 'Clear message for the page.'),
       pg('Load checklist for walk', `select w.id as walk_id, mo.project, mo.visit_date, json_agg(json_build_object('code', l.code, 'area', l.area, 'text', l.text, 'severity', l.severity, 'status', l.status, 'when', l."when", 'evidence', l.evidence) order by l.code) as lines,
   (select jsonb_agg(jsonb_build_object('area', z.area, 'name', z.name) || z.shape) from zones z where z.mobilisation_id = mo.id) as zones
-from walks w join mobilisations mo on mo.id = w.mobilisation_id join lines l on l.mobilisation_id = mo.id where w.id = $1 group by w.id, mo.id;`, '={{ $json.walk_id }}', at(3, 0), 'Lines, statuses, papers already accepted, and the drawn areas.', { guard: ['retry'] }),
+from walks w join mobilisations mo on mo.id = w.mobilisation_id join lines l on l.mobilisation_id = mo.id where w.id = $1 group by w.id, mo.id;`, '={{ $json.walk_id }}', at(3, 0), 'Lines, statuses, papers already accepted, and the drawn areas.', { onError: true, guard: ['error-out', 'retry'] }),
       respond('Send checklist', 200, '={{ $json }}', at(4, 0), 'The page caches it, so it works with no signal.'),
 
       hook('Walk page posts (POST)', 'POST', 'vera/mob/walk', at(0, 2.5), 'capture / trail / finish (body.action). The page retries until it gets an answer.', { guard: ['auth'] }),
@@ -477,8 +483,8 @@ from walks w join mobilisations mo on mo.id = w.mobilisation_id join lines l on 
       sw('Which action?', '={{ $json.body.action }}', ['capture', 'trail', 'finish'], at(3, 2.5), 'Three kinds of post.'),
       pg('Load walk', `select w.id as walk_id, w.mobilisation_id, w.engineer_id, (select json_agg(code) from lines where mobilisation_id = w.mobilisation_id) as visit_lines,
   (select jsonb_agg(jsonb_build_object('area', area, 'name', name) || shape) from zones where mobilisation_id = w.mobilisation_id) as zones,
-  (select row_to_json(e) from evidence e where e.capture_id = nullif($2, '')::uuid) as existing
-from walks w where w.id = $1;`, "={{ $json.walk_id }},={{ $json.body.capture_id || '' }}", at(4, 1.6), 'Lines, areas, and whether this capture was already saved.', { guard: ['retry'] }),
+  (select row_to_json(e) from evidence e where e.capture_id::text = $2) as existing
+from walks w where w.id = $1;`, "={{ $json.walk_id }},={{ $json.body.capture_id || '' }}", at(4, 1.6), 'Lines, areas, and whether this capture was already saved.', { onError: true, guard: ['error-out', 'retry'] }),
       code('Validate capture', L.validateCapture, at(5, 1.6), 'UUID per capture, known line code, size limits, sane GPS, phone clock vs server clock.', { guard: ['schema', 'error-out'], onError: true, pre: "input.body = $('Check walk link ').item.json.body;" }),
       iff('Capture valid?', '={{ $json.valid }}', at(6, 1.6), 'Bad input gets a 400 with the reasons.', { guard: ['schema'] }),
       respond('Respond 400', 400, '={{ { "error": "validation_error", "details": $json.errors } }}', at(7, 2.6), 'The page shows the reason and keeps the capture.'),
@@ -495,7 +501,7 @@ from walks w where w.id = $1;`, "={{ $json.walk_id }},={{ $json.body.capture_id 
 ) update lines set status = case when $9 = 'photo' then status else $9 end, remark = coalesce(nullif($7, ''), remark), status_by = $8, status_at = now()
   where mobilisation_id = $1 and code = $2 returning code, status;`,
       "={{ $('Photo to file').item.json.mobilisation_id }},={{ $('Photo to file').item.json.body.line }},={{ $('Photo to file').item.json.body.capture_id }},={{ $('Photo to file').item.json.s3_key }},={{ JSON.stringify($('Photo to file').item.json.body.gps || null) }},={{ JSON.stringify($('Photo to file').item.json.geo) }},={{ $('Photo to file').item.json.body.remark || '' }},={{ $('Photo to file').item.json.engineer_id }},={{ $('Photo to file').item.json.body.status }}",
-      at(11, 1.6), 'The line was chosen before the shutter: binding is certain. Status is the engineer\'s own.', { guard: ['idempotent', 'audit', 'retry'] }),
+      at(11, 1.6), 'The line was chosen before the shutter: binding is certain. Status is the engineer\'s own.', { onError: true, guard: ['error-out', 'idempotent', 'audit', 'retry'] }),
       respond('Respond saved', 200, "={{ { ok: true, line: $json.code, status: $json.status, geo: $('Place on site map').item.json.geo } }}", at(12, 1.6), 'The page shows "inside Labour camp" or "38 m outside: are you in the right area?"'),
       iff('Voice remark attached?', "={{ !!$('Photo to file').item.json.body.audio_b64 }}", at(13, 1.6), 'Voice is transcribed after the page has its answer.'),
       code('Voice to file', (input) => input, at(14, 1.1), 'Base64 → audio file.', { src: `const item = $input.item;\nconst b = $('Photo to file').item.json.body;\nreturn { json: { capture_id: b.capture_id }, binary: { data: { data: b.audio_b64, mimeType: b.audio_mime || 'audio/webm', fileName: b.capture_id + '.webm', fileExtension: 'webm' } } };` }),
@@ -504,9 +510,9 @@ from walks w where w.id = $1;`, "={{ $json.walk_id }},={{ $json.body.capture_id 
 
       pg('Save trail points', `insert into trail (walk_id, ts, lat, lng, accuracy)
 select $1, (p->>'ts')::timestamptz, (p->>'lat')::float, (p->>'lng')::float, (p->>'accuracy')::real from json_array_elements($2::json) p
-on conflict do nothing returning 1;`, "={{ $json.walk_id }},={{ JSON.stringify(($json.body.points || []).slice(0, 500)) }}", at(4, 3.4), 'Batches of GPS points every 20 s while the page is open. Duplicates ignored.', { guard: ['idempotent', 'retry'], alwaysOutput: true }),
+on conflict do nothing returning 1;`, "={{ $json.walk_id }},={{ JSON.stringify(($json.body.points || []).slice(0, 500)) }}", at(4, 3.4), 'Batches of GPS points every 20 s while the page is open. Duplicates ignored.', { onError: true, guard: ['error-out', 'idempotent', 'retry'], alwaysOutput: true }),
       respond('Respond 204', 204, null, at(5, 3.4), 'No body.'),
-      pg('Mark walk finished', `update walks set finished_at = coalesce(finished_at, now()) where id = $1 returning mobilisation_id;`, '={{ $json.walk_id }}', at(4, 4.6), 'Once only.', { guard: ['idempotent'] }),
+      pg('Mark walk finished', `update walks set finished_at = coalesce(finished_at, now()) where id = $1 returning mobilisation_id;`, '={{ $json.walk_id }}', at(4, 4.6), 'Once only.', { onError: true, guard: ['error-out', 'idempotent'] }),
       respond('Respond 202', 202, '={{ { "ok": true, "message": "Report is being drafted. It will come on WhatsApp." } }}', at(5, 4.6), 'The page can close.'),
       sub('Draft the NOC report', IDS.noc, { mobilisation_id: '={{ $json.mobilisation_id }}' }, at(6, 4.6), 'WF-06 runs in the background.'),
       respond('Respond 500', 500, '={{ { "error": "internal_error", "message": "Saved on the phone. Will retry." } }}', at(2, 5.8), 'Any step that breaks still answers the page, so it keeps the capture and retries.'),
@@ -522,7 +528,7 @@ on conflict do nothing returning 1;`, "={{ $json.walk_id }},={{ JSON.stringify((
       .link('Voice to file', 'Transcribe remark').link('Transcribe remark', 'Save remark transcript').link('Transcribe remark', 'Save remark transcript', 'error')
       .link('Save trail points', 'Respond 204')
       .link('Mark walk finished', 'Respond 202').link('Respond 202', 'Draft the NOC report')
-      .link('Check walk link', 'Respond 500', 'error').link('Check walk link ', 'Respond 500', 'error').link('Validate capture', 'Respond 500', 'error').link('Place on site map', 'Respond 500', 'error').link('Photo to file', 'Respond 500', 'error')),
+      .link('Check walk link', 'Respond 500', 'error').link('Load checklist for walk', 'Respond 500', 'error').link('Load walk', 'Respond 500', 'error').link('Save capture and line', 'Respond 500', 'error').link('Save trail points', 'Respond 500', 'error').link('Mark walk finished', 'Respond 500', 'error').link('Check walk link ', 'Respond 500', 'error').link('Validate capture', 'Respond 500', 'error').link('Place on site map', 'Respond 500', 'error').link('Photo to file', 'Respond 500', 'error')),
 
   // ------------------------------------------------------------------ WF-04
   wf(IDS.gaps, 'Vera 05 · 04 Evening gap list',
@@ -705,7 +711,7 @@ select (select id from mo) as mobilisation_id, (select id from k where role = 'c
       pg('Log what we sent', `insert into outbound (wamid, mobilisation_id, contact_id, kind, area, line_code, ref, payload) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb) returning id, wamid;`,
         "={{ $json.messages[0].id }},={{ $('Asked to send').item.json.mobilisation_id }},={{ $('Asked to send').item.json.contact_id }},={{ $('Asked to send').item.json.kind }},={{ $('Asked to send').item.json.area }},={{ $('Asked to send').item.json.line_code }},={{ $('Asked to send').item.json.ref }},={{ JSON.stringify($('Session or template?').item.json.payload) }}",
         at(5, 0), 'The message id is what makes "reply to this message" bind for sure.', { guard: ['audit', 'retry'] }),
-      code('Why did it fail?', L.classifySendError, at(5, 2.2), 'Reads the WhatsApp error code: rate limit, window closed, bad number.', { pre: "input = { ...$('Session or template?').item.json, error: $input.item.json.error || $input.item.json };" }),
+      code('Why did it fail?', L.classifySendError, at(5, 2.2), 'Reads the WhatsApp error code: rate limit, window closed, bad number.', { pre: "const prev = $('Wait 30 s').isExecuted ? Number($('Wait 30 s').item.json.attempt || 0) : 0; const base = $('Session or template?').item.json; input = { ...base, attempt: Math.max(Number(base.attempt || 0), prev), error: $input.item.json.error || $input.item.json };" }),
       sw('Retry?', '={{ $json.send_error.action }}', ['retry', 'needs_template'], at(6, 2.2), 'Rate limit → wait and retry (max 3). Window closed → template. Bad number → a person.'),
       n('Wait 30 s', 'wait', { amount: 30, unit: 'seconds' }, at(7, 1.6), 'WhatsApp limits how fast one person can be messaged.'),
     )

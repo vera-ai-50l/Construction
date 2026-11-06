@@ -862,17 +862,45 @@
       "notesInFlow": false
     },
     {
-      "id": "513d6d16-5c5b-4e83-8f77-1f23556d7ada",
-      "name": "Build confirm buttons",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "06e81c0a-4001-49c0-859b-9e0a0d9658fe",
+      "name": "Save as unfiled evidence",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
         5040,
         420
       ],
       "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into evidence (mobilisation_id, line_code, message_id, kind, s3_key, sha256, mime, bytes, bind_method, ai, transcript, transcript_lang, created_by)\nvalues ($1, null, $2, $3, $4, $5, $6, $7, 'ai', $8::jsonb, nullif($9, ''), nullif($10, ''), $11) returning id as evidence_id;",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id) ?? null, ($json.message_id) ?? null, ($json.message.type === 'document' ? 'document' : $json.message.type === 'audio' ? 'audio' : 'photo') ?? null, ($json.s3_key) ?? null, ($json.file.sha256) ?? null, ($json.file.mime) ?? null, ($json.file.bytes) ?? null, (JSON.stringify($json.ai_answer || null)) ?? null, ($json.transcript || '') ?? null, ($json.transcript_lang || '') ?? null, ($json.contact_id) ?? null] }}"
+        }
+      },
+      "notes": "The file is kept, with no line yet, so the button answer has something to file.\nGuardrails: audit, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "513d6d16-5c5b-4e83-8f77-1f23556d7ada",
+      "name": "Build confirm buttons",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5320,
+        420
+      ],
+      "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Build confirm buttons: generated from n8n/mobilise/logic.mjs buildConfirm. Edit there, then rebuild.\nconst __fn = function buildConfirm(input) {\n  const opts = (input.options || []).slice(0, 10)\n  const byCode = {}\n  for (const l of input.lines || []) byCode[l.code] = l\n  const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)\n  const ev = input.evidence_id || input.message_id\n  const body = { text: 'Which checklist line is this for?' + (input.reason ? '\\n' + short(input.reason, 200) : '') }\n  let interactive\n  if (opts.length && opts.length <= 2) {\n    interactive = {\n      type: 'button', body,\n      action: { buttons: opts.map((c) => ({ type: 'reply', reply: { id: 'bind:' + ev + ':' + c, title: short(c + ' ' + (byCode[c] ? byCode[c].text : ''), 20) } })).concat([{ type: 'reply', reply: { id: 'bind:' + ev + ':OTHER', title: 'Something else' } }]) },\n    }\n  } else {\n    const rows = (opts.length ? opts : (input.lines || []).filter((l) => !['accepted', 'ok', 'na'].includes(l.status)).slice(0, 9).map((l) => l.code))\n      .map((c) => ({ id: 'bind:' + ev + ':' + c, title: short(c, 24), description: short(byCode[c] ? byCode[c].text : '', 72) }))\n    rows.push({ id: 'bind:' + ev + ':OTHER', title: 'Something else', description: 'Type the line code, e.g. LC-03' })\n    interactive = { type: 'list', body, action: { button: 'Choose line', sections: [{ title: 'Open lines', rows: rows.slice(0, 10) }] } }\n  }\n  return { ...input, request: { body: { type: 'interactive', context: input.wamid ? { message_id: input.wamid } : undefined, interactive } } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Build confirm buttons: generated from n8n/mobilise/logic.mjs buildConfirm. Edit there, then rebuild.\nconst __fn = function buildConfirm(input) {\n  const opts = (input.options || []).slice(0, 10)\n  const byCode = {}\n  for (const l of input.lines || []) byCode[l.code] = l\n  const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)\n  const ev = input.evidence_id || input.message_id\n  const body = { text: 'Which checklist line is this for?' + (input.reason ? '\\n' + short(input.reason, 200) : '') }\n  let interactive\n  if (opts.length && opts.length <= 2) {\n    interactive = {\n      type: 'button', body,\n      action: { buttons: opts.map((c) => ({ type: 'reply', reply: { id: 'bind:' + ev + ':' + c, title: short(c + ' ' + (byCode[c] ? byCode[c].text : ''), 20) } })).concat([{ type: 'reply', reply: { id: 'bind:' + ev + ':OTHER', title: 'Something else' } }]) },\n    }\n  } else {\n    const rows = (opts.length ? opts : (input.lines || []).filter((l) => !['accepted', 'ok', 'na'].includes(l.status)).slice(0, 9).map((l) => l.code))\n      .map((c) => ({ id: 'bind:' + ev + ':' + c, title: short(c, 24), description: short(byCode[c] ? byCode[c].text : '', 72) }))\n    rows.push({ id: 'bind:' + ev + ':OTHER', title: 'Something else', description: 'Type the line code, e.g. LC-03' })\n    interactive = { type: 'list', body, action: { button: 'Choose line', sections: [{ title: 'Open lines', rows: rows.slice(0, 10) }] } }\n  }\n  return { ...input, request: { body: { type: 'interactive', context: input.wamid ? { message_id: input.wamid } : undefined, interactive } } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...$('Save as unfiled evidence').item.json, ...input }; input = { ...input, ...($('Confidence gate').isExecuted ? $('Confidence gate').item.json : $('Bind to checklist line').item.json), evidence_id: $input.item.json.evidence_id, wamid: ($('Load and lock message').item.json.message || {}).wamid }; input.options = input.options && input.options.length ? input.options : ((input.binding && input.binding.ask && input.binding.candidates) || []);\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "Top 3 lines as one-tap buttons, plus \"Something else\".",
       "notesInFlow": false
@@ -883,7 +911,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        5320,
+        5600,
         420
       ],
       "parameters": {
@@ -2024,7 +2052,7 @@
         ],
         [
           {
-            "node": "Mark needs a person",
+            "node": "Send to review queue",
             "type": "main",
             "index": 0
           }
@@ -2042,7 +2070,7 @@
         ],
         [
           {
-            "node": "Mark needs a person",
+            "node": "Send to review queue",
             "type": "main",
             "index": 0
           }
@@ -2157,7 +2185,7 @@
         ],
         [
           {
-            "node": "Mark needs a person",
+            "node": "Send to review queue",
             "type": "main",
             "index": 0
           }
@@ -2204,7 +2232,7 @@
         ],
         [
           {
-            "node": "Build confirm buttons",
+            "node": "Save as unfiled evidence",
             "type": "main",
             "index": 0
           }
@@ -2269,21 +2297,32 @@
         ],
         [
           {
+            "node": "Save as unfiled evidence",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save as unfiled evidence": {
+      "main": [
+        [
+          {
             "node": "Build confirm buttons",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send to review queue",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Send to review queue",
             "type": "main",
             "index": 0
           }
@@ -2480,6 +2519,105 @@
         [
           {
             "node": "Ask engineer about N/A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the gap list now": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send help": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask engineer about N/A": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save remark": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask sender to confirm": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send file problem": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply answer": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save location pin": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send \"what we accept\"": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
             "type": "main",
             "index": 0
           }

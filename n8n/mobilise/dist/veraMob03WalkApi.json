@@ -126,7 +126,7 @@
           "queryReplacement": "={{ [($json.walk_id) ?? null] }}"
         }
       },
-      "notes": "Lines, statuses, papers already accepted, and the drawn areas.\nGuardrails: retry",
+      "notes": "Lines, statuses, papers already accepted, and the drawn areas.\nGuardrails: error-out, retry",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -136,7 +136,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
     },
     {
       "id": "8b2b3361-4c6e-4b47-8115-7706d38a4ffa",
@@ -351,12 +352,12 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "select w.id as walk_id, w.mobilisation_id, w.engineer_id, (select json_agg(code) from lines where mobilisation_id = w.mobilisation_id) as visit_lines,\n  (select jsonb_agg(jsonb_build_object('area', area, 'name', name) || shape) from zones where mobilisation_id = w.mobilisation_id) as zones,\n  (select row_to_json(e) from evidence e where e.capture_id = nullif($2, '')::uuid) as existing\nfrom walks w where w.id = $1;",
+        "query": "select w.id as walk_id, w.mobilisation_id, w.engineer_id, (select json_agg(code) from lines where mobilisation_id = w.mobilisation_id) as visit_lines,\n  (select jsonb_agg(jsonb_build_object('area', area, 'name', name) || shape) from zones where mobilisation_id = w.mobilisation_id) as zones,\n  (select row_to_json(e) from evidence e where e.capture_id::text = $2) as existing\nfrom walks w where w.id = $1;",
         "options": {
           "queryReplacement": "={{ [($json.walk_id) ?? null, ($json.body.capture_id || '') ?? null] }}"
         }
       },
-      "notes": "Lines, areas, and whether this capture was already saved.\nGuardrails: retry",
+      "notes": "Lines, areas, and whether this capture was already saved.\nGuardrails: error-out, retry",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -366,7 +367,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
     },
     {
       "id": "7bca16f4-96e1-436d-8e6d-42a2db2c2509",
@@ -597,7 +599,7 @@
           "queryReplacement": "={{ [($('Photo to file').item.json.mobilisation_id) ?? null, ($('Photo to file').item.json.body.line) ?? null, ($('Photo to file').item.json.body.capture_id) ?? null, ($('Photo to file').item.json.s3_key) ?? null, (JSON.stringify($('Photo to file').item.json.body.gps || null)) ?? null, (JSON.stringify($('Photo to file').item.json.geo)) ?? null, ($('Photo to file').item.json.body.remark || '') ?? null, ($('Photo to file').item.json.engineer_id) ?? null, ($('Photo to file').item.json.body.status) ?? null] }}"
         }
       },
-      "notes": "The line was chosen before the shutter: binding is certain. Status is the engineer's own.\nGuardrails: idempotent, audit, retry",
+      "notes": "The line was chosen before the shutter: binding is certain. Status is the engineer's own.\nGuardrails: error-out, idempotent, audit, retry",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -607,7 +609,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
     },
     {
       "id": "6857c934-1a15-44f5-83e2-a43c0394fad2",
@@ -779,7 +782,7 @@
           "queryReplacement": "={{ [($json.walk_id) ?? null, (JSON.stringify(($json.body.points || []).slice(0, 500))) ?? null] }}"
         }
       },
-      "notes": "Batches of GPS points every 20 s while the page is open. Duplicates ignored.\nGuardrails: idempotent, retry",
+      "notes": "Batches of GPS points every 20 s while the page is open. Duplicates ignored.\nGuardrails: error-out, idempotent, retry",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -790,6 +793,7 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
       "alwaysOutputData": true
     },
     {
@@ -826,7 +830,7 @@
           "queryReplacement": "={{ [($json.walk_id) ?? null] }}"
         }
       },
-      "notes": "Once only.\nGuardrails: idempotent",
+      "notes": "Once only.\nGuardrails: error-out, idempotent",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -836,7 +840,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
     },
     {
       "id": "ce287c89-52de-4e4b-8c43-041f90e8335e",
@@ -978,6 +983,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1065,6 +1077,13 @@
         [
           {
             "node": "Validate capture",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
             "type": "main",
             "index": 0
           }
@@ -1187,6 +1206,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1249,6 +1275,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -1257,6 +1290,13 @@
         [
           {
             "node": "Respond 202",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
             "type": "main",
             "index": 0
           }

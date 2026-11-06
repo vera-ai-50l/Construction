@@ -165,6 +165,12 @@ export async function runTests() {
   R.push(t('send: rate limit 131056 → retry, then a person after 3', L.classifySendError({ error: { message: '(#131056) pair rate limit', code: 131056 }, attempt: 0 }).send_error.action === 'retry' && L.classifySendError({ error: { code: 131056 }, attempt: 2 }).send_error.action === 'review', null))
   R.push(t('send: 131047 window closed → switch to template', (() => { const e = L.classifySendError({ error: { code: 131047 } }); return e.send_error.action === 'needs_template' && L.chooseSendMode({ ...e, phone: '919820000001', last_inbound_at: new Date().toISOString(), request: { body: { type: 'text' }, template: { name: 't' } } }).mode === 'template' })(), null))
 
+  R.push(t('send: blocked 403 (proxy / bad token) → a person, not a retry loop', L.classifySendError({ error: { message: '403 - "request blocked: no rule allows host"', httpCode: '403', timestamp: 1762455123 }, attempt: 0 }).send_error.action === 'review', null))
+  R.push(t('send: WhatsApp 503 → retry', L.classifySendError({ error: { message: '503 - Service Unavailable', httpCode: '503' }, attempt: 0 }).send_error.action === 'retry', null))
+  const whyNode = nodeNamed(IDS.send, 'Why did it fail?')
+  const rate = { error: { message: '(#131056) pair rate limit', code: 131056 } }
+  const w1 = await runCode(whyNode, [{ json: rate }], { nodes: { 'Session or template?': { json: { attempt: 0 } }, 'Wait 30 s': { json: { attempt: 2 } } } })
+  R.push(t('n8n code: retry counter survives the Wait loop (3rd failure → a person)', w1[0].json.attempt === 3 && w1[0].json.send_error.action === 'review', w1[0].json.send_error))
   // ---- replies
   const rep = L.composeReply({ fragments: [{ kind: 'accepted', line: 'PAP-03' }, { kind: 'filed', line: 'LC-03', photo: true }, { kind: 'filed', line: 'LC-05', photo: true }, { kind: 'rejected', line: 'PAP-04', reason: 'Sum insured below contract value' }], open_count: 9 })
   R.push(t('reply: 4 items → 1 message', rep.reply.split('\n').length === 4 && rep.reply.includes('LC-03, LC-05'), rep.reply))

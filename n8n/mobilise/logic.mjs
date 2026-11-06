@@ -686,13 +686,15 @@ export function classifySendError(input) {
   const e = input.error || {}
   const text = JSON.stringify(e)
   const code = Number((text.match(/"code"\s*:\s*(\d{3,6})/) || [])[1] || 0)
+  // HTTP status from n8n's error ("403 - …" or httpCode), never from digits elsewhere in the text.
+  const status = Number(e.httpCode || (String(e.message || '').match(/^(\d{3})\b/) || [])[1] || 0)
   const attempt = Number(input.attempt || 0) + 1
   let action = 'review'
   let note = 'Send failed: ' + (e.message || 'unknown error')
   if ([131056, 130429, 80007].includes(code)) { action = attempt < 3 ? 'retry' : 'review'; note = 'Rate limited by WhatsApp (' + code + ')' }
   else if (code === 131047) { action = 'needs_template'; note = 'More than 24 h since their last message: needs a template' }
   else if ([131026, 131051, 131052, 131053].includes(code)) { action = 'review'; note = 'WhatsApp could not deliver to this number (' + code + ')' }
-  else if (/ETIMEDOUT|ECONNRESET|5\d\d/.test(text) && attempt < 3) { action = 'retry'; note = 'WhatsApp did not answer; retrying' }
+  else if ((status >= 500 || /ETIMEDOUT|ECONNRESET|ECONNABORTED|socket hang up/.test(text)) && attempt < 3) { action = 'retry'; note = 'WhatsApp did not answer; retrying' }
   return { ...input, attempt, send_error: { code, action, note } }
 }
 
