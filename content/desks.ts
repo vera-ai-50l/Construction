@@ -47,7 +47,7 @@ export const desks: Desk[] = [
     helps: [
       { figure: '₹16.1 L', text: 'found on one illustrative site over 3 months: 6.3% of ₹2.57 Cr bought' },
       { figure: '₹7.5 L', text: 'recoverable from suppliers: duplicates, short supply, above-PO rates' },
-      { figure: '₹8.6 L', text: 'stoppable on site: issue beyond what the work needed' },
+      { figure: '~60 h', text: 'of register matching a quarter per site, done in code instead of by hand (estimate)' },
     ],
   },
   {
@@ -75,7 +75,7 @@ export const desks: Desk[] = [
     ],
     outputs: ['8 AM WhatsApp brief for the owner', 'Daily progress record per site', 'Weekly progress report: planned against done, per site', 'Hindrance register with photos and times', 'Tally receipt-note import'],
     helps: [
-      { figure: '13 / 15', text: 'messages turned into records on an illustrative day; the 2 unclear ones flagged, not guessed' },
+      { figure: '~8 h', text: 'a week saved per site: no daily or weekly report typed by hand (estimate)' },
       { figure: '₹63.8 L', text: 'at risk surfaced before 8 AM: an unpaid RA bill, a returned bill, idle crews, a no-PO delivery' },
       { figure: '0', text: 'new apps for site teams. They keep using WhatsApp' },
     ],
@@ -106,8 +106,8 @@ export const desks: Desk[] = [
     ],
     outputs: ['Weekly stock sheet across all sites', 'Excess and shortage for the next 4 weeks, valued', 'Who sends what to whom, with supervisor names', 'One buy list for purchase', 'Cash stuck in excess stock, by site'],
     helps: [
-      { figure: '₹16.1 L', text: 'of new steel not bought in an illustrative week: 26 MT sent 40 km from a site that did not need it' },
-      { figure: '6+ sites', text: 'on one sheet every Monday: extra, short, and who sends what to whom' },
+      { figure: '₹14.9 L', text: 'of new steel not bought in an illustrative week: 24 MT sent 40 km from a site that did not need it' },
+      { figure: '~5 h', text: 'a week of purchase calls to six sites, replaced by one Monday sheet (estimate)' },
       { figure: '1 list', text: 'for purchase: only what no site can spare' },
     ],
   },
@@ -136,9 +136,9 @@ export const desks: Desk[] = [
     ],
     outputs: ['Wastage by supervisor, wing and floor', 'Over-limit quantity valued at the PO rate', 'Issue slip numbers behind every line', 'Each supervisor’s own lines on WhatsApp'],
     helps: [
-      { figure: '₹15,120', text: 'one illustrative line: Tower C, Floor 7, Supervisor A, 42 bags of cement over the allowed limit' },
-      { figure: '2 · 3 · 1.5%', text: 'allowed wastage for cement, steel and RMC, set to your own norms' },
-      { figure: '1 table', text: 'a month, ranking supervisors by rupees over the limit' },
+      { figure: '₹65,670', text: 'over the allowed limit in one illustrative tower in one month, now with a name on every line' },
+      { figure: '₹15,120', text: 'one line: Tower C, Floor 7, Supervisor A, 42 bags of cement over the 2% limit' },
+      { figure: '~1 day', text: 'of QS work a month, splitting issues by supervisor, done in code (estimate)' },
     ],
   },
   {
@@ -148,7 +148,7 @@ export const desks: Desk[] = [
     kind: 'Per new site · first inspection',
     status: 'In design',
     audience: ['developer'],
-    headline: 'The first inspection of a new site, done and written up in one day instead of three.',
+    headline: 'For developers. The first inspection of a new site, done and written up in one day instead of three.',
     problem:
       'Before a contractor starts on a new site, the project team inspects the set-up: labour camp, stores yard, batching plant or RMC, formwork, safety, and a stack of certificates. It takes two to three days because papers are chased on the day, photos sit on personal phones, and the report is typed up afterwards from notes.',
     inputs: [
@@ -167,9 +167,9 @@ export const desks: Desk[] = [
     ],
     outputs: ['Missing-document list, before the visit', 'Checklist with photos, time and location', 'Inspection report drafted the same day', 'Open items closed on photos'],
     helps: [
-      { figure: '1 day', text: 'for the first inspection and its report, against 2–3 days today' },
+      { figure: '3 → 1 day', text: 'for the first inspection and its report, so the contractor starts two days sooner' },
+      { figure: '~16 h', text: 'of engineer time saved per new site: no papers chased on the day, no report typed afterwards (estimate)' },
       { figure: '~80%', text: 'of the report written by the end of the visit, from tagged photos and spoken remarks' },
-      { figure: '0', text: 'second visits for small open items: closed on a photo' },
     ],
   },
   {

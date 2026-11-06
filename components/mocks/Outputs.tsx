@@ -167,7 +167,7 @@ export function PlantBoard() {
 export function StockSheet() {
   const sites = [
     ['Baner', 'TMT 16 mm', '+30 MT', 'excess'],
-    ['Chakan', 'TMT 16 mm', '−26 MT by 18 Nov', 'short'],
+    ['Chakan', 'TMT 16 mm', '−24 MT by 18 Nov', 'short'],
     ['Kharadi', 'OPC 53 (wk 36)', '+340 bags', 'excess'],
     ['Wagholi', 'OPC 53', '−300 bags by 14 Nov', 'short'],
     ['Hinjewadi', 'AAC blocks', '+1,800 nos', 'excess'],
@@ -179,7 +179,7 @@ export function StockSheet() {
         {[
           ['Excess', '₹31.2 L', 'bg-ochre-2/70 text-ochre'],
           ['Short, 4 weeks', '₹22.4 L', 'bg-rust/10 text-rust'],
-          ['To buy', '₹4.1 L', 'bg-sage-2/60 text-sage'],
+          ['To buy', '₹5.3 L', 'bg-sage-2/60 text-sage'],
         ].map(([a, b, t]) => (
           <div key={a} className={`rounded-2xl p-3.5 ${t.split(' ')[0]}`}>
             <p className={`text-[10px] uppercase tracking-[0.14em] ${t.split(' ')[1]}`}>{a}</p>
@@ -201,7 +201,7 @@ export function StockSheet() {
       <p className="mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-3">Who sends what to whom</p>
       <ul className="mt-2 space-y-2 text-sm">
         {[
-          ['Baner → Chakan', '26 MT steel · 40 km', '₹16.1 L'],
+          ['Baner → Chakan', '24 MT steel · 40 km', '₹14.9 L'],
           ['Kharadi → Wagholi', '300 bags, oldest first · 18 km', '₹1.1 L'],
           ['Hinjewadi → Kharadi', '1,800 AAC blocks · 28 km', '₹1.1 L'],
         ].map(([a, b, c]) => (

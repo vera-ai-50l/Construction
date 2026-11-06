@@ -5,7 +5,7 @@ import { PillButton } from './ui/PillButton'
 import { Reveal } from './ui/Reveal'
 import { Icon } from './ui/icons'
 import { Flow } from './Flow'
-import { BeforeAfter, RunButton, RunProvider, RunReveal } from './run/Run'
+import { BeforeAfter, RunButton, RunProvider, RunReveal, RunZone } from './run/Run'
 import { RunChat } from './run/RunChat'
 import { Nav } from './Nav'
 import { HeroVisual } from './mocks/HeroVisual'
@@ -27,7 +27,20 @@ const MOCKS: Record<string, ReactNode> = {
 // Each link shows only the desks meant for it, numbered in the order shown.
 function desksFor(audience: Audience): Desk[] {
   const who = audience === 'review' ? 'developer' : 'contractor'
-  return desks.filter((d) => d.audience.includes(who)).map((d, i) => ({ ...d, num: String(i + 1).padStart(2, '0') }))
+  const list = desks.filter((d) => d.audience.includes(who))
+  // The developer brief leads with the desk built only for developers.
+  if (who === 'developer') list.sort((a, b) => Number(onlyDev(b)) - Number(onlyDev(a)))
+  return list.map((d, i) => ({ ...d, num: String(i + 1).padStart(2, '0') }))
+}
+
+const onlyDev = (d: Desk) => d.audience.length === 1 && d.audience[0] === 'developer'
+
+function DevChip() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-rust px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.16em] text-paper">
+      <Icon name="Buildings" size={12} /> For developers
+    </span>
+  )
 }
 
 function contactHref() {
@@ -56,14 +69,14 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
         <div>
           <Reveal>
             <Eyebrow tone={firm || review ? 'rust' : 'light'}>
-              {review ? 'Vera · a short brief' : firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}
+              {review ? 'Vera · for developers' : firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}
             </Eyebrow>
           </Reveal>
           <Reveal delay={80}>
             <h1 className="display mt-7 text-[2.75rem] leading-[1.02] text-ink sm:text-6xl md:text-[5.25rem]">
               {review ? (
                 <>
-                  A tool that cleans up the <em className="text-rust">paperwork on your sites</em>.
+                  Hours back for your site teams. <em className="text-rust">Rupees you can see.</em>
                 </>
               ) : (
                 <>
@@ -75,7 +88,7 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-2">
               {review
-                ? 'Five problems every large site has, and how Vera fixes each one. Vera reads the purchase orders, challans, stores slips and WhatsApp messages your sites already produce, checks them against each other, and sends each person the part they act on. Nobody on site learns a new app.'
+                ? 'Vera works like a back-office team for your projects. It reads what your sites already send, does the checking your engineers now do by hand, and shows the time and money it saves on every site.'
                 : 'Vera is a back office that reads your registers, challans and WhatsApp site groups, reconciles them in code, and hands you the rupees: what to claim from suppliers, what to stop on site, and what is idle.'}
             </p>
           </Reveal>
@@ -98,7 +111,7 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
             </p>
           </Reveal>
         </div>
-        <Reveal delay={200}>
+        <Reveal delay={200} className={review ? 'hidden md:block' : ''}>
           <HeroVisual />
         </Reveal>
       </div>
@@ -107,10 +120,10 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
         <dl className="grid grid-cols-2 gap-y-10 border-t border-ink/[0.08] pt-10 md:grid-cols-4">
           {(review
             ? [
-                ['1 week', 'to the first leak report on one site'],
-                ['8 AM', 'daily brief, and a weekly report every Monday'],
-                ['1 day', 'target for a new site’s first inspection'],
-                ['0', 'rupee figures made by AI: all maths is in code'],
+                ['3 → 1 day', 'first inspection of a new site'],
+                ['~8 h', 'a week saved per site on progress reports'],
+                ['₹16.1 L', 'leakage found on one sample site in 3 months'],
+                ['0', 'new apps for site teams'],
               ]
             : [
                 ['6.3%', 'of material spend leaking on an illustrative site'],
@@ -232,12 +245,12 @@ function How() {
 
 /* ───────────── Review: five problems, five fixes ───────────── */
 
-const FIVE: { id: string; problem: string; fix: string; get: string }[] = [
-  { id: 'leak-check', problem: 'Material is paid for but never received, or billed twice, or billed above the PO rate. More is issued than the BOQ work needed.', fix: 'Matches every PO, challan, gate entry and issue slip against each other and against the work done.', get: 'A 1-page ₹ summary: what to recover from suppliers, what to stop on site.' },
-  { id: 'site-desk', problem: 'Daily and weekly progress reports are typed by hand from WhatsApp messages, late and in different formats.', fix: 'Reads the voice notes, photos and texts supervisors already send to the site group.', get: 'An 8 AM brief every day, and a weekly progress report every Monday.' },
-  { id: 'stock-balance', problem: 'One site has too much steel or cement while another buys the same material fresh.', fix: 'Puts every site’s stock and next 4 weeks of need on one sheet, and matches excess to shortage.', get: 'Who sends what to whom, and one buy list for purchase.' },
-  { id: 'wastage', problem: 'The site total looks fine, so nobody sees which supervisor used more than the allowed wastage.', fix: 'Ties every issue slip to a supervisor and floor, and checks it against the work done plus the allowed wastage.', get: 'A monthly table: who is over the limit, by how much, in ₹.' },
-  { id: 'site-opening', problem: 'The first inspection of a new site takes 2–3 days: papers chased on the day, report typed afterwards.', fix: 'Checks the contractor’s papers 3 days before, runs the checklist on a phone with tagged photos.', get: 'The inspection report about 80% written by the end of the same day.' },
+const FIVE: { id: string; problem: string; fix: string; big: string; effect: string }[] = [
+  { id: 'site-opening', problem: 'The first inspection of a new site takes 2–3 days.', fix: 'Papers checked 3 days before. Checklist, photos and remarks on a phone. Report drafted the same evening.', big: '3 → 1 day', effect: 'per new site. About 16 engineer hours saved; the contractor starts two days sooner.' },
+  { id: 'leak-check', problem: 'Material paid for but not received, billed twice, or above the PO rate.', fix: 'Matches every PO, challan, gate entry and issue slip against the BOQ work done.', big: '₹16.1 L', effect: 'found on one sample site in 3 months. About 60 hours of register matching saved.' },
+  { id: 'site-desk', problem: 'Daily and weekly progress reports typed by hand, and late.', fix: 'Reads the WhatsApp voice notes and photos supervisors already send.', big: '~8 h', effect: 'a week saved per site. Reports on time, in one format.' },
+  { id: 'stock-balance', problem: 'One site holds excess steel while another buys it fresh.', fix: 'One weekly sheet across sites: excess, shortage, and who sends what to whom.', big: '₹14.9 L', effect: 'of steel not bought in one sample week. Less cash stuck in idle stock.' },
+  { id: 'wastage', problem: 'Nobody sees which supervisor wasted above the allowed limit.', fix: 'Ties every issue slip to a supervisor and floor, and checks it against the work done.', big: '₹65,670', effect: 'over the limit in one tower in a month, with a name on every line.' },
 ]
 
 function FiveFixes({ list }: { list: Desk[] }) {
@@ -246,13 +259,13 @@ function FiveFixes({ list }: { list: Desk[] }) {
     <Section id="five">
       <Reveal>
         <Eyebrow>Five problems, five fixes</Eyebrow>
-        <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">What goes wrong today, and what Vera puts in front of you.</h2>
+        <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">Where your teams lose hours today, and what Vera gives back.</h2>
       </Reveal>
       <div className="mt-14 hidden grid-cols-[3rem_1.1fr_1.1fr_1fr_2.5rem] gap-6 px-7 text-[11px] uppercase tracking-[0.18em] text-ink-3 md:grid">
         <span />
         <span>The problem today</span>
         <span>What Vera does</span>
-        <span>What you get</span>
+        <span>The effect</span>
         <span />
       </div>
       <ol className="mt-4 space-y-3">
@@ -265,6 +278,11 @@ function FiveFixes({ list }: { list: Desk[] }) {
                 <Bezel inner="grid gap-4 p-6 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-y-0.5 md:grid-cols-[3rem_1.1fr_1.1fr_1fr_2.5rem] md:items-start md:gap-6 md:p-7">
                   <span className="num text-sm text-rust md:pt-1">{d.num}</span>
                   <span>
+                    {onlyDev(d) && (
+                      <span className="mb-3 block">
+                        <DevChip />
+                      </span>
+                    )}
                     <span className="display block text-2xl leading-tight text-ink">{d.name}</span>
                     <span className="mt-2 block text-[15px] leading-relaxed text-ink-2">{f.problem}</span>
                   </span>
@@ -272,9 +290,9 @@ function FiveFixes({ list }: { list: Desk[] }) {
                     <span className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-ink-3 md:hidden">What Vera does</span>
                     {f.fix}
                   </span>
-                  <span className="flex items-start gap-2 text-[15px] leading-relaxed text-ink">
-                    <Icon name="CheckCircle" size={18} className="mt-0.5 shrink-0 text-sage" />
-                    <span>{f.get}</span>
+                  <span className="rounded-2xl bg-sage-2/60 px-4 py-3 md:bg-transparent md:p-0">
+                    <span className="display block text-3xl leading-none text-ink">{f.big}</span>
+                    <span className="mt-2 block text-sm leading-relaxed text-ink-2">{f.effect}</span>
                   </span>
                   <span className="hidden h-10 w-10 items-center justify-center rounded-full bg-ink/[0.05] text-ink transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:scale-105 md:flex">
                     <Icon name="ArrowDownRight" size={16} />
@@ -287,7 +305,7 @@ function FiveFixes({ list }: { list: Desk[] }) {
       </ol>
       <Reveal delay={100}>
         <p className="mt-8 max-w-2xl text-sm leading-relaxed text-ink-3">
-          Each desk below has a “Run the flow” button. Press it to watch Vera work through sample registers step by step, then see who gets told and how they ask follow-up questions on WhatsApp.
+          Sample data; hours are estimates. Each desk below has a Run the flow button: press it to watch Vera fix sample records step by step.
         </p>
       </Reveal>
     </Section>
@@ -312,7 +330,7 @@ function AiUse() {
           <Eyebrow tone="dark">How the AI is used</Eyebrow>
           <h2 className="display mt-6 max-w-3xl text-4xl leading-[1.05] md:text-6xl">AI reads. Code counts. People decide.</h2>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/65">
-            Your teams do not have to learn AI. They keep sending WhatsApp messages and filling the registers they fill today. AI is used only where a person would otherwise have to read and type.
+            Your teams do not have to learn AI. They keep using WhatsApp and their registers. AI only reads; it never decides a rupee figure.
           </p>
         </Reveal>
         <div className="mt-16 grid gap-5 md:grid-cols-[1.4fr_1fr]">
@@ -414,81 +432,112 @@ function DeskSection({ d, index, compact = false }: { d: Desk; index: number; co
   return (
     <Section id={d.id} className={index % 2 === 1 ? 'bg-paper-2/60' : ''}>
       <RunProvider n={d.steps.length}>
-      {/* Header */}
-      <div className="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-end">
-        <Reveal>
-          <div className="flex flex-wrap items-center gap-3">
-            <Eyebrow>Desk {d.num}</Eyebrow>
-            <StatusChip status={d.status} />
-          </div>
-          <h2 className="display mt-6 text-5xl leading-[1] text-ink md:text-7xl">{d.name}</h2>
-          <p className="mt-5 max-w-2xl text-xl leading-snug text-ink-2 md:text-2xl">{d.headline}</p>
-        </Reveal>
-        <Reveal delay={100}>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-ink-3">The problem</p>
-          <p className="mt-3 text-base leading-relaxed text-ink-2">{d.problem}</p>
-        </Reveal>
-      </div>
-
-      {/* Flow */}
-      <Reveal delay={60} className="mt-16 md:mt-20">
-        <Bezel inner="px-6 py-10 md:px-10 md:py-12">
-          <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">The flow · {d.steps.length} steps</p>
-              <p className="mt-2 text-sm text-ink-2">Sample data. Press run and watch each step fix what it catches.</p>
-            </div>
-            <RunButton />
-          </div>
-          <Flow steps={d.steps} />
-          {runs[d.id] && <BeforeAfter rows={runs[d.id]} steps={d.steps} />}
-        </Bezel>
-      </Reveal>
-
-      {/* What goes in / what comes out */}
-      <div className={`mt-16 grid gap-12 md:mt-20 md:grid-cols-[1fr_1.15fr] md:gap-16 ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
-        <div className="space-y-12">
+        {/* Header */}
+        <div className="grid gap-8 md:grid-cols-[1.2fr_1fr] md:items-end md:gap-10">
           <Reveal>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">What you already have</p>
-            <ul className="mt-5 flex flex-wrap gap-2">
-              {d.inputs.map((x) => (
-                <li key={x.label} className="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm text-ink ring-1 ring-ink/[0.07]">
-                  <Icon name={x.icon} size={16} className="text-rust" /> {x.label}
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Eyebrow>Desk {d.num}</Eyebrow>
+              {onlyDev(d) && <DevChip />}
+              <StatusChip status={d.status} />
+            </div>
+            <h2 className="display mt-6 text-[2.6rem] leading-[1] text-ink sm:text-5xl md:text-7xl">{d.name}</h2>
+            <p className="mt-5 max-w-2xl text-lg leading-snug text-ink-2 md:text-2xl">{compact ? d.headline.replace(/^For developers\. /, '') : d.headline}</p>
           </Reveal>
-          <Reveal delay={80}>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">What you get</p>
-            <ul className="mt-5 divide-y divide-ink/[0.07] border-y border-ink/[0.07]">
-              {d.outputs.map((x) => (
-                <li key={x} className="flex items-center gap-3 py-3.5 text-[15px] text-ink">
-                  <Icon name="CheckCircle" size={18} className="shrink-0 text-sage" /> {x}
-                </li>
-              ))}
-            </ul>
+          <Reveal delay={100}>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-ink-3">The problem</p>
+            <p className="mt-3 text-base leading-relaxed text-ink-2">{d.problem}</p>
           </Reveal>
-          {!compact && <Reveal delay={140}>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">How it helps</p>
-            <dl className="mt-5 space-y-6">
+        </div>
+
+        {/* Effect */}
+        {compact && (
+          <Reveal delay={60} className="mt-10 md:mt-14">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">The effect · sample site, illustrative</p>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
               {d.helps.map((h) => (
-                <div key={h.text} className="grid grid-cols-[7.5rem_1fr] items-baseline gap-4">
-                  <dt className="display text-3xl text-ink">{h.figure}</dt>
-                  <dd className="text-sm leading-relaxed text-ink-2">{h.text}</dd>
+                <div key={h.text} className="rounded-2xl bg-card px-5 py-4 ring-1 ring-ink/[0.06]">
+                  <dt className="display text-3xl leading-none text-rust">{h.figure}</dt>
+                  <dd className="mt-2 text-sm leading-relaxed text-ink-2">{h.text}</dd>
                 </div>
               ))}
             </dl>
-          </Reveal>}
-        </div>
-        <Reveal delay={120} className="md:sticky md:top-28 md:self-start">
-          <RunReveal>{MOCKS[d.id]}</RunReveal>
-        </Reveal>
-      </div>
-      {chats[d.id] && (
-        <Reveal className="mt-20 border-t border-ink/[0.07] pt-16 md:mt-28 md:pt-24">
-          <RunChat chat={chats[d.id]} />
-        </Reveal>
-      )}
+          </Reveal>
+        )}
+
+        <RunZone label={`${d.name} · sample data`}>
+          {/* Flow */}
+          <Reveal delay={60} className={compact ? 'mt-10 md:mt-14' : 'mt-16 md:mt-20'}>
+            <Bezel inner="px-5 py-8 md:px-10 md:py-12">
+              <div className="mb-8 flex flex-col gap-4 md:mb-10 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">The flow · {d.steps.length} steps</p>
+                  <p className="mt-2 text-sm text-ink-2">Press the button and watch each step fix what it catches.</p>
+                </div>
+                <RunButton big className="w-full md:w-auto" />
+              </div>
+              <Flow steps={d.steps} />
+              {runs[d.id] && <BeforeAfter rows={runs[d.id]} steps={d.steps} />}
+            </Bezel>
+          </Reveal>
+
+          {compact ? (
+            <div className="mt-12 grid gap-12 md:mt-16 md:grid-cols-[1.15fr_1fr] md:gap-16">
+              <Reveal className="md:sticky md:top-28 md:self-start">
+                <p className="mb-4 text-[11px] uppercase tracking-[0.2em] text-ink-3">What comes out</p>
+                <RunReveal>{MOCKS[d.id]}</RunReveal>
+              </Reveal>
+              {chats[d.id] && (
+                <Reveal delay={100}>
+                  <RunChat chat={chats[d.id]} compact />
+                </Reveal>
+              )}
+            </div>
+          ) : (
+            <div className={`mt-16 grid gap-12 md:mt-20 md:grid-cols-[1fr_1.15fr] md:gap-16 ${flip ? 'md:[&>*:first-child]:order-2' : ''}`}>
+              <div className="space-y-12">
+                <Reveal>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">What you already have</p>
+                  <ul className="mt-5 flex flex-wrap gap-2">
+                    {d.inputs.map((x) => (
+                      <li key={x.label} className="flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm text-ink ring-1 ring-ink/[0.07]">
+                        <Icon name={x.icon} size={16} className="text-rust" /> {x.label}
+                      </li>
+                    ))}
+                  </ul>
+                </Reveal>
+                <Reveal delay={80}>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">What you get</p>
+                  <ul className="mt-5 divide-y divide-ink/[0.07] border-y border-ink/[0.07]">
+                    {d.outputs.map((x) => (
+                      <li key={x} className="flex items-center gap-3 py-3.5 text-[15px] text-ink">
+                        <Icon name="CheckCircle" size={18} className="shrink-0 text-sage" /> {x}
+                      </li>
+                    ))}
+                  </ul>
+                </Reveal>
+                <Reveal delay={140}>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">How it helps</p>
+                  <dl className="mt-5 space-y-6">
+                    {d.helps.map((h) => (
+                      <div key={h.text} className="grid grid-cols-[7.5rem_1fr] items-baseline gap-4">
+                        <dt className="display text-3xl text-ink">{h.figure}</dt>
+                        <dd className="text-sm leading-relaxed text-ink-2">{h.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Reveal>
+              </div>
+              <Reveal delay={120} className="md:sticky md:top-28 md:self-start">
+                <RunReveal>{MOCKS[d.id]}</RunReveal>
+              </Reveal>
+            </div>
+          )}
+        </RunZone>
+        {!compact && chats[d.id] && (
+          <Reveal className="mt-20 border-t border-ink/[0.07] pt-16 md:mt-28 md:pt-24">
+            <RunChat chat={chats[d.id]} />
+          </Reveal>
+        )}
       </RunProvider>
     </Section>
   )
@@ -592,7 +641,7 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
         <Bezel tone="tint" inner="relative overflow-hidden px-7 py-16 text-center md:px-16 md:py-24">
           <Eyebrow>{audience === 'review' ? 'Thank you' : firm ? `Next step for ${firm}` : 'Next step'}</Eyebrow>
           <h2 className="display mx-auto mt-6 max-w-3xl text-4xl leading-[1.05] text-ink md:text-6xl">
-            {audience === 'review' ? 'Pick one site and one problem. We will show you the result.' : 'Pick one site. We will show you the leak in a week.'}
+            {audience === 'review' ? 'Pick one site and one problem. We will show you the hours and rupees.' : 'Pick one site. We will show you the leak in a week.'}
           </h2>
           {has ? (
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">

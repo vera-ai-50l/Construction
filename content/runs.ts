@@ -33,7 +33,7 @@ export const runs: Record<string, RunRow[]> = {
     { source: '6 site stores', before: 'Stock kept in 6 separate registers', issue: 'Nobody sees the total', after: 'One sheet: ₹1.9 Cr of stock across 6 sites', step: 0 },
     { source: 'Baner', before: 'TMT 16 mm · 30 MT in the yard', issue: 'No slab needs it for 9 weeks', after: 'Excess ₹18.6 L · offered to other sites', step: 2 },
     { source: 'Kharadi', before: '340 bags OPC 53, made week 36', issue: 'Ageing in a damp store', after: 'Move first · Wagholi pours next week', step: 2 },
-    { source: 'Chakan', before: 'Slab L9 in 2 weeks needs 26 MT', issue: 'PO for 26 MT about to go out', after: 'Send from Baner, 40 km · ₹16.1 L not bought', step: 3 },
+    { source: 'Chakan', before: 'Slab L9 in 2 weeks needs 24 MT', issue: 'PO for 24 MT about to go out', after: 'Send from Baner, 40 km · ₹14.9 L not bought', step: 3 },
     { source: 'Purchase', before: '14 purchase requests from 6 sites', issue: 'Each site buys for itself', after: 'One buy list: 5 items no site can spare', step: 4 },
     { source: 'Both sites’ books', before: 'Steel moved by truck', issue: 'Transfer never recorded', after: 'Transfer note + Tally stock journal', step: 5 },
   ],

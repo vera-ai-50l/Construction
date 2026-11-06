@@ -69,11 +69,11 @@ export const chats: Record<string, Chat> = {
     ],
     phone: { who: 'Vera · Stock balance', sub: 'to Purchase head · Monday sheet' },
     msgs: [
-      { from: 'vera', text: 'Stock balance · week 45 · 6 sites\nExcess ₹31.2 L. Short ₹22.4 L in the next 4 weeks.\n3 transfers cover ₹18.3 L of the shortage.\nBuy list: 5 items, ₹4.1 L.', files: ['Stock balance wk45.xlsx'] },
+      { from: 'vera', text: 'Stock balance · week 45 · 6 sites\nExcess ₹31.2 L. Short ₹22.4 L in the next 4 weeks.\n3 transfers cover ₹17.1 L of the shortage.\nBuy list: 5 items, ₹5.3 L.', files: ['Stock balance wk45.xlsx'] },
       { from: 'them', text: 'Chakan ka steel PO roko?' },
-      { from: 'vera', text: 'Yes. Baner has 30 MT TMT 16 mm and no slab using it for 9 weeks. Chakan needs 26 MT for slab L9 on 18 Nov. Truck cost ₹14,000. ₹16.1 L not spent.' },
+      { from: 'vera', text: 'Yes. Baner has 30 MT TMT 16 mm and no slab using it for 9 weeks. Chakan needs 24 MT for slab L9 on 18 Nov. Truck cost ₹14,000. ₹14.9 L not spent.' },
       { from: 'them', text: 'Theek hai, bhejo' },
-      { from: 'vera', text: 'Transfer note TN/BN-CK/021 sent to Ramesh (Baner stores) and Sunil (Chakan supervisor): 26 MT, loading Wednesday. Chakan PR closed. Tally journal ready.', files: ['TN-BN-CK-021.pdf'] },
+      { from: 'vera', text: 'Transfer note TN/BN-CK/021 sent to Ramesh (Baner stores) and Sunil (Chakan supervisor): 24 MT, loading Wednesday. Chakan PR closed. Tally journal ready.', files: ['TN-BN-CK-021.pdf'] },
     ],
   },
   wastage: {

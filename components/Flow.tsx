@@ -95,13 +95,16 @@ export function Flow({ steps, tone = 'light' }: { steps: Step[]; tone?: 'light' 
         {steps.map((s, i) => {
           const on = i <= lit
           return (
-            <li key={s.title} className="relative flex gap-4 pb-6 last:pb-0">
+            <li key={s.title} className={`relative flex gap-4 last:pb-0 ${run ? 'pb-3' : 'pb-6'}`}>
               <span className={`relative z-[1] flex h-12 w-12 shrink-0 items-center justify-center rounded-full ring-1 transition-colors duration-700 ${on ? 'bg-rust text-paper ring-rust' : dark ? 'bg-espresso text-paper/50 ring-white/15' : 'bg-card text-ink-3 ring-ink/10'}`}>
                 <Icon name={s.icon} size={20} />
               </span>
-              <div className="pt-1">
+              <div className="pt-3">
                 <p className={`text-[15px] font-medium ${dark ? 'text-paper' : 'text-ink'}`}>{s.title}</p>
-                <p className={`mt-1 text-sm leading-relaxed ${dark ? 'text-paper/65' : 'text-ink-2'}`}>{s.detail}</p>
+                {/* Inside a run, only the step being worked on opens, to keep phones short. */}
+                {(!run || (lit >= 0 && i === shown && run.phase === 'running')) && (
+                  <p className={`mt-1 text-sm leading-relaxed [animation:type-in_500ms_cubic-bezier(0.16,1,0.3,1)] ${dark ? 'text-paper/65' : 'text-ink-2'}`}>{s.detail}</p>
+                )}
               </div>
             </li>
           )
