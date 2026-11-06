@@ -8,7 +8,7 @@ export type Desk = {
   num: string
   name: string
   kind: string
-  status: 'Working demo' | 'Pilot-ready' | 'Building with first customers'
+  status: 'Working demo' | 'Pilot-ready' | 'Building with first customers' | 'In design'
   audience: ('contractor' | 'developer')[]
   headline: string
   problem: string
@@ -25,7 +25,7 @@ export const desks: Desk[] = [
     name: 'Material Leak Check',
     kind: 'One-time check · one site',
     status: 'Working demo',
-    audience: ['contractor'],
+    audience: ['contractor', 'developer'],
     headline: 'Find what your site paid for and never got, in one week.',
     problem:
       'A challan gets billed twice. A truck is short at the weighbridge but the bill is for the full load. A supplier quietly bills ₹16 a bag above the PO. Stores issue more cement than the plaster on the wall needs. Nobody is hiding it. The registers simply never meet each other.',
@@ -54,7 +54,7 @@ export const desks: Desk[] = [
     id: 'site-desk',
     num: '02',
     name: 'Site Record Desk',
-    kind: 'Monthly · all sites',
+    kind: 'Daily and weekly · all sites',
     status: 'Working demo',
     audience: ['contractor', 'developer'],
     headline: 'Your supervisors keep sending voice notes. You get a record, every morning.',
@@ -71,9 +71,9 @@ export const desks: Desk[] = [
       { icon: 'WhatsappLogo', title: 'Read every message', detail: 'Labour by contractor, progress, material received, stock left, hindrances and hours lost. A message Vera cannot read is marked “noted” for the supervisor, never guessed.' },
       { icon: 'Notebook', title: 'Daily site record', detail: 'One dated record per site: labour, progress, receipts, stock, and a hindrance register with the photos attached.' },
       { icon: 'Coins', title: 'Money at risk', detail: 'Idle labour × hours × day rate, client delays you can claim, unpaid or returned RA bills, deliveries with no PO, stock that will stop work, sites that went silent.' },
-      { icon: 'PaperPlaneTilt', title: '8 AM brief + Tally', detail: 'A WhatsApp brief for the owner before the day starts, and a Tally import file for the day’s receipts.' },
+      { icon: 'PaperPlaneTilt', title: '8 AM brief + weekly report', detail: 'A WhatsApp brief for the owner before the day starts, a weekly progress report every Monday (planned against done, per site), and a Tally import file for the receipts.' },
     ],
-    outputs: ['8 AM WhatsApp brief for the owner', 'Daily progress record per site', 'Hindrance register with photos and times', 'Tally receipt-note import'],
+    outputs: ['8 AM WhatsApp brief for the owner', 'Daily progress record per site', 'Weekly progress report: planned against done, per site', 'Hindrance register with photos and times', 'Tally receipt-note import'],
     helps: [
       { figure: '13 / 15', text: 'messages turned into records on an illustrative day; the 2 unclear ones flagged, not guessed' },
       { figure: '₹63.8 L', text: 'at risk surfaced before 8 AM: an unpaid RA bill, a returned bill, idle crews, a no-PO delivery' },
@@ -81,10 +81,102 @@ export const desks: Desk[] = [
     ],
   },
   {
+    id: 'stock-balance',
+    num: '03',
+    name: 'Cross-Site Stock Balance',
+    kind: 'Weekly · across all sites',
+    status: 'Building with first customers',
+    audience: ['contractor', 'developer'],
+    headline: 'One sheet a week: which site has too much, which will run short, and who sends what to whom.',
+    problem:
+      'With six or more sites running, one site holds 30 MT of steel it will not use for two months while another, 40 km away, places a fresh order for the same bars. Cement ages in one store while a pour stops for lack of it at another. Each site buys for itself, so cash stays stuck in stock nobody needs.',
+    inputs: [
+      { icon: 'Warehouse', label: 'Stock at each site' },
+      { icon: 'Ruler', label: 'Next 4 weeks of planned work' },
+      { icon: 'Receipt', label: 'Purchase requests and open POs' },
+      { icon: 'Clock', label: 'Batch dates (cement, admixtures)' },
+    ],
+    steps: [
+      { icon: 'Warehouse', title: 'Stock by site', detail: 'Book stock from every site’s stores register on one sheet, corrected by the latest physical count.' },
+      { icon: 'Ruler', title: 'Need, next 4 weeks', detail: 'What each site will use in the next four weeks, from BOQ progress and the plan.' },
+      { icon: 'Scales', title: 'Excess and shortage', detail: 'Stock above the need is excess, valued. Need above the stock is a shortage, with the date it will stop work. Old cement is marked to move first.' },
+      { icon: 'ArrowsLeftRight', title: 'Who sends what to whom', detail: 'Excess at one site is matched to a shortage at another, with the distance and truck cost. Each move names the sending and receiving supervisor.' },
+      { icon: 'ShoppingCart', title: 'One buy list', detail: 'Only what no site can spare goes to purchase, as one list for all sites instead of a PR from each.' },
+      { icon: 'FileText', title: 'Transfer note + Tally', detail: 'A transfer note for each truck, and the Tally stock journal so both sites’ books stay right.' },
+    ],
+    outputs: ['Weekly stock sheet across all sites', 'Excess and shortage for the next 4 weeks, valued', 'Who sends what to whom, with supervisor names', 'One buy list for purchase', 'Cash stuck in excess stock, by site'],
+    helps: [
+      { figure: '₹16.1 L', text: 'of new steel not bought in an illustrative week: 26 MT sent 40 km from a site that did not need it' },
+      { figure: '6+ sites', text: 'on one sheet every Monday: extra, short, and who sends what to whom' },
+      { figure: '1 list', text: 'for purchase: only what no site can spare' },
+    ],
+  },
+  {
+    id: 'wastage',
+    num: '04',
+    name: 'Supervisor-wise Wastage',
+    kind: 'Part of the Leak Check · monthly',
+    status: 'Working demo',
+    audience: ['contractor', 'developer'],
+    headline: 'See which supervisor, on which floor, used more than the allowed wastage.',
+    problem:
+      'A tower has eight or ten supervisors, each running a few floors. Cement, steel and RMC go to all of them from one store. At month end the site total looks fine, so nobody sees that one floor used 42 bags more than its work needed while the floor above was careful.',
+    inputs: [
+      { icon: 'Package', label: 'Stores issue slips, with supervisor' },
+      { icon: 'Ruler', label: 'BOQ work done by floor' },
+      { icon: 'Truck', label: 'RMC delivery tickets' },
+      { icon: 'Sliders', label: 'Your allowed wastage norms' },
+    ],
+    steps: [
+      { icon: 'Package', title: 'Slips by supervisor', detail: 'Every issue slip is tied to a supervisor, wing and floor. Slips with no name are sent back to stores to fill in, not guessed.' },
+      { icon: 'Ruler', title: 'Work done by floor', detail: 'BOQ quantities done on each floor in the month: concrete, steel, blockwork, plaster.' },
+      { icon: 'Calculator', title: 'Allowed quantity', detail: 'Work done × consumption norm, plus your allowed wastage: cement 2%, steel 3%, RMC 1.5%. Calculated in code.' },
+      { icon: 'Warning', title: 'Over the limit', detail: 'Issued minus allowed, by supervisor, floor and material, valued at the PO rate. Supervisors within the limit are shown too.' },
+      { icon: 'PaperPlaneTilt', title: 'Monthly table', detail: 'One table for the project manager, ranked by ₹ over the limit, with slip numbers. Each supervisor gets only their own lines.' },
+    ],
+    outputs: ['Wastage by supervisor, wing and floor', 'Over-limit quantity valued at the PO rate', 'Issue slip numbers behind every line', 'Each supervisor’s own lines on WhatsApp'],
+    helps: [
+      { figure: '₹15,120', text: 'one illustrative line: Tower C, Floor 7, Supervisor A, 42 bags of cement over the allowed limit' },
+      { figure: '2 · 3 · 1.5%', text: 'allowed wastage for cement, steel and RMC, set to your own norms' },
+      { figure: '1 table', text: 'a month, ranking supervisors by rupees over the limit' },
+    ],
+  },
+  {
+    id: 'site-opening',
+    num: '05',
+    name: 'One-day Site Opening',
+    kind: 'Per new site · first inspection',
+    status: 'In design',
+    audience: ['developer'],
+    headline: 'The first inspection of a new site, done and written up in one day instead of three.',
+    problem:
+      'Before a contractor starts on a new site, the project team inspects the set-up: labour camp, stores yard, batching plant or RMC, formwork, safety, and a stack of certificates. It takes two to three days because papers are chased on the day, photos sit on personal phones, and the report is typed up afterwards from notes.',
+    inputs: [
+      { icon: 'ListChecks', label: 'Your mobilisation checklist (50–100 points)' },
+      { icon: 'Certificate', label: 'Contractor certificates on WhatsApp' },
+      { icon: 'Camera', label: 'Photos taken on the walk' },
+      { icon: 'Microphone', label: 'Spoken remarks' },
+    ],
+    steps: [
+      { icon: 'ListChecks', title: 'Your checklist', detail: 'Your existing checklist loaded once: labour camp, stores yard, batching plant or RMC, formwork, safety, documents.' },
+      { icon: 'Certificate', title: 'Papers, 3 days before', detail: 'The contractor sends certificates on WhatsApp. Vera reads each one: BOCW registration, labour licence, workmen’s compensation, CAR insurance, plant calibration, consent to operate. Names, dates and amounts checked.' },
+      { icon: 'WarningCircle', title: 'Missing list that evening', detail: 'The contractor gets one list of what is missing, expired or short, the same evening, so it is fixed before the visit and not during it.' },
+      { icon: 'Camera', title: 'Checklist on the phone', detail: 'On the day, the engineer walks the site with the checklist on the phone. Each photo is tagged to a checklist line, with time and location.' },
+      { icon: 'Microphone', title: 'Spoken remarks', detail: 'Remarks spoken in Hindi, Marathi or English become written observations against the right line.' },
+      { icon: 'FileText', title: 'Report by evening', detail: 'By the end of the day the inspection report is about 80% written: passed, open and failed lines with photos. Open items are closed later on photos, without a second visit.' },
+    ],
+    outputs: ['Missing-document list, before the visit', 'Checklist with photos, time and location', 'Inspection report drafted the same day', 'Open items closed on photos'],
+    helps: [
+      { figure: '1 day', text: 'for the first inspection and its report, against 2–3 days today' },
+      { figure: '~80%', text: 'of the report written by the end of the visit, from tagged photos and spoken remarks' },
+      { figure: '0', text: 'second visits for small open items: closed on a photo' },
+    ],
+  },
+  {
     id: 'plant-desk',
     num: '03',
     name: 'Plant & Formwork Desk',
-    kind: 'Add-on to the Site Record Desk',
+    kind: 'Add-on · machines and formwork',
     status: 'Building with first customers',
     audience: ['contractor'],
     headline: 'No more breakdowns from a service nobody remembered, or hired machines idling on rent.',
@@ -111,37 +203,6 @@ export const desks: Desk[] = [
       { figure: '9 days', text: 'idle on hire is about ₹25,000 of rent on one illustrative backhoe. The alert pays for the month' },
       { figure: '250 h', text: 'service intervals tracked from the hour-meter photos operators already send' },
       { figure: '5–10%', text: 'of formwork that typically goes missing at the end of a project, now tallied by site and contractor' },
-    ],
-  },
-  {
-    id: 'surplus',
-    num: '04',
-    name: 'Surplus Stock Exchange',
-    kind: 'Add-on · across all sites',
-    status: 'Building with first customers',
-    audience: ['contractor', 'developer'],
-    headline: 'Use what is lying at one site before buying it again for another.',
-    problem:
-      'A site winding down holds 340 bags of cement, 6 MT of steel and half a pallet of tile adhesive. A site 12 km away raises a fresh PO for the same items the same week. Cement passes 90 days in a damp store and loses strength. Leftovers get sold as scrap at the end of the project.',
-    inputs: [
-      { icon: 'Warehouse', label: 'Stock at each site' },
-      { icon: 'Ruler', label: 'Next 8 weeks of planned work' },
-      { icon: 'Receipt', label: 'Purchase requests and open POs' },
-      { icon: 'Clock', label: 'Batch dates (cement, admixtures)' },
-    ],
-    steps: [
-      { icon: 'Warehouse', title: 'Stock by site', detail: 'Book stock from the stores registers, corrected by the latest physical count, including sites that are closing.' },
-      { icon: 'Ruler', title: 'Upcoming need', detail: 'What each site needs in the next 8 weeks, from BOQ progress and the plan. Anything above that is surplus.' },
-      { icon: 'Hourglass', title: 'Ageing', detail: 'Cement by manufacture week, admixtures by expiry. Old stock is moved first, to the site that will use it soonest.' },
-      { icon: 'ArrowsLeftRight', title: 'Match surplus to need', detail: 'Surplus at one site against need at another, with transport cost. A transfer is suggested only when it saves money.' },
-      { icon: 'MagnifyingGlass', title: 'Before-PO check', detail: 'A new purchase request is checked against stock elsewhere. If it exists, the buyer sees the transfer option first.' },
-      { icon: 'FileText', title: 'Transfer note + Tally', detail: 'Transfer note for the trucks, and the Tally stock journal so both sites’ books stay right.' },
-    ],
-    outputs: ['Surplus list by site, valued', 'Transfer suggestions with the saving', 'Before-PO check for the purchase team', 'Ageing stock alerts'],
-    helps: [
-      { figure: '₹83,600', text: 'PO avoided in an illustrative week: 220 bags moved 12 km for ₹3,400 instead of bought new' },
-      { figure: '90 days', text: 'cement ageing caught before strength is lost, and used first' },
-      { figure: '1 check', text: 'before every PO: “do we already have this somewhere?”' },
     ],
   },
 ]

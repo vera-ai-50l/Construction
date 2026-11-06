@@ -9,7 +9,7 @@ import { BeforeAfter, RunButton, RunProvider, RunReveal } from './run/Run'
 import { RunChat } from './run/RunChat'
 import { Nav } from './Nav'
 import { HeroVisual } from './mocks/HeroVisual'
-import { BriefPhone, LeakSummary, PlantBoard, SurplusMatch } from './mocks/Outputs'
+import { BriefPhone, InspectionReport, LeakSummary, PlantBoard, StockSheet, WastageTable } from './mocks/Outputs'
 import { desks, type Desk } from '@/content/desks'
 import { runs } from '@/content/runs'
 import { chats } from '@/content/chats'
@@ -18,8 +18,16 @@ import { contact, type Audience } from '@/content/site'
 const MOCKS: Record<string, ReactNode> = {
   'leak-check': <LeakSummary />,
   'site-desk': <BriefPhone />,
+  'stock-balance': <StockSheet />,
+  wastage: <WastageTable />,
+  'site-opening': <InspectionReport />,
   'plant-desk': <PlantBoard />,
-  surplus: <SurplusMatch />,
+}
+
+// Each link shows only the desks meant for it, numbered in the order shown.
+function desksFor(audience: Audience): Desk[] {
+  const who = audience === 'review' ? 'developer' : 'contractor'
+  return desks.filter((d) => d.audience.includes(who)).map((d, i) => ({ ...d, num: String(i + 1).padStart(2, '0') }))
 }
 
 function contactHref() {
@@ -48,14 +56,14 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
         <div>
           <Reveal>
             <Eyebrow tone={firm || review ? 'rust' : 'light'}>
-              {review ? 'Built for contractors · shared for your feedback' : firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}
+              {review ? 'Vera · a short brief' : firm ? `Prepared for ${firm}` : 'Vera · AI back office for construction'}
             </Eyebrow>
           </Reveal>
           <Reveal delay={80}>
             <h1 className="display mt-7 text-[2.75rem] leading-[1.02] text-ink sm:text-6xl md:text-[5.25rem]">
               {review ? (
                 <>
-                  A back office for the contractors <em className="text-rust">who build your projects</em>.
+                  A tool that cleans up the <em className="text-rust">paperwork on your sites</em>.
                 </>
               ) : (
                 <>
@@ -67,15 +75,15 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-2">
               {review
-                ? 'Vera reads a contractor’s registers, challans and WhatsApp site groups, reconciles them in code, and gives them daily records, material reconciliations and the money they are losing. Contractors with clean records bill correctly, report on time and waste less, which shows up on your projects.'
+                ? 'Five problems every large site has, and how Vera fixes each one. Vera reads the purchase orders, challans, stores slips and WhatsApp messages your sites already produce, checks them against each other, and sends each person the part they act on. Nobody on site learns a new app.'
                 : 'Vera is a back office that reads your registers, challans and WhatsApp site groups, reconciles them in code, and hands you the rupees: what to claim from suppliers, what to stop on site, and what is idle.'}
             </p>
           </Reveal>
           <Reveal delay={240} className="mt-10 flex flex-wrap items-center gap-3">
-            <PillButton href="#desks">See what Vera does</PillButton>
+            <PillButton href={review ? '#five' : '#desks'}>{review ? 'See the five fixes' : 'See what Vera does'}</PillButton>
             {review ? (
-              <PillButton href="#feedback" variant="light">
-                Where we need your view
+              <PillButton href="#ai" variant="light">
+                How the AI is used
               </PillButton>
             ) : (
               <PillButton href={contactHref()} variant="light" external={contactHref().startsWith('http')}>
@@ -97,12 +105,20 @@ function Hero({ firm, audience }: { firm: string; audience: Audience }) {
 
       <Reveal delay={120} className="relative mx-auto mt-24 max-w-[1240px]">
         <dl className="grid grid-cols-2 gap-y-10 border-t border-ink/[0.08] pt-10 md:grid-cols-4">
-          {[
-            ['6.3%', 'of material spend leaking on an illustrative site'],
-            ['8 AM', 'WhatsApp brief, every morning'],
-            ['0', 'new apps for your site team'],
-            ['100%', 'of rupee maths done in code, not AI'],
-          ].map(([a, b]) => (
+          {(review
+            ? [
+                ['1 week', 'to the first leak report on one site'],
+                ['8 AM', 'daily brief, and a weekly report every Monday'],
+                ['1 day', 'target for a new site’s first inspection'],
+                ['0', 'rupee figures made by AI: all maths is in code'],
+              ]
+            : [
+                ['6.3%', 'of material spend leaking on an illustrative site'],
+                ['8 AM', 'WhatsApp brief, every morning'],
+                ['0', 'new apps for your site team'],
+                ['100%', 'of rupee maths done in code, not AI'],
+              ]
+          ).map(([a, b]) => (
             <div key={b} className="pr-6">
               <dt className="display text-4xl text-ink md:text-5xl">{a}</dt>
               <dd className="mt-2 max-w-[14rem] text-sm text-ink-3">{b}</dd>
@@ -214,6 +230,132 @@ function How() {
   )
 }
 
+/* ───────────── Review: five problems, five fixes ───────────── */
+
+const FIVE: { id: string; problem: string; fix: string; get: string }[] = [
+  { id: 'leak-check', problem: 'Material is paid for but never received, or billed twice, or billed above the PO rate. More is issued than the BOQ work needed.', fix: 'Matches every PO, challan, gate entry and issue slip against each other and against the work done.', get: 'A 1-page ₹ summary: what to recover from suppliers, what to stop on site.' },
+  { id: 'site-desk', problem: 'Daily and weekly progress reports are typed by hand from WhatsApp messages, late and in different formats.', fix: 'Reads the voice notes, photos and texts supervisors already send to the site group.', get: 'An 8 AM brief every day, and a weekly progress report every Monday.' },
+  { id: 'stock-balance', problem: 'One site has too much steel or cement while another buys the same material fresh.', fix: 'Puts every site’s stock and next 4 weeks of need on one sheet, and matches excess to shortage.', get: 'Who sends what to whom, and one buy list for purchase.' },
+  { id: 'wastage', problem: 'The site total looks fine, so nobody sees which supervisor used more than the allowed wastage.', fix: 'Ties every issue slip to a supervisor and floor, and checks it against the work done plus the allowed wastage.', get: 'A monthly table: who is over the limit, by how much, in ₹.' },
+  { id: 'site-opening', problem: 'The first inspection of a new site takes 2–3 days: papers chased on the day, report typed afterwards.', fix: 'Checks the contractor’s papers 3 days before, runs the checklist on a phone with tagged photos.', get: 'The inspection report about 80% written by the end of the same day.' },
+]
+
+function FiveFixes({ list }: { list: Desk[] }) {
+  const name = (id: string) => list.find((d) => d.id === id)
+  return (
+    <Section id="five">
+      <Reveal>
+        <Eyebrow>Five problems, five fixes</Eyebrow>
+        <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">What goes wrong today, and what Vera puts in front of you.</h2>
+      </Reveal>
+      <div className="mt-14 hidden grid-cols-[3rem_1.1fr_1.1fr_1fr_2.5rem] gap-6 px-7 text-[11px] uppercase tracking-[0.18em] text-ink-3 md:grid">
+        <span />
+        <span>The problem today</span>
+        <span>What Vera does</span>
+        <span>What you get</span>
+        <span />
+      </div>
+      <ol className="mt-4 space-y-3">
+        {FIVE.map((f, i) => {
+          const d = name(f.id)
+          if (!d) return null
+          return (
+            <Reveal as="li" key={f.id} delay={(i % 3) * 70}>
+              <a href={`#${f.id}`} className="group block">
+                <Bezel inner="grid gap-4 p-6 transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-y-0.5 md:grid-cols-[3rem_1.1fr_1.1fr_1fr_2.5rem] md:items-start md:gap-6 md:p-7">
+                  <span className="num text-sm text-rust md:pt-1">{d.num}</span>
+                  <span>
+                    <span className="display block text-2xl leading-tight text-ink">{d.name}</span>
+                    <span className="mt-2 block text-[15px] leading-relaxed text-ink-2">{f.problem}</span>
+                  </span>
+                  <span className="text-[15px] leading-relaxed text-ink-2">
+                    <span className="mb-1 block text-[10px] uppercase tracking-[0.16em] text-ink-3 md:hidden">What Vera does</span>
+                    {f.fix}
+                  </span>
+                  <span className="flex items-start gap-2 text-[15px] leading-relaxed text-ink">
+                    <Icon name="CheckCircle" size={18} className="mt-0.5 shrink-0 text-sage" />
+                    <span>{f.get}</span>
+                  </span>
+                  <span className="hidden h-10 w-10 items-center justify-center rounded-full bg-ink/[0.05] text-ink transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:translate-x-1 group-hover:scale-105 md:flex">
+                    <Icon name="ArrowDownRight" size={16} />
+                  </span>
+                </Bezel>
+              </a>
+            </Reveal>
+          )
+        })}
+      </ol>
+      <Reveal delay={100}>
+        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-ink-3">
+          Each desk below has a “Run the flow” button. Press it to watch Vera work through sample registers step by step, then see who gets told and how they ask follow-up questions on WhatsApp.
+        </p>
+      </Reveal>
+    </Section>
+  )
+}
+
+function AiUse() {
+  const helps = [
+    ['Microphone', 'Voice notes', 'Supervisors speak in Hindi, Marathi or Hinglish. AI turns them into written records.'],
+    ['Receipt', 'Handwriting and photos', 'Challans, slips and certificates photographed on site are read into rows.'],
+    ['Link', 'Names that do not match', '“Shree Balaji Steels” and “SBS Pune” are matched as the same supplier.'],
+    ['Camera', 'Photos to checklist', 'A photo from the site walk is placed against the right checklist line.'],
+  ]
+  const not = [
+    ['Calculator', 'Money', 'Every rupee figure, quantity and limit comes from fixed rules in code. You can check each line against the document it cites.'],
+    ['WarningCircle', 'Guessing', 'When AI is not sure what a note or a photo says, it is flagged for a person, with the original attached.'],
+  ]
+  return (
+    <section id="ai" className="scroll-mt-24 bg-espresso px-4 py-24 text-paper md:px-8 md:py-36">
+      <div className="mx-auto max-w-[1240px]">
+        <Reveal>
+          <Eyebrow tone="dark">How the AI is used</Eyebrow>
+          <h2 className="display mt-6 max-w-3xl text-4xl leading-[1.05] md:text-6xl">AI reads. Code counts. People decide.</h2>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-paper/65">
+            Your teams do not have to learn AI. They keep sending WhatsApp messages and filling the registers they fill today. AI is used only where a person would otherwise have to read and type.
+          </p>
+        </Reveal>
+        <div className="mt-16 grid gap-5 md:grid-cols-[1.4fr_1fr]">
+          <Reveal>
+            <Bezel tone="dark" className="h-full" inner="h-full p-8 md:p-10">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-rust-2">Where AI helps</p>
+              <ul className="mt-8 grid gap-8 sm:grid-cols-2">
+                {helps.map(([ic, t, d]) => (
+                  <li key={t}>
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.06] text-rust-2">
+                      <Icon name={ic} size={20} />
+                    </span>
+                    <p className="mt-5 text-lg text-paper">{t}</p>
+                    <p className="mt-2 text-[15px] leading-relaxed text-paper/60">{d}</p>
+                  </li>
+                ))}
+              </ul>
+            </Bezel>
+          </Reveal>
+          <Reveal delay={110}>
+            <Bezel tone="dark" className="h-full" inner="h-full p-8 md:p-10">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-paper/45">Where AI is not used</p>
+              <ul className="mt-8 space-y-8">
+                {not.map(([ic, t, d]) => (
+                  <li key={t} className="flex gap-5">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-paper/70">
+                      <Icon name={ic} size={20} />
+                    </span>
+                    <span>
+                      <span className="block text-lg text-paper">{t}</span>
+                      <span className="mt-2 block text-[15px] leading-relaxed text-paper/60">{d}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Bezel>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* ───────────── Desk index ───────────── */
 
 function StatusChip({ status }: { status: Desk['status'] }) {
@@ -230,7 +372,7 @@ function DeskIndex({ list, review = false }: { list: Desk[]; review?: boolean })
       <Reveal>
         <Eyebrow>{review ? 'What Vera does' : 'What we sell'}</Eyebrow>
         <h2 className="display mt-6 max-w-4xl text-4xl leading-[1.05] text-ink md:text-6xl">
-          {review ? 'Four desks we are building for contractors.' : 'Four desks. Start with one, add the rest when it proves itself.'}
+          {review ? `${list.length} desks we are building.` : `${list.length} desks. Start with one, add the rest when it proves itself.`}
         </h2>
       </Reveal>
       <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-5">
@@ -267,7 +409,7 @@ function DeskIndex({ list, review = false }: { list: Desk[]; review?: boolean })
 
 /* ───────────── One desk ───────────── */
 
-function DeskSection({ d, index }: { d: Desk; index: number }) {
+function DeskSection({ d, index, compact = false }: { d: Desk; index: number; compact?: boolean }) {
   const flip = index % 2 === 1
   return (
     <Section id={d.id} className={index % 2 === 1 ? 'bg-paper-2/60' : ''}>
@@ -326,7 +468,7 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
               ))}
             </ul>
           </Reveal>
-          <Reveal delay={140}>
+          {!compact && <Reveal delay={140}>
             <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">How it helps</p>
             <dl className="mt-5 space-y-6">
               {d.helps.map((h) => (
@@ -336,7 +478,7 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
                 </div>
               ))}
             </dl>
-          </Reveal>
+          </Reveal>}
         </div>
         <Reveal delay={120} className="md:sticky md:top-28 md:self-start">
           <RunReveal>{MOCKS[d.id]}</RunReveal>
@@ -348,90 +490,6 @@ function DeskSection({ d, index }: { d: Desk; index: number }) {
         </Reveal>
       )}
       </RunProvider>
-    </Section>
-  )
-}
-
-/* ───────────── Review: what it changes for the developer ───────────── */
-
-const FOR_DEVELOPER: { icon: string; title: string; text: string }[] = [
-  { icon: 'Receipt', title: 'RA bills that arrive complete', text: 'Measurements, JMRs and hindrances come dated, with photos and references. Fewer bills go back for missing papers, and reviews start from the same facts.' },
-  { icon: 'Notebook', title: 'A daily record from every package', text: 'Labour, progress, receipts and hindrances, dated and with photos, from each contractor. Planning sees the site as it was yesterday, not as it was at the monthly review.' },
-  { icon: 'Clock', title: 'Delays with timestamps', text: 'Crane down four hours, drawing pending, client hold: logged when it happens. Extension and claim discussions start from the same facts.' },
-  { icon: 'Warning', title: 'Fewer stoppages', text: 'Cement that will not last tomorrow’s pour, a machine past its service, a certificate about to lapse: flagged to the contractor before work stops.' },
-  { icon: 'Recycle', title: 'Less waste across sites', text: 'Overuse beyond the norm, formwork that never came back, stock bought at one site while it lies at another. The same material, used once.' },
-  { icon: 'Users', title: 'Nothing new for site teams', text: 'Supervisors keep sending WhatsApp voice notes and photos. No app to roll out, no training for your engineers or the contractor’s.' },
-]
-
-const FD_SPANS = ['md:col-span-4', 'md:col-span-2', 'md:col-span-2', 'md:col-span-4', 'md:col-span-3', 'md:col-span-3']
-
-function ForDeveloper() {
-  return (
-    <Section id="for-you">
-      <div className="grid gap-10 md:grid-cols-[1fr_1.3fr] md:items-end">
-        <Reveal>
-          <Eyebrow>On your projects</Eyebrow>
-          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">What changes when your contractors run on it.</h2>
-        </Reveal>
-        <Reveal delay={100}>
-          <p className="max-w-xl text-lg leading-relaxed text-ink-2">
-            Vera is sold to contractors. The developer is not asked to buy anything or change any system. The benefit reaches the project because the contractor’s records are complete, on time and checkable.
-          </p>
-        </Reveal>
-      </div>
-      <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-6 md:gap-5">
-        {FOR_DEVELOPER.map((x, i) => (
-          <Reveal key={x.title} delay={(i % 3) * 80} className={FD_SPANS[i]}>
-            <Bezel className="h-full" inner="flex h-full flex-col gap-8 p-7 md:p-8">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-ink/[0.04] text-rust">
-                <Icon name={x.icon} size={20} />
-              </span>
-              <div>
-                <h3 className={`display leading-tight text-ink ${FD_SPANS[i] === 'md:col-span-2' ? 'text-2xl' : 'text-3xl'}`}>{x.title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-ink-2">{x.text}</p>
-              </div>
-            </Bezel>
-          </Reveal>
-        ))}
-      </div>
-    </Section>
-  )
-}
-
-const QUESTIONS = [
-  ['Delays', 'When a contractor reports a delay or hindrance, what record would your team accept without argument?'],
-  ['RA bills', 'Where do RA-bill disagreements with contractors usually start, and what evidence ends them?'],
-  ['Site records', 'What makes a contractor’s DPR useful to your planning team, and what makes it ignored?'],
-  ['Biggest losses', 'Which contractor problems cost your projects the most: material, labour, plant and formwork, or paperwork?'],
-  ['Plant & formwork', 'How are formwork shortages and idle hired equipment handled with contractors today?'],
-  ['Adoption', 'Who inside a contractor’s firm should own a tool like this, and what would stop them using it?'],
-]
-
-function Feedback() {
-  return (
-    <Section id="feedback">
-      <div className="grid gap-16 md:grid-cols-[1fr_1.3fr] md:gap-20">
-        <Reveal className="md:sticky md:top-28 md:self-start">
-          <Eyebrow tone="rust">Your guidance</Eyebrow>
-          <h2 className="display mt-6 text-4xl leading-[1.05] text-ink md:text-6xl">Where we would value your view.</h2>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-2">
-            You see how contractors actually work on large projects. These are the questions we cannot answer from the outside.
-          </p>
-        </Reveal>
-        <ol className="space-y-4">
-          {QUESTIONS.map(([k, q], i) => (
-            <Reveal as="li" key={k} delay={(i % 3) * 70}>
-              <Bezel inner="flex gap-6 p-6 md:p-7">
-                <span className="num pt-1 text-sm text-rust">{String(i + 1).padStart(2, '0')}</span>
-                <span>
-                  <span className="block text-[11px] uppercase tracking-[0.18em] text-ink-3">{k}</span>
-                  <span className="mt-2 block text-lg leading-snug text-ink">{q}</span>
-                </span>
-              </Bezel>
-            </Reveal>
-          ))}
-        </ol>
-      </div>
     </Section>
   )
 }
@@ -494,7 +552,7 @@ function Faq({ audience }: { audience: Audience }) {
     ['What if a message or a register entry is unclear?', 'It is listed as unclear, with the original attached, for a person to confirm. Vera does not fill gaps with guesses.'],
     ['What data do you need, and who sees it?', 'Exports or photos of the registers you already keep. Everything is covered by an NDA, used only for your reports, and deleted on request.'],
     ['Does it work with Tally?', 'Yes. Receipts and stock journals come out as Tally import files, so your accountant does not re-enter anything.'],
-    ['What are Plant & Formwork and Surplus Stock?', 'Two add-ons we are building with our first customers. They use the same WhatsApp and register data to catch overdue services, hired machines idling on rent, missing formwork, and stock that one site holds while another buys it again.'],
+    ['What are Cross-Site Stock Balance and Plant & Formwork?', 'Two add-ons we are building with our first customers. They use the same WhatsApp and register data to catch stock that one site holds while another buys it again, overdue services, hired machines idling on rent, and missing formwork.'],
   ]
   return (
     <Section id="faq" className="bg-paper-2/60">
@@ -534,7 +592,7 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
         <Bezel tone="tint" inner="relative overflow-hidden px-7 py-16 text-center md:px-16 md:py-24">
           <Eyebrow>{audience === 'review' ? 'Thank you' : firm ? `Next step for ${firm}` : 'Next step'}</Eyebrow>
           <h2 className="display mx-auto mt-6 max-w-3xl text-4xl leading-[1.05] text-ink md:text-6xl">
-            {audience === 'review' ? 'Tell us what we have got wrong.' : 'Pick one site. We will show you the leak in a week.'}
+            {audience === 'review' ? 'Pick one site and one problem. We will show you the result.' : 'Pick one site. We will show you the leak in a week.'}
           </h2>
           {has ? (
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -557,20 +615,22 @@ function Contact({ firm, audience }: { firm: string; audience: Audience }) {
                 : 'Reply on the thread this link came in, and we will set up a 20-minute walkthrough on your own numbers.'}
             </p>
           )}
-          <p className="mx-auto mt-8 max-w-md text-xs text-ink-3">{audience === 'review' ? 'This page uses fictional sample data only. We are not asking for any project data.' : 'We will not ask for real project data until an NDA is signed.'}</p>
+          <p className="mx-auto mt-8 max-w-md text-xs text-ink-3">{audience === 'review' ? 'This page uses fictional sample data only. We will not ask for real project data until an NDA is signed.' : 'We will not ask for real project data until an NDA is signed.'}</p>
         </Bezel>
       </Reveal>
     </Section>
   )
 }
 
-function Footer() {
+function Footer({ list }: { list: Desk[] }) {
+  const later = list.filter((d) => d.status !== 'Working demo').map((d) => d.num)
+  const note = later.length ? ` Desk${later.length > 1 ? 's' : ''} ${later.join(', ').replace(/, (?=[^,]*$)/, ' and ')} ${later.length > 1 ? 'are' : 'is'} still being built or designed.` : ''
   return (
     <footer className="px-4 pb-14 md:px-8">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-4 border-t border-ink/[0.08] pt-8 text-xs leading-relaxed text-ink-3 md:flex-row md:items-start md:justify-between">
         <p className="display text-lg text-ink">Vera</p>
         <p className="max-w-2xl">
-          Sample data: every site, contractor, supplier and person named on this page is fictional. Figures are illustrative of a ₹100–300 Cr contractor and are not results from any client. Desks 03 and 04 are being built with first customers.
+          Sample data: every site, contractor, supplier and person named on this page is fictional. Figures are illustrative of a ₹100–300 Cr contractor and are not results from any client.{note}
         </p>
       </div>
     </footer>
@@ -581,31 +641,45 @@ function Footer() {
 
 export function DemoPage({ firm, audience }: { firm: string; audience: Audience }) {
   const review = audience === 'review'
-  const list = desks
-  const links = [
-    { href: '#problem', label: 'Problem' },
-    { href: '#how', label: 'How it works' },
-    { href: '#desks', label: 'Desks' },
-    review ? { href: '#feedback', label: 'Your view' } : { href: '#engage', label: 'How we start' },
-    { href: '#faq', label: 'FAQ' },
-  ]
+  const list = desksFor(audience)
+  const links = review
+    ? [
+        { href: '#five', label: 'Five fixes' },
+        { href: '#ai', label: 'How AI is used' },
+        { href: `#${list[0].id}`, label: 'The desks' },
+      ]
+    : [
+        { href: '#problem', label: 'Problem' },
+        { href: '#how', label: 'How it works' },
+        { href: '#desks', label: 'Desks' },
+        { href: '#engage', label: 'How we start' },
+        { href: '#faq', label: 'FAQ' },
+      ]
   return (
     <>
-      <Nav links={links} cta={review ? { href: '#feedback', label: 'Share your view' } : { href: '#contact', label: 'Talk to us' }} />
+      <Nav links={links} cta={{ href: '#contact', label: 'Talk to us' }} />
       <main>
         <Hero firm={firm} audience={audience} />
-        <Leaks />
-        <How />
-        {review && <ForDeveloper />}
-        <DeskIndex list={list} review={review} />
+        {review ? (
+          <>
+            <FiveFixes list={list} />
+            <AiUse />
+          </>
+        ) : (
+          <>
+            <Leaks />
+            <How />
+            <DeskIndex list={list} />
+          </>
+        )}
         {list.map((d, i) => (
-          <DeskSection key={d.id} d={d} index={i} />
+          <DeskSection key={d.id} d={d} index={i} compact={review} />
         ))}
-        {review ? <Feedback /> : <Engagement />}
-        <Faq audience={audience} />
+        {!review && <Engagement />}
+        {!review && <Faq audience={audience} />}
         <Contact firm={firm} audience={audience} />
       </main>
-      <Footer />
+      <Footer list={list} />
     </>
   )
 }

@@ -164,46 +164,173 @@ export function PlantBoard() {
   )
 }
 
-export function SurplusMatch() {
+export function StockSheet() {
+  const sites = [
+    ['Baner', 'TMT 16 mm', '+30 MT', 'excess'],
+    ['Chakan', 'TMT 16 mm', '−26 MT by 18 Nov', 'short'],
+    ['Kharadi', 'OPC 53 (wk 36)', '+340 bags', 'excess'],
+    ['Wagholi', 'OPC 53', '−300 bags by 14 Nov', 'short'],
+    ['Hinjewadi', 'AAC blocks', '+1,800 nos', 'excess'],
+    ['Nashik', 'Tile adhesive', '−60 bags', 'short'],
+  ]
   return (
-    <Plate title="Transfer suggestion · this week" sub="Surplus Stock Exchange">
-      <div className="grid gap-3 pt-5 md:grid-cols-[1fr_auto_1fr] md:items-center">
-        <div className="rounded-2xl bg-paper-2/70 p-4">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-ink-3">Baner · closing</p>
-          <p className="num mt-1 text-xl text-ink">340 bags OPC 53</p>
-          <p className="mt-1 text-xs text-ink-3">Made week 36 · 68 days old</p>
-          <Tag tone="ochre">Use first</Tag>
-        </div>
-        <div className="flex items-center justify-center gap-2 text-ink-3 md:flex-col">
-          <Icon name="ArrowsLeftRight" size={20} />
-          <span className="num text-[11px]">12 km · ₹3,400</span>
-        </div>
-        <div className="rounded-2xl bg-paper-2/70 p-4">
-          <p className="text-[10px] uppercase tracking-[0.16em] text-ink-3">Kharadi · slab L4</p>
-          <p className="num mt-1 text-xl text-ink">needs 220 bags</p>
-          <p className="mt-1 text-xs text-ink-3">PR/KH/233 raised yesterday</p>
-          <Tag tone="rust">Hold the PO</Tag>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-between rounded-2xl bg-sage-2/60 px-4 py-3">
-        <span className="text-sm text-ink">Saving after transport</span>
-        <span className="num text-lg text-ink">₹80,200</span>
-      </div>
-      <ul className="mt-4 divide-y divide-ink/[0.06] text-sm">
+    <Plate title="Stock balance · week 45 · 6 sites" sub="Cross-Site Stock Balance">
+      <div className="grid grid-cols-3 gap-3 pt-5">
         {[
-          ['TMT 12 mm · Baner', '6.2 MT over the next 8 weeks’ need', '₹3.8 L'],
-          ['Tile adhesive · Nashik', '42 bags, expiry in 5 weeks', '₹21,000'],
-          ['AAC blocks · Hinjewadi', '1,800 nos, no masonry planned', '₹1.1 L'],
-        ].map(([a, b, c]) => (
+          ['Excess', '₹31.2 L', 'bg-ochre-2/70 text-ochre'],
+          ['Short, 4 weeks', '₹22.4 L', 'bg-rust/10 text-rust'],
+          ['To buy', '₹4.1 L', 'bg-sage-2/60 text-sage'],
+        ].map(([a, b, t]) => (
+          <div key={a} className={`rounded-2xl p-3.5 ${t.split(' ')[0]}`}>
+            <p className={`text-[10px] uppercase tracking-[0.14em] ${t.split(' ')[1]}`}>{a}</p>
+            <p className="num mt-1 text-lg text-ink md:text-xl">{b}</p>
+          </div>
+        ))}
+      </div>
+      <ul className="mt-5 divide-y divide-ink/[0.06] text-sm">
+        {sites.map(([a, b, c, k]) => (
           <li key={a} className="flex items-center justify-between gap-4 py-2.5">
             <span>
               <span className="text-ink">{a}</span>
+              <span className="block text-xs text-ink-3">{b}</span>
+            </span>
+            <span className={`num text-[13px] ${k === 'short' ? 'text-rust' : 'text-ochre'}`}>{c}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-3">Who sends what to whom</p>
+      <ul className="mt-2 space-y-2 text-sm">
+        {[
+          ['Baner → Chakan', '26 MT steel · 40 km', '₹16.1 L'],
+          ['Kharadi → Wagholi', '300 bags, oldest first · 18 km', '₹1.1 L'],
+          ['Hinjewadi → Kharadi', '1,800 AAC blocks · 28 km', '₹1.1 L'],
+        ].map(([a, b, c]) => (
+          <li key={a} className="flex items-center justify-between gap-4 rounded-2xl bg-sage-2/50 px-4 py-2.5">
+            <span>
+              <span className="flex items-center gap-1.5 text-ink">
+                <Icon name="ArrowsLeftRight" size={14} className="text-sage" /> {a}
+              </span>
               <span className="block text-xs text-ink-3">{b}</span>
             </span>
             <span className="num text-ink">{c}</span>
           </li>
         ))}
       </ul>
+    </Plate>
+  )
+}
+
+export function WastageTable() {
+  const rows = [
+    ['A', 'Floor 7', 'Cement', '42 bags', '₹15,120'],
+    ['A', 'Floor 7', 'Steel', '0.2 MT', '₹12,400'],
+    ['B', 'Floor 5', 'Steel', '0.5 MT', '₹31,000'],
+    ['D', 'Floor 6', 'RMC', '1.1 m³', '₹7,150'],
+    ['C', 'Floor 8', 'Cement', 'within', '—'],
+  ]
+  const rank = [
+    ['B', 31000],
+    ['A', 27520],
+    ['D', 7150],
+    ['C', 0],
+  ] as const
+  return (
+    <Plate title="Wastage over the limit · Tower C · October" sub="Supervisor-wise Wastage">
+      <div className="pt-5">
+        <p className="display text-5xl text-ink">₹65,670</p>
+        <p className="mt-1 text-sm text-ink-2">over the allowed wastage · cement 2%, steel 3%, RMC 1.5%</p>
+      </div>
+      <div className="mt-5 space-y-2.5">
+        {rank.map(([n, v]) => (
+          <div key={n} className="grid grid-cols-[6.5rem_1fr_4.5rem] items-center gap-3 text-sm">
+            <span className="text-ink">Supervisor {n}</span>
+            <span className="h-2 overflow-hidden rounded-full bg-paper-2">
+              <span className={`block h-full rounded-full ${v ? 'bg-rust/70' : 'bg-sage'}`} style={{ width: `${v ? Math.max((v / 31000) * 100, 6) : 4}%` }} />
+            </span>
+            <span className={`num text-right text-[13px] ${v ? 'text-ink' : 'text-sage'}`}>{v ? `₹${v.toLocaleString('en-IN')}` : 'within'}</span>
+          </div>
+        ))}
+      </div>
+      <table className="mt-6 w-full text-left text-[13px]">
+        <thead>
+          <tr className="text-[10px] uppercase tracking-[0.14em] text-ink-3">
+            <th className="pb-2 font-normal">Sup.</th>
+            <th className="pb-2 font-normal">Floor</th>
+            <th className="pb-2 font-normal">Material</th>
+            <th className="pb-2 text-right font-normal">Over</th>
+            <th className="pb-2 text-right font-normal">₹</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-ink/[0.06]">
+          {rows.map((r) => (
+            <tr key={r.join()} className="text-ink">
+              {r.map((c, i) => (
+                <td key={i} className={`py-2 ${i >= 3 ? 'num text-right' : ''} ${c === 'within' ? 'text-sage' : ''}`}>
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-4 text-xs text-ink-3">Every line opens to its issue slips. Valued at the PO rate.</p>
+    </Plate>
+  )
+}
+
+export function InspectionReport() {
+  const parts = [
+    ['Documents', 12, 14],
+    ['Labour camp', 15, 18],
+    ['Stores yard', 10, 10],
+    ['Batching plant / RMC', 11, 12],
+    ['Formwork', 9, 9],
+    ['Safety', 21, 23],
+  ] as const
+  return (
+    <Plate title="First inspection · Tower B" sub="One-day Site Opening">
+      <div className="flex items-end justify-between gap-4 pt-5">
+        <div>
+          <p className="display text-5xl text-ink">78 / 86</p>
+          <p className="mt-1 text-sm text-ink-2">lines pass · 8 open, none stops work</p>
+        </div>
+        <Tag tone="sage">Draft · 6:04 PM</Tag>
+      </div>
+      <div className="mt-6 space-y-3">
+        {parts.map(([n, a, b]) => (
+          <div key={n} className="grid grid-cols-[9rem_1fr_3rem] items-center gap-3 text-sm">
+            <span className="text-ink">{n}</span>
+            <span className="h-2 overflow-hidden rounded-full bg-paper-2">
+              <span className={`block h-full rounded-full ${a === b ? 'bg-sage' : 'bg-ochre'}`} style={{ width: `${(a / b) * 100}%` }} />
+            </span>
+            <span className="num text-right text-[13px] text-ink-2">
+              {a}/{b}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-6 text-[10px] uppercase tracking-[0.18em] text-ink-3">Open items · closed later on photos</p>
+      <ul className="mt-2 divide-y divide-ink/[0.06] text-sm">
+        {[
+          ['Line 3 · CAR insurance', 'Policy ₹42 Cr, contract ₹58 Cr', 'Renewal asked'],
+          ['Line 14 · Camp toilets', '6 of 9, photo 9:52 AM', 'Thursday'],
+          ['Line 71 · Fire extinguishers', 'Stores, not tagged, photo 2:31 PM', 'Thursday'],
+        ].map(([a, b, c]) => (
+          <li key={a} className="flex items-center justify-between gap-4 py-2.5">
+            <span className="flex items-start gap-2">
+              <Icon name="Image" size={16} className="mt-0.5 shrink-0 text-ink-3" />
+              <span>
+                <span className="text-ink">{a}</span>
+                <span className="block text-xs text-ink-3">{b}</span>
+              </span>
+            </span>
+            <Tag tone="ochre">{c}</Tag>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-3">
+        <Icon name="MapPin" size={13} /> 86 photos, each tagged to a line with time and location
+      </p>
     </Plate>
   )
 }

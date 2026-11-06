@@ -1,10 +1,9 @@
 // Contact details shown on the demo page. Leave a field empty to hide it.
-// (Fill these in before sharing the link.)
 export const contact = {
-  whatsapp: '', // digits with country code, e.g. '919800000000'
-  whatsappLabel: '', // how the number is shown, e.g. '+91 98000 00000'
-  email: '',
-  name: '', // person to ask for, e.g. 'Rishi'
+  whatsapp: '919619749965', // digits with country code
+  whatsappLabel: '96197 49965', // how the number is shown
+  email: 'shivam@getveraai.com',
+  name: 'Shivam', // person to ask for
 }
 
 // "sharma-infra" -> "Sharma Infra". Keeps short words like "and" lower-case.
