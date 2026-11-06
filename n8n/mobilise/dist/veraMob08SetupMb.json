@@ -1,0 +1,652 @@
+{
+  "id": "veraMob08SetupMb",
+  "name": "Vera 05 · 08 Set up a new site",
+  "nodes": [
+    {
+      "id": "222661c0-d117-486a-87e7-b635c5fc8f33",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 08 Set up a new site\nThe engineer (or planning) fills one form: site, contractor, dates, contract value, peak labour, phones. Vera creates the checklist, sends the contractor the area prompts, and sends the engineer his walk link.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "46906e28-21ef-4eb1-85d5-f09534bc5b3c",
+      "name": "New site form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "formTitle": "New site mobilisation",
+        "formDescription": "Five minutes, once per site. Vera uses these facts to check every paper the contractor sends.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Project",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Package",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Contractor (legal name)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Other spellings of the contractor name",
+              "fieldType": "text",
+              "requiredField": false
+            },
+            {
+              "fieldLabel": "Site address",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Address words that must appear on papers",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work start date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Engineer visit date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Contract end date",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Contract value (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Planned peak labour",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Concrete",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "plant"
+                  },
+                  {
+                    "option": "rmc"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Tower crane / hoist at site",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "yes"
+                  },
+                  {
+                    "option": "no"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Creche needed",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "yes"
+                  },
+                  {
+                    "option": "no"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Excavation at start",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "yes"
+                  },
+                  {
+                    "option": "no"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Contractor phone (WhatsApp)",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Engineer phone (WhatsApp)",
+              "fieldType": "text",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "notes": "An n8n form behind login. No spreadsheet to keep in sync.\nGuardrails: auth",
+      "notesInFlow": false,
+      "webhookId": "bcd0d20d-1df7-4e53-8dd8-ac2573258b09"
+    },
+    {
+      "id": "0f79e8f4-af2f-4268-89fd-98eee53b9b11",
+      "name": "Read the form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: maps the form's labels to field names (one node instead of a long Set).\nconst f = $input.item.json;\nconst k = { 'Project': 'project', 'Package': 'package', 'Contractor (legal name)': 'contractor_name', 'Other spellings of the contractor name': 'contractor_aliases',\n  'Site address': 'site_address', 'Address words that must appear on papers': 'site_keywords', 'Work start date': 'start_date', 'Engineer visit date': 'visit_date',\n  'Contract end date': 'contract_end', 'Contract value (₹)': 'contract_value_inr', 'Planned peak labour': 'peak_workers', 'Concrete': 'concrete',\n  'Tower crane / hoist at site': 'lifting', 'Creche needed': 'creche', 'Excavation at start': 'excavation',\n  'Contractor phone (WhatsApp)': 'contractor_phone', 'Engineer phone (WhatsApp)': 'engineer_phone' };\nconst out = {};\nfor (const [label, key] of Object.entries(k)) out[key] = f[label] == null ? '' : f[label];\nreturn { json: out };"
+      },
+      "notes": "Labels → field names.",
+      "notesInFlow": false
+    },
+    {
+      "id": "9ed47ac0-a9fc-4920-8bd3-c0c821c4a73b",
+      "name": "Check the form",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check the form: generated from n8n/mobilise/logic.mjs validateSetup. Edit there, then rebuild.\nconst __fn = function validateSetup(input) {\n  const f = input\n  const errors = []\n  const day = (s) => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || ''))\n  const phone = (s) => /^\\d{10,15}$/.test(String(s || '').replace(/\\D/g, ''))\n  if (!f.project) errors.push('Project name is needed')\n  if (!f.contractor_name) errors.push('Contractor name is needed')\n  if (!day(f.start_date) || !day(f.visit_date) || !day(f.contract_end)) errors.push('Dates must be YYYY-MM-DD')\n  if (day(f.visit_date) && day(f.start_date) && f.visit_date > f.start_date) errors.push('Visit must be on or before the start date')\n  if (!(Number(f.contract_value_inr) > 0)) errors.push('Contract value must be a number in rupees')\n  if (!(Number(f.peak_workers) > 0)) errors.push('Planned peak labour must be a number')\n  if (!phone(f.contractor_phone)) errors.push('Contractor phone must have country code, e.g. 9198xxxxxxxx')\n  if (!phone(f.engineer_phone)) errors.push('Engineer phone must have country code')\n  if (!['plant', 'rmc'].includes(f.concrete)) errors.push('Concrete must be \"plant\" or \"rmc\"')\n  const list = (s) => String(s || '').split(/[,;\\n]/).map((x) => x.trim()).filter(Boolean)\n  return {\n    ...input, valid: errors.length === 0, errors,\n    clean: {\n      project: String(f.project || '').trim(), package: String(f.package || '').trim(),\n      contractor_name: String(f.contractor_name || '').trim(), contractor_aliases: list(f.contractor_aliases),\n      site_address: String(f.site_address || '').trim(), site_keywords: list(f.site_keywords),\n      start_date: f.start_date, visit_date: f.visit_date, contract_end: f.contract_end,\n      contract_value_inr: Number(f.contract_value_inr), peak_workers: Number(f.peak_workers),\n      flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)) },\n      contractor_phone: String(f.contractor_phone || '').replace(/\\D/g, ''), engineer_phone: String(f.engineer_phone || '').replace(/\\D/g, ''),\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Dates in order, numbers are numbers, phones have country code.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "5e020167-a128-41bf-8238-589358c46a16",
+      "name": "Form OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Wrong input stops here, with reasons.",
+      "notesInFlow": false
+    },
+    {
+      "id": "e5b94842-95a1-48db-89d9-1b16b5b86a95",
+      "name": "Show what is wrong",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        200
+      ],
+      "parameters": {
+        "errorMessage": "={{ 'Please fix: ' + $json.errors.join('; ') }}"
+      },
+      "notes": "The form shows the error.",
+      "notesInFlow": false
+    },
+    {
+      "id": "58c7ffd3-88ab-4544-8590-3abf0343804d",
+      "name": "Copy checklist for this site",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Copy checklist for this site: generated from n8n/mobilise/logic.mjs instantiateChecklist. Edit there, then rebuild.\nconst __fn = function instantiateChecklist(input) {\n  const s = input.clean\n  const flags = { onSitePlant: s.flags.concrete === 'plant', rmc: s.flags.concrete === 'rmc', lifting: s.flags.lifting, creche: s.flags.creche, excavation: s.flags.excavation }\n  const rows = (input.template || []).filter((l) => !l.appliesIf || flags[l.appliesIf]).map((l) => ({\n    code: l.code, area: l.area, text: l.text, evidence: l.evidence, when: l.when, severity: l.severity,\n    doc_type: l.docType || null, rules: l.rules || [], hint: l.hint || '', status: 'open',\n  }))\n  const areas = (input.areas || []).filter((a) => rows.some((r) => r.area === a.code))\n  return { ...input, checklist: rows, checklist_areas: areas }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.template = [{\"code\":\"PAP-01\",\"area\":\"PAP\",\"text\":\"Establishment registration for this site (OSH Code; BOCW registration accepted during transition)\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"establishment_registration\",\"rules\":[\"nameMatchesContractor\",\"siteMatches\",\"validOnStart\",\"coversPeakWorkers\"],\"hint\":\"Registration certificate showing the contractor name, this site address and the maximum number of workers.\"},{\"code\":\"PAP-02\",\"area\":\"PAP\",\"text\":\"Contract labour licence (OSH Code single licence; CLRA Form VI accepted during transition)\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"labour_licence\",\"rules\":[\"nameMatchesContractor\",\"siteMatches\",\"validBeyondStart\",\"coversPeakWorkers\"],\"hint\":\"Licence with licence number, validity dates and the maximum workers allowed. Must cover the planned peak labour.\"},{\"code\":\"PAP-03\",\"area\":\"PAP\",\"text\":\"Employees' compensation (WC) policy\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"wc_policy\",\"rules\":[\"nameMatchesContractor\",\"validBeyondStart\",\"coversPeakWorkers\"],\"hint\":\"Policy schedule page: insured name, policy period, number of workers covered.\"},{\"code\":\"PAP-04\",\"area\":\"PAP\",\"text\":\"Contractor's All Risks (CAR) policy with third-party liability\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"car_policy\",\"rules\":[\"nameMatchesContractor\",\"siteMatches\",\"validBeyondStart\",\"sumInsuredCoversContract\",\"principalNamed\"],\"hint\":\"Policy schedule: insured parties (developer named as principal), project address, period, sum insured, TPL limit.\"},{\"code\":\"PAP-05\",\"area\":\"PAP\",\"text\":\"ESIC and PF registration codes\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"esic_pf\",\"rules\":[\"nameMatchesContractor\"],\"hint\":\"ESIC and EPFO registration letters or portal screenshots with the contractor name and codes.\"},{\"code\":\"PAP-06\",\"area\":\"PAP\",\"text\":\"Batching plant calibration certificate (weigh batchers, admixture dispenser)\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"calibration_certificate\",\"rules\":[\"calibrationCurrent\"],\"appliesIf\":\"onSitePlant\",\"hint\":\"Certificate from an accredited agency, plant serial number, date of calibration and next due date.\"},{\"code\":\"PAP-07\",\"area\":\"PAP\",\"text\":\"Consent to Operate (MPCB) for the batching plant\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"consent_to_operate\",\"rules\":[\"siteMatches\",\"validOnStart\"],\"appliesIf\":\"onSitePlant\",\"hint\":\"MPCB consent order for this plant at this address, with validity date and capacity.\"},{\"code\":\"PAP-08\",\"area\":\"PAP\",\"text\":\"RMC supplier: approved vendor letter and approved mix designs\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"rmc_tieup\",\"rules\":[\"validOnStart\"],\"appliesIf\":\"rmc\",\"hint\":\"Vendor approval and mix design approval for each grade, signed by the structural consultant.\"},{\"code\":\"PAP-09\",\"area\":\"PAP\",\"text\":\"Safety officer appointment letter and qualification\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"safety_officer\",\"rules\":[\"safetyOfficersEnough\"],\"hint\":\"Appointment letter naming the safety officer(s) for this site, with qualification certificate.\"},{\"code\":\"PAP-10\",\"area\":\"PAP\",\"text\":\"Site EHS plan approved by developer EHS\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"ehs_plan\",\"rules\":[\"siteMatches\"],\"hint\":\"Site-specific safety plan with approval signature or approval email.\"},{\"code\":\"PAP-11\",\"area\":\"PAP\",\"text\":\"Emergency plan: nearest hospital tie-up and ambulance contact\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"emergency_plan\",\"rules\":[],\"hint\":\"Emergency plan with hospital name, distance, phone numbers and ambulance arrangement.\"},{\"code\":\"PAP-12\",\"area\":\"PAP\",\"text\":\"Lifting appliances: load test certificates (tower crane, hoist) by competent person\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"load_test\",\"rules\":[\"validOnStart\"],\"appliesIf\":\"lifting\",\"hint\":\"Test certificate per machine: serial number, safe working load, test date, next due date.\"},{\"code\":\"PAP-13\",\"area\":\"PAP\",\"text\":\"Temporary power: connection approval and licensed electrical supervisor\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"electrical\",\"rules\":[],\"hint\":\"Power connection sanction or DG arrangement, and the licence of the electrical supervisor.\"},{\"code\":\"PAP-14\",\"area\":\"PAP\",\"text\":\"Worker list with ID check (ID numbers masked) and induction plan\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"worker_list\",\"rules\":[],\"hint\":\"List of workers with contractor, trade and ID check status. Aadhaar numbers must be masked.\"},{\"code\":\"PAP-15\",\"area\":\"PAP\",\"text\":\"Quality assurance plan and inspection test plan approved by developer QA\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"qap\",\"rules\":[],\"hint\":\"QAP / ITP document with developer QA approval.\"},{\"code\":\"PAP-16\",\"area\":\"PAP\",\"text\":\"Survey instruments calibration (total station, auto level)\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"minor\",\"docType\":\"calibration_certificate\",\"rules\":[\"calibrationCurrent\"],\"hint\":\"Calibration certificate per instrument with serial number and date.\"},{\"code\":\"DR-01\",\"area\":\"DR\",\"text\":\"Latest GFC drawings at site; drawing register matches the design register\",\"evidence\":\"both\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Photo of the drawing register at site. Vera compares revisions with the design team register.\"},{\"code\":\"DR-02\",\"area\":\"DR\",\"text\":\"Superseded drawings stamped and removed from site\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Photo of the superseded-drawings file or stamp.\"},{\"code\":\"DR-03\",\"area\":\"DR\",\"text\":\"Structural consultant approvals for mix designs and design basis received\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"design_approval\",\"rules\":[],\"hint\":\"Approval letter or email from the structural consultant.\"},{\"code\":\"DR-04\",\"area\":\"DR\",\"text\":\"Formwork / shoring scheme approved by structural consultant\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"critical\",\"docType\":\"formwork_scheme\",\"rules\":[],\"hint\":\"Approved formwork drawings or scheme with approval stamp.\"},{\"code\":\"DR-05\",\"area\":\"DR\",\"text\":\"Site logistics plan: crane positions, batching plant, material routes, as approved\",\"evidence\":\"both\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Approved layout drawing, and a photo from the site showing it is set out that way.\"},{\"code\":\"DR-06\",\"area\":\"DR\",\"text\":\"Benchmark and grid lines established and recorded\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Photo of the benchmark pillar and the grid reference.\"},{\"code\":\"DR-07\",\"area\":\"DR\",\"text\":\"RFI log and design query contact agreed\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"minor\",\"docType\":\"rfi_log\",\"rules\":[],\"hint\":\"RFI register format and the named design contact.\"},{\"code\":\"DR-08\",\"area\":\"DR\",\"text\":\"Sample and mock-up approval plan\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"minor\",\"docType\":\"mockup_plan\",\"rules\":[],\"hint\":\"List of samples and mock-ups with dates.\"},{\"code\":\"LC-01\",\"area\":\"LC\",\"text\":\"Camp location safe: not low-lying, not under power lines, layout as approved\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Wide photo of the camp with surroundings.\"},{\"code\":\"LC-02\",\"area\":\"LC\",\"text\":\"Rooms: ventilation, windows, space per person as per developer camp standard\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Inside one room, showing windows and beds.\"},{\"code\":\"LC-03\",\"area\":\"LC\",\"text\":\"Toilets: enough for the workforce, separate for women, clean, with water\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"count\":\"toilets\",\"hint\":\"Toilet block from outside showing the count, and one inside.\"},{\"code\":\"LC-04\",\"area\":\"LC\",\"text\":\"Bathing and washing area with drainage\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Washing area and drain.\"},{\"code\":\"LC-05\",\"area\":\"LC\",\"text\":\"Drinking water: potable source, marked, away from toilets and washing areas\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Water point with its marking; test report if any.\"},{\"code\":\"LC-06\",\"area\":\"LC\",\"text\":\"Kitchen separate from rooms; gas cylinders not inside rooms\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Kitchen area and where cylinders are kept.\"},{\"code\":\"LC-07\",\"area\":\"LC\",\"text\":\"Electrical: RCCB/ELCB, earthing, no loose wiring\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Distribution board with RCCB, and a typical room wiring.\"},{\"code\":\"LC-08\",\"area\":\"LC\",\"text\":\"Fire extinguishers and fire buckets, charged, with dates\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Extinguisher with its tag showing the refill date.\"},{\"code\":\"LC-09\",\"area\":\"LC\",\"text\":\"First-aid box stocked; trained first-aider named\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Open first-aid box and the first-aider board.\"},{\"code\":\"LC-10\",\"area\":\"LC\",\"text\":\"Creche where required (OSH Code / state rules)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"appliesIf\":\"creche\",\"hint\":\"Creche room.\"},{\"code\":\"LC-11\",\"area\":\"LC\",\"text\":\"Waste bins, drainage, mosquito control\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Waste collection point and drains.\"},{\"code\":\"LC-12\",\"area\":\"LC\",\"text\":\"Notice board: wage days, grievance contact, emergency numbers (Hindi / Marathi)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Notice board, readable.\"},{\"code\":\"LC-13\",\"area\":\"LC\",\"text\":\"Lighting for night movement\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Camp lighting.\"},{\"code\":\"LC-14\",\"area\":\"LC\",\"text\":\"Boundary and security for the camp\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Camp gate and boundary.\"},{\"code\":\"SY-01\",\"area\":\"SY\",\"text\":\"Cement shed: weatherproof, raised floor, stacks within limit, away from walls\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Inside the shed showing floor, stack height and wall gap.\"},{\"code\":\"SY-02\",\"area\":\"SY\",\"text\":\"Cement stacked first-in first-out, week of manufacture visible\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Stack labels / bag dates.\"},{\"code\":\"SY-03\",\"area\":\"SY\",\"text\":\"Steel stacked off the ground, diameter-wise, tagged\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Steel yard with sleepers and tags.\"},{\"code\":\"SY-04\",\"area\":\"SY\",\"text\":\"Sand and aggregate bays on hard ground, separated\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Material bays.\"},{\"code\":\"SY-05\",\"area\":\"SY\",\"text\":\"Admixtures and chemicals stored with safety data sheets\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Chemical store with MSDS file.\"},{\"code\":\"SY-06\",\"area\":\"SY\",\"text\":\"Diesel and flammables stored apart, no-smoking signs, extinguisher\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Diesel store with signage and extinguisher.\"},{\"code\":\"SY-07\",\"area\":\"SY\",\"text\":\"Gate entry and stores registers set up (challan, gate book, issue slips)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"First pages of the gate book and stores register.\"},{\"code\":\"SY-08\",\"area\":\"SY\",\"text\":\"Weighing arrangement for incoming material (weighbridge or tie-up)\",\"evidence\":\"both\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Weighbridge or tie-up letter.\"},{\"code\":\"SY-09\",\"area\":\"SY\",\"text\":\"Fire extinguishers in stores\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Extinguisher with tag.\"},{\"code\":\"SY-10\",\"area\":\"SY\",\"text\":\"Truck access and turning space kept clear\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Access road.\"},{\"code\":\"BP-01\",\"area\":\"BP\",\"text\":\"Batching plant installed and running at planned capacity\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Plant with its name plate.\"},{\"code\":\"BP-02\",\"area\":\"BP\",\"text\":\"Calibration status on the plant matches the certificate\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Calibration sticker and serial plate.\"},{\"code\":\"BP-03\",\"area\":\"BP\",\"text\":\"Aggregate bins separated; moisture check arrangement\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Bins and moisture meter.\"},{\"code\":\"BP-04\",\"area\":\"BP\",\"text\":\"Water tank clean; water test report available\",\"evidence\":\"both\",\"when\":\"walk\",\"severity\":\"major\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Tank and the water test report.\"},{\"code\":\"BP-05\",\"area\":\"BP\",\"text\":\"Cement silo with level indicator\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Silo and indicator.\"},{\"code\":\"BP-06\",\"area\":\"BP\",\"text\":\"Site lab: calibrated compression testing machine, cube moulds, curing tank, slump cone\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Lab with CTM calibration tag and moulds.\"},{\"code\":\"BP-07\",\"area\":\"BP\",\"text\":\"Dust control as per consent conditions (sprinklers, covered conveyors)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"appliesIf\":\"onSitePlant\",\"hint\":\"Sprinklers / covers.\"},{\"code\":\"BP-08\",\"area\":\"BP\",\"text\":\"Transit mixers and concrete pump available as planned\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Transit mixers and pump at site.\"},{\"code\":\"BP-09\",\"area\":\"BP\",\"text\":\"RMC plant visited or audit report on file\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"rmc_audit\",\"rules\":[],\"appliesIf\":\"rmc\",\"hint\":\"Audit report of the RMC plant.\"},{\"code\":\"BP-10\",\"area\":\"BP\",\"text\":\"Trial mix done for the first grade to be poured\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"trial_mix\",\"rules\":[],\"hint\":\"Trial mix report with cube results.\"},{\"code\":\"FW-01\",\"area\":\"FW\",\"text\":\"Formwork quantity at site matches the cycle plan\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"count\":\"formwork sets\",\"hint\":\"Stacked formwork, countable.\"},{\"code\":\"FW-02\",\"area\":\"FW\",\"text\":\"Formwork panels cleaned, oiled, not damaged\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Close-up of panels.\"},{\"code\":\"FW-03\",\"area\":\"FW\",\"text\":\"Props and scaffold material in good condition, quantity as planned\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Props and scaffold stack.\"},{\"code\":\"FW-04\",\"area\":\"FW\",\"text\":\"Formwork storage area level and drained\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Storage area.\"},{\"code\":\"FW-05\",\"area\":\"FW\",\"text\":\"Scaffold tagging system in place (green / red tags)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Tag samples.\"},{\"code\":\"SF-01\",\"area\":\"SF\",\"text\":\"Hoarding and barricading on the full boundary; signage\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Boundary hoarding and gate.\"},{\"code\":\"SF-02\",\"area\":\"SF\",\"text\":\"Main gate: security, visitor register, vehicle entry control\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Gate cabin and register.\"},{\"code\":\"SF-03\",\"area\":\"SF\",\"text\":\"Induction room and toolbox talk area; induction records started\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Induction room and register.\"},{\"code\":\"SF-04\",\"area\":\"SF\",\"text\":\"PPE stock for the planned workforce: helmets, shoes, full-body harness, jackets\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"count\":\"harnesses\",\"hint\":\"PPE store showing quantities.\"},{\"code\":\"SF-05\",\"area\":\"SF\",\"text\":\"Safety nets and edge protection material at site\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Nets and edge protection stock.\"},{\"code\":\"SF-06\",\"area\":\"SF\",\"text\":\"Fire point and emergency assembly point marked\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"Assembly point sign.\"},{\"code\":\"SF-07\",\"area\":\"SF\",\"text\":\"First-aid room and ambulance arrangement\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"major\",\"hint\":\"First-aid room.\"},{\"code\":\"SF-08\",\"area\":\"SF\",\"text\":\"Site electrical: main DB with RCCB, earthing pits, licensed electrician on site\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Main DB and earthing pit.\"},{\"code\":\"SF-09\",\"area\":\"SF\",\"text\":\"Lifting appliances: test tags on machine, operator licences\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"appliesIf\":\"lifting\",\"hint\":\"Crane test tag and operator card.\"},{\"code\":\"SF-10\",\"area\":\"SF\",\"text\":\"Safety officer present on site (met in person)\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"hint\":\"Engineer notes the name; photo optional.\"},{\"code\":\"SF-11\",\"area\":\"SF\",\"text\":\"Housekeeping and lighting of work areas\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"General site view.\"},{\"code\":\"SF-12\",\"area\":\"SF\",\"text\":\"Excavation edges protected, access ladders\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"critical\",\"appliesIf\":\"excavation\",\"hint\":\"Excavation edge and ladder.\"},{\"code\":\"SF-13\",\"area\":\"SF\",\"text\":\"Emergency contact board at gate and camp\",\"evidence\":\"photo\",\"when\":\"walk\",\"severity\":\"minor\",\"hint\":\"Board, readable.\"},{\"code\":\"SF-14\",\"area\":\"SF\",\"text\":\"Permit-to-work system: hot work, work at height, confined space\",\"evidence\":\"document\",\"when\":\"paper\",\"severity\":\"major\",\"docType\":\"ptw\",\"rules\":[],\"hint\":\"Permit formats and the permit register.\"}]; input.areas = [{\"code\":\"PAP\",\"name\":\"Papers and licences\",\"icon\":\"FileText\",\"walk\":false},{\"code\":\"DR\",\"name\":\"Drawings and design readiness\",\"icon\":\"Ruler\",\"walk\":true},{\"code\":\"LC\",\"name\":\"Labour camp\",\"icon\":\"Tent\",\"walk\":true},{\"code\":\"SY\",\"name\":\"Stores yard\",\"icon\":\"Warehouse\",\"walk\":true},{\"code\":\"BP\",\"name\":\"Batching plant / RMC\",\"icon\":\"Factory\",\"walk\":true},{\"code\":\"FW\",\"name\":\"Formwork and scaffolding\",\"icon\":\"Stack\",\"walk\":true},{\"code\":\"SF\",\"name\":\"Safety set-up\",\"icon\":\"HardHat\",\"walk\":true}];\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Template mob-v1: only the lines that apply (plant or RMC, crane, creche, excavation).",
+      "notesInFlow": false
+    },
+    {
+      "id": "c551e090-89a6-48d4-8040-5183915ada15",
+      "name": "Create site, lines, contacts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with mo as (\n  insert into mobilisations (project, package, contractor_name, contractor_aliases, site_address, site_keywords, start_date, visit_date, contract_end, contract_value_inr, peak_workers, flags, template_version)\n  select c->>'project', c->>'package', c->>'contractor_name', c->'contractor_aliases', c->>'site_address', c->'site_keywords', (c->>'start_date')::date, (c->>'visit_date')::date, (c->>'contract_end')::date,\n    (c->>'contract_value_inr')::numeric, (c->>'peak_workers')::int, c->'flags', 'mob-v1' from (select $1::jsonb c) x returning id\n), l as (\n  insert into lines (mobilisation_id, code, area, text, evidence, \"when\", severity, doc_type, rules, hint)\n  select (select id from mo), r->>'code', r->>'area', r->>'text', r->>'evidence', r->>'when', r->>'severity', r->>'doc_type', r->'rules', r->>'hint' from jsonb_array_elements($2::jsonb) r returning 1\n), k as (\n  insert into contacts (mobilisation_id, phone, role) values ((select id from mo), $3, 'contractor'), ((select id from mo), $4, 'engineer') returning id, role\n), wk as (\n  insert into walks (mobilisation_id, engineer_id, expires_at) select (select id from mo), (select id from k where role = 'engineer'), ($5::date + 2)::timestamptz returning id\n)\nselect (select id from mo) as mobilisation_id, (select id from k where role = 'contractor') as contractor_contact_id, (select id from k where role = 'engineer') as engineer_contact_id,\n  (select id from wk) as walk_id, (select count(*) from l) as lines_created;",
+        "options": {
+          "queryReplacement": "={{ [(JSON.stringify($json.clean)) ?? null, (JSON.stringify($json.checklist)) ?? null, ($json.clean.contractor_phone) ?? null, ($json.clean.engineer_phone) ?? null, ($json.clean.visit_date) ?? null] }}"
+        }
+      },
+      "notes": "All in one statement: either the whole site is created or nothing is.\nGuardrails: audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "a2df436a-0edb-4593-8718-5da89405563b",
+      "name": "Build area prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build area prompts: generated from n8n/mobilise/logic.mjs buildAreaPrompts. Edit there, then rebuild.\nconst __fn = function buildAreaPrompts(input) {\n  const rows = input.checklist || []\n  const out = []\n  for (const a of input.checklist_areas || []) {\n    const ls = rows.filter((r) => r.area === a.code)\n    const lines = ls.map((l) => Number(l.code.split('-')[1]) + '. ' + l.text + (l.severity === 'critical' ? ' 🔴' : '')).join('\\n')\n    out.push({\n      mobilisation_id: input.mobilisation_id, contact_id: input.contractor_contact_id, kind: 'area', area: a.code, line_code: '',\n      request: { body: { type: 'text', text: { preview_url: false, body: '*' + a.name + ' (' + a.code + ')*\\n' + lines + '\\n\\nReply to *this message* with photos or papers for ' + a.name + '. Write the number in the caption (e.g. 3).' } } },\n    })\n  }\n  return out\n};\nconst out = [];\nconst all = $input.all();\nfor (let i = 0; i < all.length; i++) {\n  const item = all[i];\n  let input = { ...item.json };\n  input.checklist = $('Copy checklist for this site').first().json.checklist; input.checklist_areas = $('Copy checklist for this site').first().json.checklist_areas;\n  for (const j of [].concat(__fn(input))) out.push({ json: j });\n}\nreturn out;"
+      },
+      "notes": "One message per area, each listing its lines by number.",
+      "notesInFlow": false
+    },
+    {
+      "id": "cf978c25-d336-450d-8317-dadd8c85d6e2",
+      "name": "Send area prompts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1960,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "area",
+            "area": "={{ $json.area }}",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "The first one goes as the welcome template (outside the 24 h window); the contractor's reply opens the window for the rest.",
+      "notesInFlow": false
+    },
+    {
+      "id": "f9967952-4dc5-4773-81fd-36d63d9dd982",
+      "name": "Sign the walk link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: signs the engineer's walk link (HMAC, expires the day after the visit).\nconst crypto = require('crypto');\nconst item = $input.item;\nconst exp = Math.floor(Date.parse(item.json.visit_date + 'T23:59:59+05:30') / 1000) + 86400;\nconst base = item.json.walk_id + '.' + exp;\nconst token = base + '.' + crypto.createHmac('sha256', $env.VERA_WALK_SECRET || '').update(base).digest('base64url');\nconst url = ($env.VERA_WALK_URL || 'https://vera.example/walk') + '#t=' + token;\nreturn { json: { ...item.json, request: {\n  body: { type: 'text', text: { preview_url: false, body: '*Site visit ' + item.json.visit_date + ': ' + item.json.project + '*\\nOpen this on the day. Tap a line, take the photo, say your remark. GPS is recorded with each photo.\\n' + url } },\n  template: { name: 'vera_mob_walk_link', language: 'en', params: [item.json.project, item.json.visit_date, url] } } } };"
+      },
+      "notes": "Signed link for the engineer, valid until the day after the visit.\nGuardrails: auth",
+      "notesInFlow": false
+    },
+    {
+      "id": "f8ad7301-ff9f-425c-8802-ac0408892870",
+      "name": "Send engineer the walk link",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1960,
+        240
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $('Create site, lines, contacts').item.json.engineer_contact_id }}",
+            "mobilisation_id": "={{ $('Create site, lines, contacts').item.json.mobilisation_id }}",
+            "kind": "help",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "New site form": {
+      "main": [
+        [
+          {
+            "node": "Read the form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the form": {
+      "main": [
+        [
+          {
+            "node": "Check the form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the form": {
+      "main": [
+        [
+          {
+            "node": "Form OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Form OK?": {
+      "main": [
+        [
+          {
+            "node": "Copy checklist for this site",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Show what is wrong",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy checklist for this site": {
+      "main": [
+        [
+          {
+            "node": "Create site, lines, contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create site, lines, contacts": {
+      "main": [
+        [
+          {
+            "node": "Build area prompts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sign the walk link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build area prompts": {
+      "main": [
+        [
+          {
+            "node": "Send area prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign the walk link": {
+      "main": [
+        [
+          {
+            "node": "Send engineer the walk link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

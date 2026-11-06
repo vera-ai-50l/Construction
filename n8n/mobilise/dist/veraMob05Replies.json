@@ -1,0 +1,276 @@
+{
+  "id": "veraMob05Replies",
+  "name": "Vera 05 · 05 One reply per burst",
+  "nodes": [
+    {
+      "id": "b0fb4635-8173-4843-81d8-720974342b04",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 05 One reply per burst\nContractors send 20 photos in a minute. Instead of 20 replies, Vera waits until the burst goes quiet for 90 seconds and sends one summary.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "b858c617-513d-4c6c-8aa5-dc794963b1e0",
+      "name": "Every minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "notes": "Small, cheap query.",
+      "notesInFlow": false
+    },
+    {
+      "id": "27a5d47d-5cb1-4c10-8790-aa3b50405964",
+      "name": "Bursts that went quiet",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with q as (\n  select contact_id from reply_queue where sent_at is null and claimed_at is null\n  group by contact_id having max(created_at) < now() - interval '90 seconds'\n), c as (\n  update reply_queue r set claimed_at = now() from q where r.contact_id = q.contact_id and r.sent_at is null and r.claimed_at is null\n  returning r.id, r.contact_id, r.mobilisation_id, r.fragment\n)\nselect contact_id, max(mobilisation_id) as mobilisation_id, json_agg(fragment order by id) as fragments, json_agg(id) as ids,\n  (select count(*) from lines l where l.mobilisation_id = max(c.mobilisation_id) and l.status not in ('accepted', 'ok', 'na') and l.\"when\" = 'paper') as open_count\nfrom c group by contact_id;",
+        "options": {}
+      },
+      "notes": "Claims each burst once, so two runs never send the same reply.\nGuardrails: idempotent, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "fedec6d9-fe0b-4650-8fce-3950c564f981",
+      "name": "Compose one reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Compose one reply: generated from n8n/mobilise/logic.mjs composeReply. Edit there, then rebuild.\nconst __fn = function composeReply(input) {\n  const frags = Array.isArray(input.fragments) ? input.fragments : []\n  const filed = frags.filter((f) => f.kind === 'filed')\n  const accepted = frags.filter((f) => f.kind === 'accepted')\n  const rejected = frags.filter((f) => f.kind === 'rejected')\n  const review = frags.filter((f) => f.kind === 'review')\n  const asks = frags.filter((f) => f.kind === 'unclear')\n  const out = []\n  if (accepted.length) out.push('✅ Accepted: ' + accepted.map((f) => f.line).join(', '))\n  if (filed.length) out.push('📎 Filed: ' + filed.map((f) => f.line).join(', ') + (filed.some((f) => f.photo) ? ' (site photos are checked by the engineer on the visit day)' : ''))\n  for (const f of rejected) out.push('↩️ ' + f.line + ' sent back: ' + f.reason)\n  if (review.length) out.push('🔎 Being checked by our team: ' + review.map((f) => f.line || 'item').join(', '))\n  if (asks.length) out.push('❓ ' + asks.length + ' item' + (asks.length > 1 ? 's' : '') + ' could not be placed. Please reply to it with the line code.')\n  if (input.open_count != null) out.push('Still open: ' + input.open_count + ' line' + (input.open_count === 1 ? '' : 's') + '. Send *status* for the list.')\n  return { ...input, reply: out.join('\\n'), count: frags.length }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "\"✅ Accepted PAP-03. ↩️ PAP-04 sent back: sum insured below contract value. Still open: 6.\"",
+      "notesInFlow": false
+    },
+    {
+      "id": "8d9ad591-45e3-49af-84e1-08dfe14bfcaa",
+      "name": "Send the reply",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "reply",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ { body: { type: \"text\", text: { body: $json.reply } } } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09.",
+      "notesInFlow": false
+    },
+    {
+      "id": "686a5bca-d6bf-45d6-8c19-08f4fdc7aec1",
+      "name": "Mark reply sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update reply_queue set sent_at = now() where id = any(($1)::bigint[]) returning id;",
+        "options": {
+          "queryReplacement": "={{ [('{' + $('Compose one reply').item.json.ids.join(',') + '}') ?? null] }}"
+        }
+      },
+      "notes": "Done.",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Every minute": {
+      "main": [
+        [
+          {
+            "node": "Bursts that went quiet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bursts that went quiet": {
+      "main": [
+        [
+          {
+            "node": "Compose one reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose one reply": {
+      "main": [
+        [
+          {
+            "node": "Send the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the reply": {
+      "main": [
+        [
+          {
+            "node": "Mark reply sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

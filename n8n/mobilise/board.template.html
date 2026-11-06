@@ -1,0 +1,667 @@
+<title>One-day Mobilisation Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a whiteboard canvas (pan / zoom) of frames: story, decisions, the live n8n node map, guardrails. "Read as page" stacks the same frames. */
+:root {
+  --canvas: #e9ecf0; --dot: #c9cfd8; --frame: #ffffff; --frame-line: #d3d8df; --ink: #1b2330; --ink-2: #4a5566; --ink-3: #7a8494;
+  --accent: #2f5bea; --accent-ink: #ffffff;
+  --sticky-y: #fff1a8; --sticky-p: #ffd6e2; --sticky-g: #d4f2d9; --sticky-b: #d6e6ff; --sticky-o: #ffe0bf; --sticky-ink: #2a2a22;
+  --ok: #1f8f4e; --warn: #b7791f; --bad: #c93b3b; --info: #2f5bea;
+  --k-trigger: #2f5bea; --k-code: #7b4ddb; --k-ai: #e0632b; --k-http: #138a8a; --k-db: #3d5a80; --k-store: #2e8b57; --k-decide: #c98a12; --k-respond: #6b7280; --k-call: #4f46e5;
+  --edge: #8a94a6; --shadow: 0 1px 2px rgb(20 30 50 / .08), 0 6px 18px rgb(20 30 50 / .06);
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --canvas: #14171c; --dot: #2a3039; --frame: #1d2128; --frame-line: #323944; --ink: #e8ebf0; --ink-2: #b3bac6; --ink-3: #8790a0;
+  --accent: #7d9cff; --accent-ink: #0d1220;
+  --sticky-y: #4a4420; --sticky-p: #4d2a36; --sticky-g: #22422b; --sticky-b: #233552; --sticky-o: #4d3620; --sticky-ink: #f1eee0;
+  --ok: #4cc27f; --warn: #e0ad4f; --bad: #f07272; --info: #7d9cff;
+  --k-trigger: #7d9cff; --k-code: #a98bf0; --k-ai: #f08a57; --k-http: #4cc2c2; --k-db: #8fb0d9; --k-store: #5fc48c; --k-decide: #e0ad4f; --k-respond: #9aa3b2; --k-call: #9c95ff;
+  --edge: #6d7686; --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .3); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --canvas: #14171c; --dot: #2a3039; --frame: #1d2128; --frame-line: #323944; --ink: #e8ebf0; --ink-2: #b3bac6; --ink-3: #8790a0;
+  --accent: #7d9cff; --accent-ink: #0d1220;
+  --sticky-y: #4a4420; --sticky-p: #4d2a36; --sticky-g: #22422b; --sticky-b: #233552; --sticky-o: #4d3620; --sticky-ink: #f1eee0;
+  --ok: #4cc27f; --warn: #e0ad4f; --bad: #f07272; --info: #7d9cff;
+  --k-trigger: #7d9cff; --k-code: #a98bf0; --k-ai: #f08a57; --k-http: #4cc2c2; --k-db: #8fb0d9; --k-store: #5fc48c; --k-decide: #e0ad4f; --k-respond: #9aa3b2; --k-call: #9c95ff;
+  --edge: #6d7686; --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .3); color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--canvas); color: var(--ink); font: 14px/1.45 var(--f-body); overflow: hidden; }
+body.list { overflow: auto; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* top bar */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--frame) 92%, transparent); border-bottom: 1px solid var(--frame-line); backdrop-filter: blur(8px); }
+.brand { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.brand b { font: 800 16px/1.1 var(--f-display); letter-spacing: .01em; }
+.brand span { color: var(--ink-3); font-size: 12px; }
+.tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { border: 1px solid var(--frame-line); background: var(--frame); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; line-height: 1.2; }
+.btn:hover { border-color: var(--accent); }
+.btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+select.btn { padding-right: 24px; max-width: 46vw; }
+.zoom { font: 500 12px var(--f-mono); color: var(--ink-3); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* canvas */
+.viewport { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--canvas); background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px); background-size: 22px 22px; }
+.viewport.drag { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+body.list .viewport { position: static; overflow: visible; touch-action: auto; cursor: auto; background-image: none; padding: calc(84px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+body.list .world { position: static; transform: none !important; display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+
+/* frames */
+.frame { position: absolute; background: var(--frame); border: 1px solid var(--frame-line); border-radius: 6px; box-shadow: var(--shadow); padding: 26px 28px 28px; }
+body.list .frame { position: relative; left: auto !important; top: auto !important; width: auto !important; max-width: 100%; }
+.frame-tag { position: absolute; top: -26px; left: 0; font: 600 13px var(--f-body); color: var(--ink-2); white-space: nowrap; }
+body.list .frame-tag { position: static; display: block; margin-bottom: 6px; }
+.frame h2 { font: 800 30px/1.1 var(--f-display); margin: 0 0 6px; text-wrap: balance; letter-spacing: -.005em; }
+.frame h3 { font: 700 18px/1.2 var(--f-display); margin: 0 0 8px; text-wrap: balance; }
+.frame p { margin: 0 0 10px; max-width: 70ch; color: var(--ink-2); }
+.lede { font-size: 16px; color: var(--ink-2); max-width: 72ch; }
+.eyebrow { font: 600 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.col { flex: 1 1 260px; min-width: 0; }
+
+.sticky { background: var(--sticky-y); color: var(--sticky-ink); padding: 14px 16px; border-radius: 2px; box-shadow: 0 2px 0 rgb(0 0 0 / .06), 0 8px 16px rgb(0 0 0 / .07); min-width: 0; }
+.sticky.p { background: var(--sticky-p); } .sticky.g { background: var(--sticky-g); } .sticky.b { background: var(--sticky-b); } .sticky.o { background: var(--sticky-o); }
+.sticky h4 { margin: 0 0 6px; font: 700 14px/1.25 var(--f-body); }
+.sticky ul { margin: 0; padding-left: 18px; } .sticky li { margin: 3px 0; }
+.sticky p { color: inherit; opacity: .85; margin: 0; }
+.tilt-l { transform: rotate(-0.8deg); } .tilt-r { transform: rotate(0.7deg); }
+
+table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+.t th, .t td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--frame-line); }
+.t th { font: 600 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.scroll { overflow-x: auto; max-width: 100%; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 600 11px var(--f-mono); letter-spacing: .03em; white-space: nowrap; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); } .pill.info { color: var(--info); }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* timeline */
+.lanes { display: grid; grid-template-columns: 150px 1fr; gap: 10px 14px; align-items: stretch; }
+.lane-name { font: 700 13px var(--f-body); padding-top: 10px; }
+.lane { display: flex; gap: 8px; flex-wrap: wrap; }
+.step { flex: 1 1 150px; min-width: 0; border: 1px solid var(--frame-line); border-left: 4px solid var(--edge); border-radius: 4px; padding: 8px 10px; background: color-mix(in srgb, var(--frame) 94%, var(--canvas)); }
+.step b { display: block; font-size: 12px; font-family: var(--f-mono); color: var(--ink-3); font-weight: 500; }
+.step.today { border-left-color: var(--bad); } .step.vera { border-left-color: var(--ok); }
+
+/* checklist bars */
+.areas { display: grid; gap: 8px; }
+.area { display: grid; grid-template-columns: 52px 1fr 120px; gap: 10px; align-items: center; }
+.area .code { font: 600 12px var(--f-mono); }
+.bars { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: var(--canvas); }
+.bars i { display: block; height: 100%; }
+.area small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* binding ladder */
+.ladder { display: grid; gap: 8px; counter-reset: rung; }
+.rung { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--frame-line); border-radius: 6px; }
+.rung::before { counter-increment: rung; content: counter(rung); font: 800 20px/1 var(--f-display); color: var(--ink-3); }
+.rung h4 { margin: 0 0 3px; font-size: 14px; }
+.rung p { margin: 0; font-size: 13px; }
+
+/* accuracy rings */
+.rings { width: 100%; max-width: 360px; height: auto; display: block; }
+
+/* overview map */
+.ov { position: relative; }
+.ovbox { position: absolute; width: 208px; border: 1px solid var(--frame-line); border-radius: 8px; padding: 10px 12px; background: var(--frame); box-shadow: var(--shadow); cursor: pointer; }
+.ovbox:hover { border-color: var(--accent); }
+.ovbox b { display: block; font: 700 13px/1.25 var(--f-body); }
+.ovbox span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.ovbox .id { font: 600 11px var(--f-mono); color: var(--accent); }
+.ovbox.actor { background: var(--sticky-b); color: var(--sticky-ink); border-style: dashed; cursor: default; }
+.ovbox.actor span { color: inherit; opacity: .8; }
+
+/* n8n nodes */
+.wf-canvas { position: relative; }
+body.list .wf-wrap { overflow-x: auto; max-width: 100%; border: 1px solid var(--frame-line); border-radius: 6px; background: var(--canvas); background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 22px 22px; }
+.node { position: absolute; width: 214px; background: var(--frame); border: 1px solid var(--frame-line); border-top: 4px solid var(--kc, var(--edge)); border-radius: 6px; padding: 8px 10px 9px; box-shadow: var(--shadow); cursor: pointer; text-align: left; }
+.node:hover { border-color: var(--accent); border-top-color: var(--kc); }
+.node.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+.node .type { display: flex; justify-content: space-between; gap: 6px; font: 500 10.5px var(--f-mono); color: var(--kc); text-transform: lowercase; }
+.node .nm { display: block; font: 600 13px/1.25 var(--f-body); margin: 3px 0 4px; color: var(--ink); }
+.node .ds { display: block; font-size: 11.5px; line-height: 1.35; color: var(--ink-2); }
+.node .gd { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+.gchip { font: 500 10px var(--f-mono); padding: 1px 5px; border-radius: 3px; background: color-mix(in srgb, var(--g, var(--edge)) 14%, transparent); color: var(--g, var(--ink-2)); }
+svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+svg.edges path { fill: none; stroke-width: 1.6; }
+svg.edges text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+
+/* side panel */
+.panel { position: fixed; z-index: 30; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: min(380px, calc(100vw - 24px)); max-height: calc(100% - 90px); overflow: auto;
+  background: var(--frame); border: 1px solid var(--frame-line); border-radius: 10px; box-shadow: var(--shadow); padding: 16px 18px; }
+.panel h3 { margin: 4px 0 6px; font: 700 18px/1.2 var(--f-display); }
+.panel dl { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; margin: 10px 0 0; font-size: 13px; }
+.panel dt { color: var(--ink-3); font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.panel dd { margin: 0; min-width: 0; }
+.panel .x { position: absolute; right: 10px; top: 10px; }
+
+.legend { display: flex; gap: 10px 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 12px; height: 12px; border-radius: 3px; background: var(--c); display: inline-block; }
+.ln { width: 22px; height: 0; border-top: 2px solid var(--c); display: inline-block; }
+.ln.d { border-top-style: dashed; }
+
+.hint { position: fixed; z-index: 15; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--ink-3); background: var(--frame); border: 1px solid var(--frame-line); border-radius: 8px; padding: 6px 10px; }
+body.list .hint { display: none; }
+
+@media (max-width: 640px) {
+  .brand span { display: none; }
+  .lanes { grid-template-columns: 1fr; }
+  .area { grid-template-columns: 44px 1fr; } .area small { grid-column: 2; }
+  .frame { padding: 20px 18px; }
+  .frame h2 { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="bar">
+  <div class="brand"><b>Desk 05 · One-day Mobilisation</b><span>Node map, decisions and guardrails · prepared for a Mumbai developer · Nov 2026</span></div>
+  <div class="tools" role="toolbar" aria-label="Board controls">
+    <label class="sr" for="jump" hidden>Go to frame</label>
+    <select id="jump" class="btn" aria-label="Go to frame"></select>
+    <button class="btn" id="zout" aria-label="Zoom out">−</button>
+    <span class="zoom" id="zl">100%</span>
+    <button class="btn" id="zin" aria-label="Zoom in">+</button>
+    <button class="btn" id="fit">Fit all</button>
+    <button class="btn" id="mode" aria-pressed="false">Read as page</button>
+  </div>
+</header>
+
+<div class="viewport" id="vp"><div class="world" id="world"></div></div>
+<aside class="panel" id="panel" hidden aria-live="polite"></aside>
+<div class="hint" id="hint">Drag to move · scroll or pinch to zoom · click a node for details</div>
+
+<script>
+const DATA = /*BOARD_DATA*/null;
+
+// ------------------------------------------------------------------ content
+const K = {
+  webhook: ['trigger', 'k-trigger'], cron: ['trigger', 'k-trigger'], sub: ['trigger', 'k-trigger'], form: ['trigger', 'k-trigger'], errorTrigger: ['trigger', 'k-trigger'],
+  code: ['code', 'k-code'], http: ['http', 'k-http'], pg: ['postgres', 'k-db'], s3: ['s3 store', 'k-store'], if: ['if', 'k-decide'], switch: ['switch', 'k-decide'],
+  respond: ['respond', 'k-respond'], exec: ['sub-workflow', 'k-call'], wait: ['wait', 'k-respond'], noop: ['no-op', 'k-respond'], stop: ['stop', 'k-respond'],
+  loop: ['loop', 'k-decide'], email: ['email', 'k-http'], merge: ['merge', 'k-decide'],
+};
+const GUARD = {
+  retry: ['retry ×3', '--info', 'Retries 3 times, 5 s apart, before anything is called a failure.'],
+  dedupe: ['dedupe', '--ok', 'The same item twice is recognised and processed once.'],
+  idempotent: ['safe to repeat', '--ok', 'Running it again gives the same result and stores nothing twice.'],
+  'error-out': ['error path', '--bad', 'If this step fails, the item goes down a wired error path. Nothing fails silently.'],
+  human: ['person', '--warn', 'A person decides here, or the item goes to the review queue.'],
+  schema: ['schema', '--k-code', 'Input or AI output is checked against a fixed shape; anything else is refused.'],
+  auth: ['auth', '--k-trigger', 'Only signed, known callers get past this step.'],
+  window: ['24 h window', '--k-call', 'Respects WhatsApp’s 24-hour rule: free reply inside it, approved template outside.'],
+  timeout: ['timeout', '--info', 'Has a time limit, so a slow service cannot hold the line.'],
+  audit: ['audit', '--k-db', 'Writes who did what and when, kept with the evidence.'],
+};
+const isAI = (n) => /Claude|Sarvam|Transcribe/.test(n.name);
+
+const STORY = [
+  { id: 'start', tag: 'Start here', w: 1180, html: () => `
+    <div class="eyebrow">Desk 05 · One-day Mobilisation · board v1</div>
+    <h2>Open a new site in one day, not three</h2>
+    <p class="lede">The contractor sends papers and photos on WhatsApp three days before. Vera checks each paper against the site's own facts and tells him what is missing every evening. On the day, the engineer taps a line, takes the photo and speaks his remark; GPS is stored with each photo. By evening the NOC report is drafted and waits for his signature.</p>
+    <div class="row" style="margin-top:16px">
+      <div class="sticky col tilt-l"><h4>What this board shows</h4><ul><li>Who uses it, and their day today</li><li>Three decisions: which WhatsApp, how accurate GPS is, who tags each photo to its line</li><li>All 10 n8n workflows, node by node, as they run</li><li>Every failure we planned for and what happens then</li></ul></div>
+      <div class="sticky g col"><h4>The rule for the whole desk</h4><p>AI reads: voice notes, handwriting, papers, which line a photo belongs to. Code decides: is the paper valid, is the line closed, is the site ready. The engineer signs. When code cannot decide from what AI read, a person looks. Nothing is guessed.</p></div>
+      <div class="sticky b col tilt-r"><h4>Built and checked so far</h4><ul><li><span class="num">${DATA.workflows.length}</span> workflows, <span class="num">${DATA.workflows.reduce((a, w) => a + w.nodes.length, 0)}</span> nodes, one source file</li><li>Checked against n8n's own node definitions: 0 errors</li><li>Imported into n8n 2.44.5 and run against a real database</li><li><span class="num">${DATA.lineCount}</span>-line checklist, template ${DATA.version}</li></ul></div>
+    </div>
+    <div class="legend" style="margin-top:18px">
+      ${Object.entries({ Trigger: 'k-trigger', 'Code (rules)': 'k-code', 'AI call': 'k-ai', Database: 'k-db', 'File store': 'k-store', Decision: 'k-decide', 'Calls a workflow': 'k-call', Reply: 'k-respond' }).map(([l, c]) => `<span><i class="sw" style="--c:var(--${c})"></i>${l}</span>`).join('')}
+      <span><i class="ln" style="--c:var(--edge)"></i>next step</span><span><i class="ln" style="--c:var(--ok)"></i>yes</span><span><i class="ln" style="--c:var(--warn)"></i>no / other</span><span><i class="ln d" style="--c:var(--bad)"></i>on error</span>
+    </div>` },
+
+  { id: 'people', tag: '1 · Who we are building for', w: 1180, html: () => `
+    <h2>Two people at the developer, one at the site</h2>
+    <p>The developer's engineer signs the NOC. If something goes wrong later, that signature is what gets asked about. Design wants the site to start on the right drawings and approved schemes. The contractor's team does the sending.</p>
+    <div class="row" style="margin-top:14px">
+      <div class="sticky o col"><h4>Senior engineer (signs the NOC)</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> walks 50 to 100 items over 2 to 3 days, chases papers over email, writes the report the next day.</p>
+        <ul><li>Wants papers settled before he travels, not argued at the gate</li><li>Checks details by hand: policy period, sum insured, workers covered, licence capacity vs planned labour</li><li>Gets old or borrowed photos from contractors</li><li>His signature is his liability: he needs proof of what he saw, where and when</li></ul></div>
+      <div class="sticky p col tilt-r"><h4>Chief of design</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> hears about drawing problems after work has started.</p>
+        <ul><li>Site must work from the latest GFC drawings; old ones withdrawn</li><li>Formwork and shoring scheme, mix designs approved by the structural consultant before the first pour</li><li>Crane, batching plant and material routes as per the approved logistics plan</li><li>One standard checklist across projects, changed in one place</li></ul></div>
+      <div class="sticky b col tilt-l"><h4>Contractor's site team (sends the evidence)</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> forwards PDFs on email and WhatsApp to whoever asks.</p>
+        <ul><li>Voice notes in Hindi or Marathi; papers sent from WhatsApp Web</li><li>Weak network in basements and new plots</li><li>Will not install an app or fill a portal</li><li>Needs to know exactly what is still missing, and why a paper came back</li></ul></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="col"><h3>What Vera gives each of them</h3>
+        <div class="scroll"><table class="t"><tr><th>Person</th><th>Gets</th></tr>
+        <tr><td>Engineer</td><td>Papers checked before travel · 7 PM list · on the day: tap, photo, speak · report 80% written · signs with one tap · open items closed on photos</td></tr>
+        <tr><td>Design</td><td>8 design-readiness lines (DR-01 to DR-08) on every site · drawing register photo against the design register · checklist versioned, one change applies everywhere</td></tr>
+        <tr><td>Contractor</td><td>No app · reply to the area message with photos · one-tap buttons when Vera is unsure · the exact reason when a paper is sent back</td></tr></table></div></div>
+    </div>` },
+
+  { id: 'timeline', tag: '2 · The day, before and after', w: 1180, html: () => `
+    <h2>Three days of walking and chasing becomes one day</h2>
+    <div class="lanes" style="margin-top:14px">
+      <div class="lane-name">Today</div>
+      <div class="lane">
+        <div class="step today"><b>Day −5 to 0</b>Papers chased on email, partly received</div>
+        <div class="step today"><b>Day 1–3</b>Engineer walks camp, stores, plant, formwork, safety with a paper checklist</div>
+        <div class="step today"><b>Day 4</b>Report typed from notes and photos on his phone</div>
+        <div class="step today"><b>Later</b>Re-visit to check fixes</div>
+      </div>
+      <div class="lane-name">With Vera</div>
+      <div class="lane">
+        <div class="step vera"><b>T−5 · set-up (WF-08)</b>Form: site facts. Checklist copied. Area messages to contractor. Walk link to engineer.</div>
+        <div class="step vera"><b>T−3 to T−1 (WF-01, 02, 05)</b>Papers and photos on WhatsApp. Each paper read and checked. One reply per burst.</div>
+        <div class="step vera"><b>7 PM daily (WF-04)</b>Gap list to contractor; "ready to travel?" line to engineer</div>
+        <div class="step vera"><b>Visit day (WF-03)</b>Tap line → photo → status → voice. GPS on each photo. Works offline.</div>
+        <div class="step vera"><b>Evening (WF-06)</b>Report drafted, PDF on WhatsApp, Approve / With conditions / Hold</div>
+        <div class="step vera"><b>After (WF-07)</b>Open items with due dates; closed on photos; overdue criticals escalated</div>
+      </div>
+    </div>` },
+
+  { id: 'checklist', tag: '3 · The checklist', w: 700, html: () => {
+    const max = Math.max(...DATA.byArea.map((a) => a.lines));
+    return `<h2>${DATA.lineCount} lines, 7 areas</h2>
+    <p>Every line has a fixed code (LC-03), an evidence type (paper, photo or both), a severity and, for papers, the checks code runs on it. Lines that do not apply are dropped at set-up: an RMC site gets no batching plant consent; no crane, no load test.</p>
+    <div class="areas" style="margin-top:12px">${DATA.byArea.map((a) => `<div class="area"><span class="code">${a.code}</span><div class="bars" title="${a.critical} critical of ${a.lines}" style="width:${Math.round((a.lines / max) * 100)}%"><i style="width:${(a.critical / a.lines) * 100}%;background:var(--bad)"></i><i style="flex:1;background:var(--k-db)"></i></div><small>${a.lines} lines · ${a.critical} critical</small></div>`).join('')}</div>
+    <div class="legend" style="margin-top:10px"><span><i class="sw" style="--c:var(--bad)"></i>critical: open = no NOC</span><span><i class="sw" style="--c:var(--k-db)"></i>major or minor: NOC with a dated condition, or a note</span></div>
+    <p style="margin-top:10px">${DATA.areas.map((a) => `<b>${a.code}</b> ${a.name}`).join(' · ')}</p>
+    <div class="sticky y" style="margin-top:10px"><h4>Papers the code checks (examples)</h4><ul><li>CAR policy: insured name, project address, period beyond start, sum insured ≥ contract value, developer named as principal</li><li>Labour licence: valid 90+ days past start; workers allowed ≥ planned peak</li><li>Calibration: next due date after the visit, or calibrated within 180 days</li><li>Worker list with a full Aadhaar number visible: sent back for a masked copy</li></ul></div>`
+  } },
+
+  { id: 'channel', tag: '4 · Decision: which WhatsApp', w: 1180, html: () => `
+    <h2>Cloud API with our own workflow, plus a web page for the visit day</h2>
+    <p>The question was whether to use a WhatsApp business agent, a generic AI agent on a Meta number, or something else. The filing, checking and signing need rules we control and can show to an auditor, so the agent options do not fit the core. They may fit later for open questions.</p>
+    <div class="scroll" style="margin-top:10px"><table class="t">
+      <tr><th>Option</th><th>What it is</th><th>For this desk</th><th>Verdict</th></tr>
+      <tr><td><b>Meta Business Agent</b> in the WhatsApp Business app</td><td>Meta's built-in AI that answers customers from your catalogue and website; launched in India in 2026</td><td>Made for sales and support questions. Meta decides when it hands a chat to a person, and the hand-off is one way. No control over how evidence is filed or checked; no audit trail of our own.</td><td><span class="pill bad">Not for this</span></td></tr>
+      <tr><td><b>Meta Business Agent Platform</b> (enterprise)</td><td>Same agent with your own knowledge sources and connector tools; early access</td><td>Could answer "what is still open for Tower B?" later. Filing and paper checks would still sit in our rules. Integrators report early-access gaps in file handling.</td><td><span class="pill warn">Watch</span></td></tr>
+      <tr><td><b>Generic AI agent</b> on a Meta number</td><td>An LLM with tools that decides each step itself</td><td>Hard to audit and can guess. Meta's terms (from 15 Jan 2026) bar general-purpose assistants on the Business API; a task-specific business bot is allowed.</td><td><span class="pill bad">No</span></td></tr>
+      <tr><td><b>WhatsApp Cloud API + n8n workflow + narrow AI calls</b></td><td>Meta's API direct. Our workflow decides; AI only reads and suggests a line from a short list</td><td>Full control: webhooks, media, buttons, lists, reply context, templates. Replies inside 24 h of the person's message are free; reminders outside it use approved utility templates (about ₹0.12 to ₹0.15 each, per BSP rate cards).</td><td><span class="pill ok">Recommended</span></td></tr>
+      <tr><td><b>Through a BSP</b> (Gupshup, Wati, AiSensy, 360dialog)</td><td>Same Cloud API with a partner's inbox and onboarding</td><td>Useful for the review queue inbox, or if the developer already has a contract and number with one. Adds a data processor and a mark-up.</td><td><span class="pill info">Optional</span></td></tr>
+      <tr><td><b>Vera walk page</b> (link opened from WhatsApp)</td><td>A phone web page, no install, works offline</td><td>Needed for the visit day: WhatsApp removes location data from photos, and a location pin sent in chat can be moved by hand and has no accuracy figure. The page stores GPS with each photo and the line is chosen before the photo is taken.</td><td><span class="pill ok">Required</span></td></tr>
+    </table></div>
+    <div class="row" style="margin-top:14px">
+      <div class="sticky col"><h4>Number and name</h4><p>A dedicated business number. Either Vera's own ("Vera Site Desk"), or the developer's own WhatsApp Business account with Vera added as the technology provider, if they want their name on it.</p></div>
+      <div class="sticky g col"><h4>Groups</h4><p>Use one-to-one chats with the Vera number, not site groups. Every message then has a known sender, role and site, and replies bind to the message they answer.</p></div>
+      <div class="sticky b col"><h4>Speech</h4><p>Hindi, Marathi and Hinglish voice notes go to Sarvam's speech-to-text (Indian languages, code-mixed mode). Claude reads photos and PDFs and writes the English remarks.</p></div>
+    </div>` },
+
+  { id: 'gps', tag: '5 · Decision: GPS', w: 1180, html: () => `
+    <h2>GPS proves which area he stood in, not which room</h2>
+    <div class="row" style="margin-top:8px">
+      <div class="col" style="flex:1 1 360px">
+        <svg class="rings" viewBox="0 0 360 300" role="img" aria-label="Phone GPS error by surroundings: about 5 metres in the open, 10 to 30 metres near towers, 30 to 100 metres indoors">
+          <rect x="0" y="0" width="360" height="300" fill="var(--canvas)" rx="6"/>
+          <circle cx="150" cy="150" r="130" fill="var(--bad)" fill-opacity=".10" stroke="var(--bad)" stroke-dasharray="4 4"/>
+          <circle cx="150" cy="150" r="62" fill="var(--warn)" fill-opacity=".14" stroke="var(--warn)"/>
+          <circle cx="150" cy="150" r="16" fill="var(--ok)" fill-opacity=".25" stroke="var(--ok)"/>
+          <circle cx="150" cy="150" r="3" fill="var(--ink)"/>
+          <text x="172" y="140" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±3–5 m open sky</text>
+          <text x="214" y="104" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±10–30 m</text>
+          <text x="214" y="118" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">next to towers, under slabs</text>
+          <text x="240" y="40" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±30–100 m</text>
+          <text x="240" y="54" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">indoors, basements</text>
+          <text x="12" y="290" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">Rings to scale: 1 px ≈ 0.8 m. Labour camp to stores yard is usually 50–300 m.</text>
+        </svg>
+        <p style="margin-top:8px;font-size:12px">Typical smartphone figures from published field studies; dual-frequency (L1 + L5) phones do better near buildings. Height and floor are not reliable from GPS.</p>
+      </div>
+      <div class="col" style="flex:1 1 520px">
+        <h3>How it works</h3>
+        <div class="scroll"><table class="t">
+          <tr><td><b>Tool</b></td><td>The walk page uses the phone browser's location service (high-accuracy mode). It keeps reading for up to 20 s until the error is under 15 m, then stores latitude, longitude, the phone's own error radius in metres (95%), and the time.</td></tr>
+          <tr><td><b>Areas</b></td><td>Drawn once on a satellite map, or the contractor sends a location pin as a reply to each area message at T−3 (Vera makes a 30 m circle). The engineer corrects them on the day.</td></tr>
+          <tr><td><b>Each photo</b></td><td><span class="pill ok">in</span> <span class="pill info">edge</span> <span class="pill warn">out</span> <span class="pill bad">unknown</span>. Edge means inside once the phone's own error is allowed for. A weak fix gives unknown, never out. The photo is saved whatever the result.</td></tr>
+          <tr><td><b>Walked or not</b></td><td>The page sends a point every 20 s while open. An area counts as walked only with fixes inside it. An area with no record makes the report "not ready" until the engineer explains.</td></tr>
+          <tr><td><b>Limits</b></td><td>A web page cannot detect fake-GPS apps. Cross-checks: the photo itself, server time vs phone time, a continuous trail. For a room or floor (site lab, basement store), an optional QR sticker at the door, scanned by the same page.</td></tr>
+        </table></div>
+      </div>
+    </div>` },
+
+  { id: 'tagging', tag: '6 · Decision: who tags each photo to its line', w: 1180, html: () => `
+    <h2>Nobody types it. The strongest signal wins; AI only fills the gap, from a short list</h2>
+    <p>Two different senders, two different paths. The engineer never tags anything: he picks the line first. The contractor tags by replying to the right message; AI is used only when he gives nothing, and then only to pick among that area's open lines.</p>
+    <div class="row" style="margin-top:10px">
+      <div class="col" style="flex:1 1 640px"><div class="ladder">
+        <div class="rung"><div><h4>Engineer on the visit day: line first, then the photo</h4><p>He taps LC-03 on the walk page, the camera opens, the photo is saved on LC-03 with GPS and time. His voice remark on that screen goes to the same line.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Contractor replies to a line or open-item message</h4><p>WhatsApp tells us which message was replied to. Vera logs the id of every message it sends, so the reply lands on that line.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Line code in caption or file name</h4><p>"LC 3", "lc-03", "CAR_PAP-04.pdf". Two codes in one caption: Vera asks, never picks.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Reply to the area message, with a number</h4><p>Each area gets one message listing its lines by number. Photo as a reply, "3" as the caption.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Nothing given: AI picks from that area's open lines</h4><p>13 choices instead of 74; the answer format only allows those codes or NONE. ≥ 0.90 with a clear lead: filed. 0.45 to 0.90: the sender taps one of three buttons. Lower, unreadable or suspicious: a person.</p></div><span class="pill warn">checked</span></div>
+      </div></div>
+      <div class="col" style="flex:1 1 380px">
+        <div class="sticky o"><h4>How the AI step stays safe</h4><ul>
+          <li>AI files; it never says a line is OK. Site photos are judged by the engineer on the day.</li>
+          <li>Papers: AI copies the fields, code checks them, every check says why.</li>
+          <li>First two sites in shadow mode: every AI filing confirmed by a person. The threshold is then set so that auto-filed items are at least 98% right.</li>
+          <li>Each photo shows how it was filed. The engineer moves a wrong one with one tap; the move is logged and feeds the next accuracy check.</li>
+          <li>The same file sent for two lines is stopped by its fingerprint (SHA-256).</li>
+          <li>Optional for T−3 photos: a paper slip with today's date and site code in the frame.</li>
+        </ul></div>
+      </div>
+    </div>` },
+];
+
+const TAIL = [
+  { id: 'guardrails', tag: '8 · Guardrails and exceptions', w: 1180, html: () => `
+    <h2>Every failure we planned for, and what happens</h2>
+    <p>Three nets under everything: the raw webhook is stored before any work; any step that breaks routes to a wired error path; and a sweeper sends anything stuck for 10 minutes to the review queue. Error alerts go by email, so a WhatsApp outage cannot hide its own alert.</p>
+    <div class="scroll" style="margin-top:8px"><table class="t">
+      <tr><th>What goes wrong</th><th>What Vera does</th><th>Where</th></tr>
+      ${[
+        ['A request claims to be from Meta but is not signed', 'Refused with 401, nothing stored', 'WF-01'],
+        ['Meta delivers the same message twice', 'Second copy recognised by message id and dropped', 'WF-01'],
+        ['Database is down when a message arrives', 'Meta gets 500 and delivers again later; nothing lost', 'WF-01'],
+        ['Message from a number not on the site', 'Nothing read; logged for Vera ops', 'WF-01'],
+        ['Media link expires (Meta: 5 minutes)', 'Downloaded at once, 3 retries; then a person', 'WF-02'],
+        ['Same photo sent again for another line', 'Stopped; sender asked for a new photo', 'WF-02'],
+        ['Voice note cannot be transcribed', 'Audio filed; report says "listen"', 'WF-02, 03'],
+        ['AI not sure which line', 'Sender gets one-tap buttons', 'WF-02'],
+        ['AI answer unreadable, refused, malformed, or a code not on the list', 'Review queue; a person files it', 'WF-02'],
+        ['A field on a paper is not printed or not readable', 'Marked "being checked"; never guessed', 'WF-02'],
+        ['Paper fails a check', 'Sent back with the exact reason, e.g. sum insured ₹90 Cr below contract ₹125 Cr', 'WF-02, 05'],
+        ['Full Aadhaar number visible', 'Paper sent back for a masked copy', 'WF-02'],
+        ['Contractor upload after the engineer decided', 'Engineer’s decision is never overwritten', 'WF-02'],
+        ['More than 24 h since the person last wrote', 'Approved template instead; no template = not sent, logged', 'WF-09'],
+        ['WhatsApp rate limit', 'Wait 30 s, retry up to 3 times, then a person', 'WF-09'],
+        ['Number cannot receive WhatsApp', 'Review queue with the error code', 'WF-01, 09'],
+        ['No signal on the visit day', 'Captures queue on the phone and resend; a repeated capture is saved once', 'WF-03'],
+        ['Weak or no GPS', 'Photo saved, place marked unknown; the area is not counted as walked', 'WF-03, 06'],
+        ['Forwarded or expired walk link', 'Refused; engineer asks for a new link', 'WF-03'],
+        ['Engineer forgets to press Finish', '9 PM safety net drafts the report', 'WF-06'],
+        ['AI wording names a line that does not exist, or states a verdict', 'Engineer’s own transcribed words used instead, with a note', 'WF-06'],
+        ['PDF service down', 'Vera ops alerted; report sent by hand', 'WF-06'],
+        ['Someone other than the engineer taps Approve', 'Refused: only the engineer’s number can sign', 'WF-02'],
+        ['Any workflow crashes', 'Error logged, ops emailed; stuck message to review in 10 min', 'WF-00'],
+      ].map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="mono">${c}</td></tr>`).join('')}
+    </table></div>` },
+
+  { id: 'next', tag: '9 · Open questions for the developer team', w: 1180, html: () => `
+    <h2>What we need from you to run the first site</h2>
+    <div class="row" style="margin-top:10px">
+      <div class="sticky col"><h4>Checklist</h4><ul><li>Your current mobilisation checklist, so the template matches it line for line</li><li>QA / EHS values: calibration age, policy cover after start, toilets per worker, cement stack height</li><li>Which lines are critical for your NOC</li></ul></div>
+      <div class="sticky p col tilt-r"><h4>Design</h4><ul><li>Export of the drawing register, to compare with the site register (DR-01)</li><li>Who approves formwork schemes and mix designs, so their approval is a named check</li></ul></div>
+      <div class="sticky g col"><h4>WhatsApp and data</h4><ul><li>Vera's number or yours</li><li>Where evidence is kept: Vera's Mumbai bucket, or your own storage</li><li>How long to keep it; who may see worker lists</li></ul></div>
+      <div class="sticky b col tilt-l"><h4>Pilot</h4><ul><li>One site with a visit 5 or more days away</li><li>Engineer and contractor phone numbers</li><li>First two sites in shadow mode (every AI filing checked)</li></ul></div>
+    </div>` },
+];
+
+// overview of the 10 workflows (positions in board px)
+const OV = [
+  { a: 'Engineer / planning', d: 'fills the site form', x: 0, y: 0 },
+  { w: 'veraMob08SetupMb', id: 'WF-08', x: 250, y: 0 },
+  { w: 'veraMob09SendWa1', id: 'WF-09', x: 500, y: 110 },
+  { a: 'Contractor on WhatsApp', d: 'papers, photos, voice, buttons', x: 750, y: 0 },
+  { w: 'veraMob01Inbound', id: 'WF-01', x: 1000, y: 0 },
+  { w: 'veraMob02Process', id: 'WF-02', x: 1250, y: 0 },
+  { w: 'veraMob05Replies', id: 'WF-05', x: 1250, y: 170 },
+  { w: 'veraMob04GapList', id: 'WF-04', x: 750, y: 220 },
+  { a: 'Engineer on the visit day', d: 'walk page on his phone', x: 0, y: 330 },
+  { w: 'veraMob03WalkApi', id: 'WF-03', x: 250, y: 330 },
+  { w: 'veraMob06NocRprt', id: 'WF-06', x: 500, y: 330 },
+  { w: 'veraMob07Closure', id: 'WF-07', x: 750, y: 400 },
+  { w: 'veraMob00Errors1', id: 'WF-00', x: 1250, y: 400 },
+];
+const OVL = [['Engineer / planning', 'veraMob08SetupMb'], ['veraMob08SetupMb', 'veraMob09SendWa1'], ['veraMob09SendWa1', 'Contractor on WhatsApp'], ['Contractor on WhatsApp', 'veraMob01Inbound'], ['veraMob01Inbound', 'veraMob02Process'], ['veraMob02Process', 'veraMob05Replies'], ['veraMob05Replies', 'veraMob09SendWa1'], ['veraMob04GapList', 'veraMob09SendWa1'], ['Engineer on the visit day', 'veraMob03WalkApi'], ['veraMob03WalkApi', 'veraMob06NocRprt'], ['veraMob06NocRprt', 'veraMob09SendWa1'], ['veraMob06NocRprt', 'veraMob07Closure'], ['veraMob07Closure', 'veraMob09SendWa1']];
+
+// ------------------------------------------------------------------ build frames
+const world = document.getElementById('world');
+const vp = document.getElementById('vp');
+const frames = [];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = (wf) => 'WF-' + wf.id.slice(7, 9);
+
+function addFrame(f) {
+  const el = document.createElement('section');
+  el.className = 'frame';
+  el.id = 'f-' + f.id;
+  el.style.width = f.w + 'px';
+  el.innerHTML = `<div class="frame-tag">${esc(f.tag)}</div>` + (typeof f.html === 'function' ? f.html() : '');
+  world.appendChild(el);
+  frames.push({ ...f, el });
+  return el;
+}
+
+STORY.forEach(addFrame);
+
+// Workflow overview frame
+{
+  const el = addFrame({ id: 'overview', tag: '7 · The workflows', w: 1520, html: () => `<h2>Ten n8n workflows, one door in, one door out</h2>
+    <p>Everything from WhatsApp enters through WF-01. Everything sent goes out through WF-09, which logs each message id so a reply binds to its line. WF-00 watches all of them. Click a box to jump to its node map.</p>
+    <div class="ov" style="height:520px;margin-top:14px"><svg class="edges" id="ovsvg" width="1460" height="520"></svg></div>` })
+  const ov = el.querySelector('.ov');
+  const pos = {};
+  for (const b of OV) {
+    const d = document.createElement(b.w ? 'button' : 'div');
+    d.className = 'ovbox' + (b.a ? ' actor' : '');
+    d.style.left = b.x + 'px'; d.style.top = b.y + 'px';
+    if (b.w) {
+      const wf = DATA.workflows.find((x) => x.id === b.w);
+      d.innerHTML = `<span class="id">${b.id}</span><b>${esc(wf.name.replace(/^Vera 05 · \d\d /, ''))}</b><span>${wf.nodes.length} nodes</span>`;
+      d.addEventListener('click', () => goTo('wf-' + b.w));
+      d.type = 'button';
+    } else d.innerHTML = `<b>${esc(b.a)}</b><span>${esc(b.d)}</span>`;
+    ov.appendChild(d);
+    pos[b.w || b.a] = d;
+  }
+  requestAnimationFrame(() => {
+    const svg = el.querySelector('#ovsvg');
+    let s = '';
+    for (const [a, b] of OVL) {
+      const A = pos[a], B = pos[b];
+      const ax = A.offsetLeft + A.offsetWidth, ay = A.offsetTop + A.offsetHeight / 2, bx = B.offsetLeft, by = B.offsetTop + B.offsetHeight / 2;
+      const back = bx < ax;
+      const p = back ? `M${A.offsetLeft + A.offsetWidth / 2},${A.offsetTop + A.offsetHeight} C${A.offsetLeft + A.offsetWidth / 2},${A.offsetTop + A.offsetHeight + 60} ${B.offsetLeft + B.offsetWidth / 2},${B.offsetTop + B.offsetHeight + 60} ${B.offsetLeft + B.offsetWidth / 2},${B.offsetTop + B.offsetHeight}` : `M${ax},${ay} C${ax + 40},${ay} ${bx - 40},${by} ${bx},${by}`;
+      s += `<path d="${p}" stroke="var(--edge)" marker-end="url(#ar)"/>`;
+    }
+    svg.innerHTML = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--edge)"/></marker></defs>` + s;
+  });
+}
+
+// One frame per workflow, nodes at their n8n positions
+const COLW = 250, ROWH = 175, NODEW = 214;
+const edgeColor = (k) => (k === 'true' ? 'var(--ok)' : k === 'false' || k === 'Other' ? 'var(--warn)' : k === 'error' ? 'var(--bad)' : k === 'loop' || k === 'done' ? 'var(--k-call)' : 'var(--edge)');
+const wfFrames = [];
+for (const wf of DATA.workflows) {
+  const xs = wf.nodes.map((n) => n.x), ys = wf.nodes.map((n) => n.y);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const cols = Math.round((Math.max(...xs) - minX) / 280) + 1;
+  const width = Math.max(760, cols * COLW + 40);
+  const el = addFrame({ id: 'wf-' + wf.id, tag: short(wf) + ' · ' + wf.name.replace(/^Vera 05 · \d\d /, ''), w: width + 56, html: () => `
+    <div class="eyebrow">${short(wf)} · n8n workflow <span class="mono">${wf.id}</span></div>
+    <h2>${esc(wf.name.replace(/^Vera 05 · \d\d /, ''))}</h2><p>${esc(wf.purpose)}</p>
+    <div class="wf-wrap"><div class="wf-canvas"><svg class="edges"></svg></div></div>` });
+  const canvas = el.querySelector('.wf-canvas');
+  const nodes = {};
+  for (const n of wf.nodes) {
+    const [label, kc] = isAI(n) ? ['ai · ' + K[n.kind][0], 'k-ai'] : K[n.kind] || [n.kind, 'edge'];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'node';
+    b.style.setProperty('--kc', `var(--${kc})`);
+    b.innerHTML = `<span class="type"><span>${label}</span>${n.retry ? '<span title="retries">↻</span>' : ''}</span><span class="nm">${esc(n.name)}</span><span class="ds">${esc(n.does)}</span>` +
+      (n.guard.length ? `<span class="gd">${n.guard.map((g) => `<span class="gchip" style="--g:var(${(GUARD[g] || [g, '--edge'])[1]})">${(GUARD[g] || [g])[0]}</span>`).join('')}</span>` : '');
+    b.addEventListener('click', (e) => { e.stopPropagation(); showNode(wf, n, b) });
+    canvas.appendChild(b);
+    nodes[n.name] = { n, el: b, col: Math.round((n.x - minX) / 280), y: ((n.y - minY) / 200) * ROWH };
+  }
+  wfFrames.push({ wf, el, canvas, nodes, width });
+}
+TAIL.forEach(addFrame);
+
+// After fonts load: stack nodes in a column without overlap, draw edges, lay out frames.
+function layoutNodes() {
+  for (const F of wfFrames) {
+    const byCol = {};
+    for (const v of Object.values(F.nodes)) (byCol[v.col] = byCol[v.col] || []).push(v);
+    let maxBottom = 0;
+    for (const list of Object.values(byCol)) {
+      list.sort((a, b) => a.y - b.y);
+      let floor = -Infinity;
+      for (const v of list) {
+        const h = v.el.offsetHeight;
+        v.top = Math.max(v.y, floor + 24);
+        floor = v.top + h;
+        v.h = h;
+      }
+    }
+    for (const v of Object.values(F.nodes)) {
+      v.left = v.col * COLW;
+      v.el.style.left = v.left + 'px';
+      v.el.style.top = v.top + 'px';
+      maxBottom = Math.max(maxBottom, v.top + v.h);
+    }
+    F.canvas.style.width = F.width + 'px';
+    F.canvas.style.height = maxBottom + 40 + 'px';
+    const svg = F.canvas.querySelector('svg');
+    svg.setAttribute('width', F.width);
+    svg.setAttribute('height', maxBottom + 40);
+    let s = `<defs>${['edge', 'ok', 'warn', 'bad', 'k-call'].map((c) => `<marker id="m-${F.wf.id}-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--${c})"/></marker>`).join('')}</defs>`;
+    for (const e of F.wf.edges) {
+      const A = F.nodes[e.from], B = F.nodes[e.to];
+      if (!A || !B) continue;
+      const color = edgeColor(e.kind);
+      const cname = color.match(/--([\w-]+)/)[1];
+      const ax = A.left + NODEW, ay = A.top + Math.min(A.h / 2, 40), bx = B.left, by = B.top + Math.min(B.h / 2, 40);
+      let d;
+      if (bx > ax - 4) d = `M${ax},${ay} C${ax + 36},${ay} ${bx - 36},${by} ${bx},${by}`;
+      else { const low = Math.max(A.top + A.h, B.top + B.h) + 22; d = `M${A.left + NODEW / 2},${A.top + A.h} C${A.left + NODEW / 2},${low + 30} ${B.left + NODEW / 2},${low + 30} ${B.left + NODEW / 2},${B.top + B.h}` }
+      s += `<path d="${d}" stroke="${color}" ${e.kind === 'error' || e.kind === 'Other' ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#m-${F.wf.id}-${cname})"/>`;
+      if (!['main', 'in2'].includes(e.kind)) s += `<text x="${ax + 6}" y="${ay - 5}">${esc(e.kind === 'error' ? 'on error' : e.kind)}</text>`;
+    }
+    svg.innerHTML = s;
+  }
+}
+
+// Frame positions on the whiteboard
+function layoutFrames() {
+  const G = 90;
+  const place = (ids, x0, y0) => { let x = x0, h = 0; for (const id of ids) { const f = frames.find((q) => q.id === id); f.x = x; f.y = y0; f.el.style.left = x + 'px'; f.el.style.top = y0 + 'px'; x += f.el.offsetWidth + G; h = Math.max(h, f.el.offsetHeight) } return h };
+  const placeCol = (ids, x0, y0) => { let y = y0; for (const id of ids) { const f = frames.find((q) => q.id === id); f.x = x0; f.y = y; f.el.style.left = x0 + 'px'; f.el.style.top = y + 'px'; y += f.el.offsetHeight + G } return y };
+  let y = 0;
+  y += place(['start', 'people'], 0, y) + G + 30;
+  y += place(['timeline', 'checklist'], 0, y) + G + 30;
+  y += place(['channel', 'gps', 'tagging'], 0, y) + G + 30;
+  y += place(['overview', 'guardrails'], 0, y) + G + 30;
+  // node maps: WF-01 and WF-02 full width rows, the rest two per row
+  const order = ['veraMob01Inbound', 'veraMob09SendWa1', 'veraMob02Process', 'veraMob03WalkApi', 'veraMob06NocRprt', 'veraMob04GapList', 'veraMob05Replies', 'veraMob07Closure', 'veraMob08SetupMb', 'veraMob00Errors1'].map((x) => 'wf-' + x);
+  const rows = [[order[0], order[1]], [order[2]], [order[3], order[4]], [order[5], order[6], order[7]], [order[8], order[9], 'next']];
+  for (const r of rows) y += place(r, 0, y) + G + 30;
+}
+
+let S = 1, TX = 0, TY = 0;
+const apply = () => { world.style.transform = `translate(${TX}px,${TY}px) scale(${S})`; document.getElementById('zl').textContent = Math.round(S * 100) + '%'; vp.style.backgroundSize = `${22 * S}px ${22 * S}px`; vp.style.backgroundPosition = `${TX}px ${TY}px`; };
+const topH = () => document.querySelector('.bar').offsetHeight;
+function fitTo(x, y, w, h, pad = 40) {
+  const vw = vp.clientWidth, vh = vp.clientHeight - topH();
+  S = Math.min(2, Math.max(0.05, Math.min((vw - pad * 2) / w, (vh - pad * 2) / h)));
+  TX = (vw - w * S) / 2 - x * S;
+  TY = topH() + pad - y * S;
+  apply();
+}
+function bounds(list) {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const f of list) { a = Math.min(a, f.x); b = Math.min(b, f.y - 30); c = Math.max(c, f.x + f.el.offsetWidth); d = Math.max(d, f.y + f.el.offsetHeight) }
+  return [a, b, c - a, d - b];
+}
+function goTo(id) {
+  const f = frames.find((q) => 'f-' + q.id === id || q.id === id);
+  if (!f) return;
+  document.getElementById('jump').value = f.id;
+  if (document.body.classList.contains('list')) { window.scrollTo({ top: f.el.getBoundingClientRect().top + window.scrollY - topH() - 12, behavior: 'smooth' }); return }
+  const [x, y, w, h] = bounds([f]);
+  const vw = vp.clientWidth, vh = vp.clientHeight - topH();
+  // Whole frame if it fits at a readable size; otherwise readable zoom, anchored at its top-left.
+  const fit = Math.min((vw - 60) / w, (vh - 60) / h);
+  S = Math.min(1.15, Math.max(fit, Math.min(0.6, (vw - 60) / 900)));
+  TX = S * w < vw - 60 ? (vw - w * S) / 2 - x * S : 30 - x * S;
+  TY = topH() + 24 - y * S;
+  apply();
+}
+// pan / zoom
+const pts = new Map();
+let last = null, pinch = null;
+vp.addEventListener('pointerdown', (e) => {
+  if (document.body.classList.contains('list') || e.target.closest('.node,.ovbox,button,select,a,table')) return;
+  vp.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); vp.classList.add('drag');
+  if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), s: S, cx: (p[0] + q[0]) / 2, cy: (p[1] + q[1]) / 2, tx: TX, ty: TY } }
+  last = [e.clientX, e.clientY];
+});
+vp.addEventListener('pointermove', (e) => {
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2 && pinch) {
+    const [p, q] = [...pts.values()];
+    const ns = Math.min(2.5, Math.max(0.05, pinch.s * Math.hypot(p[0] - q[0], p[1] - q[1]) / pinch.d));
+    TX = pinch.cx - (pinch.cx - pinch.tx) * (ns / pinch.s); TY = pinch.cy - (pinch.cy - pinch.ty) * (ns / pinch.s); S = ns; apply(); return;
+  }
+  TX += e.clientX - last[0]; TY += e.clientY - last[1]; last = [e.clientX, e.clientY]; apply();
+});
+const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) vp.classList.remove('drag'); const r = [...pts.values()][0]; if (r) last = r };
+vp.addEventListener('pointerup', up); vp.addEventListener('pointercancel', up);
+vp.addEventListener('wheel', (e) => {
+  if (document.body.classList.contains('list')) return;
+  e.preventDefault();
+  const mouseWheel = e.deltaMode !== 0 || (Math.abs(e.deltaY) >= 40 && e.deltaX === 0 && Number.isInteger(e.deltaY));
+  if (!e.ctrlKey && !mouseWheel) { TX -= e.deltaX; TY -= e.deltaY; apply(); return } // trackpad: pan
+  const ns = Math.min(2.5, Math.max(0.05, S * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018))));
+  TX = e.clientX - (e.clientX - TX) * (ns / S); TY = e.clientY - (e.clientY - TY) * (ns / S); S = ns; apply();
+}, { passive: false });
+const zoomBy = (k) => { const cx = vp.clientWidth / 2, cy = vp.clientHeight / 2; const ns = Math.min(2.5, Math.max(0.05, S * k)); TX = cx - (cx - TX) * (ns / S); TY = cy - (cy - TY) * (ns / S); S = ns; apply() };
+document.getElementById('zin').onclick = () => zoomBy(1.25);
+document.getElementById('zout').onclick = () => zoomBy(0.8);
+document.getElementById('fit').onclick = () => { const b = bounds(frames); fitTo(...b, 30) };
+window.addEventListener('keydown', (e) => { if (e.target.closest('select,input')) return; if (e.key === '+' || e.key === '=') zoomBy(1.2); if (e.key === '-') zoomBy(0.83); if (e.key === 'Escape') panel.hidden = true });
+
+// frame jump
+const jump = document.getElementById('jump');
+jump.innerHTML = frames.map((f) => `<option value="${f.id}">${esc(f.tag)}</option>`).join('');
+jump.addEventListener('change', () => goTo(jump.value));
+
+// node details
+const panel = document.getElementById('panel');
+function showNode(wf, n, el) {
+  document.querySelectorAll('.node.sel').forEach((x) => x.classList.remove('sel'));
+  el.classList.add('sel');
+  const ins = wf.edges.filter((e) => e.to === n.name).map((e) => e.from + (e.kind !== 'main' && e.kind !== 'in2' ? ' (' + e.kind + ')' : ''));
+  const outs = wf.edges.filter((e) => e.from === n.name).map((e) => (e.kind === 'main' ? '' : (e.kind === 'error' ? 'on error' : e.kind) + ' → ') + e.to);
+  panel.innerHTML = `<button class="btn x" aria-label="Close">✕</button><div class="eyebrow">${short(wf)} · ${esc(n.type)}</div><h3>${esc(n.name)}</h3><p>${esc(n.does)}</p>
+    <dl><dt>Comes from</dt><dd>${ins.length ? ins.map(esc).join('<br>') : 'Starts the workflow'}</dd>
+    <dt>Goes to</dt><dd>${outs.length ? outs.map(esc).join('<br>') : 'Ends here'}</dd>
+    <dt>If it fails</dt><dd>${n.onError ? 'Item goes down the wired error path.' : n.retry ? 'Retried 3 times; then the error workflow (WF-00) takes over.' : 'The error workflow (WF-00) logs it and alerts Vera ops.'}</dd>
+    ${n.guard.length ? `<dt>Guardrails</dt><dd>${n.guard.map((g) => `<b>${esc((GUARD[g] || [g])[0])}</b>: ${esc((GUARD[g] || ['', '', ''])[2])}`).join('<br>')}</dd>` : ''}</dl>`;
+  panel.hidden = false;
+  panel.querySelector('.x').onclick = () => { panel.hidden = true; el.classList.remove('sel') };
+}
+vp.addEventListener('click', (e) => { if (!e.target.closest('.node')) { panel.hidden = true; document.querySelectorAll('.node.sel').forEach((x) => x.classList.remove('sel')) } });
+
+// read as page
+const modeBtn = document.getElementById('mode');
+function setMode(list) {
+  document.body.classList.toggle('list', list);
+  vp.style.paddingTop = list ? topH() + 20 + 'px' : '';
+  modeBtn.classList.toggle('on', list); modeBtn.setAttribute('aria-pressed', String(list)); modeBtn.textContent = list ? 'Whiteboard' : 'Read as page';
+  try { localStorage.setItem('mob-board-mode', list ? 'list' : 'board') } catch (e) {}
+  if (!list) requestAnimationFrame(() => goTo(jump.value || 'start'));
+}
+modeBtn.onclick = () => setMode(!document.body.classList.contains('list'));
+
+function start() {
+  layoutNodes();
+  layoutFrames();
+  let m = null;
+  try { m = localStorage.getItem('mob-board-mode') } catch (e) {}
+  const narrow = window.innerWidth < 700;
+  if (m === 'list' || (m === null && narrow)) setMode(true);
+  else { const b = bounds(frames.filter((f) => ['start', 'people'].includes(f.id))); fitTo(...b, 30) }
+}
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start);
+window.addEventListener('resize', () => { if (!document.body.classList.contains('list')) apply() });
+</script>

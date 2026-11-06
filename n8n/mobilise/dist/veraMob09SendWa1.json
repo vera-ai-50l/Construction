@@ -1,0 +1,466 @@
+{
+  "id": "veraMob09SendWa1",
+  "name": "Vera 05 · 09 Send on WhatsApp",
+  "nodes": [
+    {
+      "id": "4fb47243-8e37-40c5-841c-2e508bde4c9b",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 09 Send on WhatsApp\nThe only way Vera sends anything. Picks session message or template by the 24-hour window, logs every message id (so replies bind to lines), backs off on rate limits, and never fails silently.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "0984585f-a76d-45a4-8197-7997f7a348ce",
+      "name": "Asked to send",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "contact_id",
+              "type": "number"
+            },
+            {
+              "name": "mobilisation_id",
+              "type": "number"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "area",
+              "type": "string"
+            },
+            {
+              "name": "line_code",
+              "type": "string"
+            },
+            {
+              "name": "ref",
+              "type": "string"
+            },
+            {
+              "name": "request",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "notes": "Who, what, and why (kind / area / line).",
+      "notesInFlow": false
+    },
+    {
+      "id": "da989e43-b87b-4a4d-8ac9-1740ebcd91e9",
+      "name": "Load contact and window",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select $1::bigint as contact_id, c.phone, c.last_inbound_at, c.role from contacts c where c.id = $1;",
+        "options": {
+          "queryReplacement": "={{ [($json.contact_id) ?? null] }}"
+        }
+      },
+      "notes": "Phone and when they last wrote to us.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "5a17a87d-64ba-4189-8a33-be8fdfdd4642",
+      "name": "Session or template?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Session or template?: generated from n8n/mobilise/logic.mjs chooseSendMode. Edit there, then rebuild.\nconst __fn = function chooseSendMode(input) {\n  const now = Number(input.now || Date.now())\n  const last = input.last_inbound_at ? Date.parse(input.last_inbound_at) : 0\n  const forceTemplate = !!(input.send_error && input.send_error.action === 'needs_template')\n  const open = last > 0 && now - last < 23.5 * 3600 * 1000 && !forceTemplate\n  const req = input.request || {}\n  const to = String(input.phone || '').replace(/\\D/g, '')\n  const attempt = Number(input.attempt || 0)\n  if (!/^\\d{10,15}$/.test(to)) return { ...input, can_send: false, why: 'No valid phone number for this contact' }\n  if (open && req.body) return { ...input, can_send: true, mode: 'session', attempt, payload: { messaging_product: 'whatsapp', recipient_type: 'individual', to, ...req.body } }\n  if (req.template) {\n    return {\n      ...input, can_send: true, mode: 'template', attempt,\n      payload: {\n        messaging_product: 'whatsapp', to, type: 'template',\n        template: { name: req.template.name, language: { code: req.template.language || 'en' }, components: [{ type: 'body', parameters: (req.template.params || []).map((p) => ({ type: 'text', text: String(p) })) }] },\n      },\n    }\n  }\n  return { ...input, can_send: false, why: 'Outside the 24-hour window and no template for this message' }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...input, request: $('Asked to send').item.json.request, attempt: input.attempt || 0 };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Inside 24 h of their last message: the message itself (free). Outside: the approved template, or not sent.\nGuardrails: window",
+      "notesInFlow": false
+    },
+    {
+      "id": "ae1d7103-003b-40bc-8082-812b20ccc07d",
+      "name": "Can send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.can_send }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "No phone, or outside the window with no template: not sent, logged.\nGuardrails: window",
+      "notesInFlow": false
+    },
+    {
+      "id": "e70d0ac4-eafa-4743-8442-533a357a922a",
+      "name": "Log not sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into outbound (mobilisation_id, contact_id, kind, area, line_code, ref, payload, status, error) values ($1, $2, $3, $4, $5, $6, $7::jsonb, 'not_sent', $8::jsonb) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Asked to send').item.json.mobilisation_id) ?? null, ($('Asked to send').item.json.contact_id) ?? null, ($('Asked to send').item.json.kind) ?? null, ($('Asked to send').item.json.area) ?? null, ($('Asked to send').item.json.line_code) ?? null, ($('Asked to send').item.json.ref) ?? null, (JSON.stringify($('Asked to send').item.json.request)) ?? null, (JSON.stringify({ why: $json.why || $json.send_error && $json.send_error.note })) ?? null] }}"
+        }
+      },
+      "notes": "Shows up in the daily ops list.\nGuardrails: human, audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "39c7433a-48a0-4aae-8589-a0f03d29d6f0",
+      "name": "Send to WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/{{ $env.VERA_WA_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "notes": "Graph API messages endpoint.\nGuardrails: error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraWaToken001",
+          "name": "WhatsApp Cloud API token (Authorization: Bearer …)"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "2ea886ce-f93e-41a4-8184-ea179f7c7d29",
+      "name": "Log what we sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into outbound (wamid, mobilisation_id, contact_id, kind, area, line_code, ref, payload) values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb) returning id, wamid;",
+        "options": {
+          "queryReplacement": "={{ [($json.messages[0].id) ?? null, ($('Asked to send').item.json.mobilisation_id) ?? null, ($('Asked to send').item.json.contact_id) ?? null, ($('Asked to send').item.json.kind) ?? null, ($('Asked to send').item.json.area) ?? null, ($('Asked to send').item.json.line_code) ?? null, ($('Asked to send').item.json.ref) ?? null, (JSON.stringify($('Session or template?').item.json.payload)) ?? null] }}"
+        }
+      },
+      "notes": "The message id is what makes \"reply to this message\" bind for sure.\nGuardrails: audit, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "4796e92d-582a-4da6-88a5-ae6f3b85e489",
+      "name": "Why did it fail?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        440
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why did it fail?: generated from n8n/mobilise/logic.mjs classifySendError. Edit there, then rebuild.\nconst __fn = function classifySendError(input) {\n  const e = input.error || {}\n  const text = JSON.stringify(e)\n  const code = Number((text.match(/\"code\"\\s*:\\s*(\\d{3,6})/) || [])[1] || 0)\n  const attempt = Number(input.attempt || 0) + 1\n  let action = 'review'\n  let note = 'Send failed: ' + (e.message || 'unknown error')\n  if ([131056, 130429, 80007].includes(code)) { action = attempt < 3 ? 'retry' : 'review'; note = 'Rate limited by WhatsApp (' + code + ')' }\n  else if (code === 131047) { action = 'needs_template'; note = 'More than 24 h since their last message: needs a template' }\n  else if ([131026, 131051, 131052, 131053].includes(code)) { action = 'review'; note = 'WhatsApp could not deliver to this number (' + code + ')' }\n  else if (/ETIMEDOUT|ECONNRESET|5\\d\\d/.test(text) && attempt < 3) { action = 'retry'; note = 'WhatsApp did not answer; retrying' }\n  return { ...input, attempt, send_error: { code, action, note } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...$('Session or template?').item.json, error: $input.item.json.error || $input.item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Reads the WhatsApp error code: rate limit, window closed, bad number.",
+      "notesInFlow": false
+    },
+    {
+      "id": "77abfc23-506f-4ac2-85de-ba9ca7625066",
+      "name": "Retry?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1680,
+        440
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.send_error.action }}",
+                    "rightValue": "retry",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "retry"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.send_error.action }}",
+                    "rightValue": "needs_template",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "needs_template"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "Rate limit → wait and retry (max 3). Window closed → template. Bad number → a person.",
+      "notesInFlow": false
+    },
+    {
+      "id": "059adae3-da61-472b-8f4d-b641a4f292b9",
+      "name": "Wait 30 s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        320
+      ],
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "notes": "WhatsApp limits how fast one person can be messaged.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "Asked to send": {
+      "main": [
+        [
+          {
+            "node": "Load contact and window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load contact and window": {
+      "main": [
+        [
+          {
+            "node": "Session or template?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session or template?": {
+      "main": [
+        [
+          {
+            "node": "Can send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Can send?": {
+      "main": [
+        [
+          {
+            "node": "Send to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log not sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Log what we sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Why did it fail?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Why did it fail?": {
+      "main": [
+        [
+          {
+            "node": "Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry?": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 s",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Session or template?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log not sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 s": {
+      "main": [
+        [
+          {
+            "node": "Send to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

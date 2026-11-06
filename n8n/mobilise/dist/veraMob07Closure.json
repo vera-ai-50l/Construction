@@ -1,0 +1,466 @@
+{
+  "id": "veraMob07Closure",
+  "name": "Vera 05 · 07 Open items after the visit",
+  "nodes": [
+    {
+      "id": "23e0004b-6472-4c52-8ac2-40447182a97c",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 07 Open items after the visit\nEvery morning: reminders for items due, escalation for critical items overdue. The contractor replies to the reminder with a photo; the engineer approves it from the photo, not another visit.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "e723bb57-2517-41e7-8912-5581d03023a6",
+      "name": "Every morning 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "notes": "IST.",
+      "notesInFlow": false
+    },
+    {
+      "id": "0c2a196e-dc12-445a-8e07-df502e76142d",
+      "name": "Items due or overdue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select oi.id, oi.mobilisation_id, json_build_object('id', oi.id, 'line', oi.line_code, 'severity', oi.severity, 'text', oi.text, 'finding', oi.finding, 'due_on', oi.due_on::text) as item,\n  mo.project, current_date::text as today,\n  (select id from contacts where mobilisation_id = oi.mobilisation_id and role = 'contractor' limit 1) as contact_id,\n  (select id from contacts where mobilisation_id = oi.mobilisation_id and role = 'project_head' limit 1) as head_contact_id\nfrom open_items oi join mobilisations mo on mo.id = oi.mobilisation_id where oi.status = 'open' and oi.due_on <= current_date;",
+        "options": {}
+      },
+      "notes": "Only items that are due.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "4cce61a4-a348-426f-8303-55149129fa2f",
+      "name": "Each item",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "One at a time.",
+      "notesInFlow": false
+    },
+    {
+      "id": "7f10a54b-98fe-451c-8b2f-a56f7a90ded0",
+      "name": "Reminder or escalate?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -100
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Reminder or escalate?: generated from n8n/mobilise/logic.mjs reminderPlan. Edit there, then rebuild.\nconst __fn = function reminderPlan(input) {\n  const today = String(input.today || new Date().toISOString().slice(0, 10))\n  const it = input.item || {}\n  const overdueDays = Math.round((Date.parse(today) - Date.parse(it.due_on)) / 86400000)\n  const who = it.severity === 'critical' && overdueDays >= 1 ? 'escalate' : 'contractor'\n  const text = (overdueDays > 0 ? '⏰ Overdue by ' + overdueDays + ' day' + (overdueDays > 1 ? 's' : '') : '📌 Due today') + ': ' + it.line + ' ' + it.text +\n    (it.finding ? '\\nFinding: ' + it.finding : '') + '\\nReply to *this message* with a photo once it is fixed. The engineer approves it from the photo.'\n  return {\n    ...input, who, overdue_days: overdueDays,\n    request: {\n      body: { type: 'text', text: { preview_url: false, body: text } },\n      template: { name: 'vera_mob_open_item', language: 'en', params: [it.line, it.text, it.due_on] },\n    },\n    escalation: who === 'escalate' ? (input.project || 'Site') + ': critical item ' + it.line + ' is ' + overdueDays + ' day(s) overdue. ' + it.text : '',\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Critical and overdue → the project head hears about it.",
+      "notesInFlow": false
+    },
+    {
+      "id": "c023c3d4-80ae-4206-833a-bb5698d1f044",
+      "name": "Remind the contractor",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        -100
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "open_item",
+            "area": "",
+            "line_code": "={{ $json.item.line }}",
+            "ref": "={{ String($json.item.id) }}",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Sent as a message they can reply to: the reply binds to this item for sure.",
+      "notesInFlow": false
+    },
+    {
+      "id": "a4b738b0-7b82-421d-8e5f-534ec182478d",
+      "name": "Escalate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        -100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Reminder or escalate?').item.json.who === 'escalate' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Only critical items, only when overdue.",
+      "notesInFlow": false
+    },
+    {
+      "id": "6c689551-4871-4f35-82e8-be3406d64e84",
+      "name": "Tell the project head",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        -240
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $('Reminder or escalate?').item.json.head_contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "open_item",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ { body: { type: 'text', text: { body: $('Reminder or escalate?').item.json.escalation } }, template: { name: 'vera_mob_escalation', language: 'en', params: [$('Reminder or escalate?').item.json.escalation] } } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "One line with the item and days overdue.",
+      "notesInFlow": false
+    },
+    {
+      "id": "da33282b-c5f7-4813-8a92-f3c0c810d39d",
+      "name": "All reminders sent",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        840,
+        200
+      ],
+      "parameters": {},
+      "notes": "End of run.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "Every morning 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Items due or overdue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Items due or overdue": {
+      "main": [
+        [
+          {
+            "node": "Each item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Each item": {
+      "main": [
+        [
+          {
+            "node": "All reminders sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reminder or escalate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder or escalate?": {
+      "main": [
+        [
+          {
+            "node": "Remind the contractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remind the contractor": {
+      "main": [
+        [
+          {
+            "node": "Escalate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate?": {
+      "main": [
+        [
+          {
+            "node": "Tell the project head",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Each item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell the project head": {
+      "main": [
+        [
+          {
+            "node": "Each item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

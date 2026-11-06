@@ -1,0 +1,919 @@
+{
+  "id": "veraMob01Inbound",
+  "name": "Vera 05 · 01 WhatsApp in (router)",
+  "nodes": [
+    {
+      "id": "e32258db-17c8-4488-8a25-3f1ad418615f",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 01 WhatsApp in (router)\nThe one door for WhatsApp. Checks the message is really from Meta, stores it before anything else, answers Meta at once, drops duplicates, and hands each message to WF-02.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "fdbc4e33-677d-4455-8fc0-16e24259641c",
+      "name": "WhatsApp verify (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "vera/mob/wa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "Meta checks the webhook URL once, when it is set up.\nGuardrails: auth",
+      "notesInFlow": false,
+      "webhookId": "608543e6-8343-41f0-848e-76d6781b92a7"
+    },
+    {
+      "id": "3030506a-844e-4585-8378-5c9a0873f102",
+      "name": "Verify token right?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.query['hub.mode'] === 'subscribe' && $json.query['hub.verify_token'] === $env.VERA_WA_VERIFY_TOKEN }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Only our own token passes.\nGuardrails: auth",
+      "notesInFlow": false
+    },
+    {
+      "id": "b9ddda53-57d7-4a22-8ecc-6f74a18a56b8",
+      "name": "Echo challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $('WhatsApp verify (GET)').item.json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Meta gets its challenge back.",
+      "notesInFlow": false
+    },
+    {
+      "id": "638708d2-e993-401a-899f-e1a22e9b3876",
+      "name": "Reject verify",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        100
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "forbidden",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "notes": "Wrong token: refused.",
+      "notesInFlow": false
+    },
+    {
+      "id": "fea18ce3-7ab1-4be6-8996-722707625f86",
+      "name": "WhatsApp events (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vera/mob/wa",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "notes": "Every message and delivery status from Meta arrives here.",
+      "notesInFlow": false,
+      "webhookId": "14067f4e-7809-4b0e-8bd9-d7cffc20d21d"
+    },
+    {
+      "id": "1808ae69-d5a5-49d6-8a3a-9d6d931c7595",
+      "name": "Check Meta signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Why Code: needs the raw body bytes and a constant-time compare (crypto).\nconst crypto = require('crypto');\nconst item = $input.first();\nconst raw = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst secret = $env.VERA_WA_APP_SECRET || '';\nconst want = 'sha256=' + crypto.createHmac('sha256', secret).update(raw).digest('hex');\nconst got = String((item.json.headers || {})['x-hub-signature-256'] || '');\nconst ok = !!secret && got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));\nlet body = null;\ntry { body = JSON.parse(raw.toString('utf8')); } catch (e) { body = null; }\nreturn [{ json: { ok: ok && body !== null, body, body_sha: crypto.createHash('sha256').update(raw).digest('hex') } }];"
+      },
+      "notes": "HMAC of the raw body with the app secret. Anything not signed by Meta stops here.\nGuardrails: auth, error-out",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "7b904087-abfc-4da3-80ee-d79e367703f4",
+      "name": "Signed by Meta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Pass or refuse.",
+      "notesInFlow": false
+    },
+    {
+      "id": "8fd9fad5-0f2d-4a87-8f43-cff0aa43d895",
+      "name": "Reject unsigned",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        840,
+        600
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"unauthorized\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "notes": "Not from Meta: 401, nothing stored.",
+      "notesInFlow": false
+    },
+    {
+      "id": "66315a02-1212-4752-8f6c-1824688aefbf",
+      "name": "Save raw to inbox",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        840,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into inbox (body_sha, payload) values ($1, $2::jsonb)\non conflict (body_sha) do update set body_sha = excluded.body_sha\nreturning id as inbox_id, payload as body;",
+        "options": {
+          "queryReplacement": "={{ [($json.body_sha) ?? null, (JSON.stringify($json.body)) ?? null] }}"
+        }
+      },
+      "notes": "The raw body is written first. If anything later breaks, it can be replayed.\nGuardrails: retry, idempotent, error-out, audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4512641c-a754-42ba-8357-15ca538cfc56",
+      "name": "Tell Meta: try again",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        640
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"storage_unavailable\" } }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "notes": "Database down: Meta gets a 500 and redelivers later. Nothing is lost.",
+      "notesInFlow": false
+    },
+    {
+      "id": "04984b22-6830-4f8b-8d33-308e2115f7b1",
+      "name": "Tell Meta: received",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "Meta gets 200 within a second. Work continues after this.\nGuardrails: timeout",
+      "notesInFlow": false
+    },
+    {
+      "id": "30df84e5-e79a-4692-8909-f675d977001b",
+      "name": "Split into events",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Split into events: generated from n8n/mobilise/logic.mjs explodeEvents. Edit there, then rebuild.\nconst __fn = function explodeEvents(input) {\n  const body = input.body || {}\n  const out = []\n  for (const entry of Array.isArray(body.entry) ? body.entry : []) {\n    for (const change of Array.isArray(entry.changes) ? entry.changes : []) {\n      const v = change.value || {}\n      const phoneNumberId = (v.metadata && v.metadata.phone_number_id) || ''\n      const names = {}\n      for (const c of Array.isArray(v.contacts) ? v.contacts : []) names[c.wa_id] = (c.profile && c.profile.name) || ''\n      for (const m of Array.isArray(v.messages) ? v.messages : []) {\n        const t = m.type || 'unknown'\n        const media = m[t] && typeof m[t] === 'object' && m[t].id ? m[t] : null\n        let interactive = null\n        if (t === 'interactive' && m.interactive) {\n          const i = m.interactive\n          if (i.type === 'button_reply') interactive = { kind: 'button', id: i.button_reply.id, title: i.button_reply.title }\n          else if (i.type === 'list_reply') interactive = { kind: 'list', id: i.list_reply.id, title: i.list_reply.title }\n          else if (i.type === 'nfm_reply') interactive = { kind: 'flow', id: '', title: '', response: i.nfm_reply.response_json || '' }\n        }\n        if (t === 'button' && m.button) interactive = { kind: 'template_button', id: m.button.payload || '', title: m.button.text || '' }\n        out.push({\n          kind: 'message', inbox_id: input.inbox_id || null, phone_number_id: phoneNumberId,\n          wamid: m.id, from: String(m.from || ''), profile_name: names[m.from] || '',\n          ts: Number(m.timestamp || 0), type: t,\n          text: t === 'text' && m.text ? String(m.text.body || '') : '',\n          caption: media && media.caption ? String(media.caption) : '',\n          media_id: media ? media.id : '', mime: media ? String(media.mime_type || '') : '',\n          sha256_meta: media ? String(media.sha256 || '') : '',\n          filename: media && media.filename ? String(media.filename) : '',\n          voice: t === 'audio' && !!(m.audio && m.audio.voice),\n          context_wamid: m.context && m.context.id ? m.context.id : '',\n          forwarded: !!(m.context && (m.context.forwarded || m.context.frequently_forwarded)),\n          location: t === 'location' && m.location ? { lat: m.location.latitude, lng: m.location.longitude, name: m.location.name || '', address: m.location.address || '' } : null,\n          interactive,\n          errors: Array.isArray(m.errors) ? m.errors.map((e) => ({ code: e.code, title: e.title })) : [],\n        })\n      }\n      for (const s of Array.isArray(v.statuses) ? v.statuses : []) {\n        out.push({\n          kind: 'status', inbox_id: input.inbox_id || null, wamid: s.id, status: s.status, to: String(s.recipient_id || ''),\n          ts: Number(s.timestamp || 0),\n          errors: Array.isArray(s.errors) ? s.errors.map((e) => ({ code: e.code, title: e.title })) : [],\n        })\n      }\n    }\n  }\n  if (!out.length) out.push({ kind: 'empty', inbox_id: input.inbox_id || null })\n  return out\n};\nconst out = [];\nconst all = $input.all();\nfor (let i = 0; i < all.length; i++) {\n  const item = all[i];\n  let input = { ...item.json };\n  for (const j of [].concat(__fn(input))) out.push({ json: j });\n}\nreturn out;"
+      },
+      "notes": "One item per message and per delivery status.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1c508787-1d24-4982-8bcf-22152ef9786f",
+      "name": "Message or status?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1680,
+        400
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "message",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "Statuses update what we sent; messages get processed.",
+      "notesInFlow": false
+    },
+    {
+      "id": "5da698ed-5da3-4e3a-8f76-d22162b24cbb",
+      "name": "Update delivery status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1960,
+        640
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update outbound set status = $2, error = nullif($3, '[]')::jsonb where wamid = $1\nreturning id, mobilisation_id, contact_id, kind, status, error;",
+        "options": {
+          "queryReplacement": "={{ [($json.wamid) ?? null, ($json.status) ?? null, (JSON.stringify($json.errors)) ?? null] }}"
+        }
+      },
+      "notes": "Sent / delivered / read / failed, on our outbound log.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "899726a8-ef47-4c00-8c27-80144fb4d776",
+      "name": "Send failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        640
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.status === 'failed' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "A failed send must not go unnoticed.",
+      "notesInFlow": false
+    },
+    {
+      "id": "5683287f-d130-48ef-8895-ed5c154ca5c6",
+      "name": "Flag failed send",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2520,
+        640
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into review_queue (mobilisation_id, reason, options) values ($1, 'WhatsApp could not deliver: ' || $2, '[]'::jsonb) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id) ?? null, (JSON.stringify($json.error)) ?? null] }}"
+        }
+      },
+      "notes": "Goes to the review queue with the error code.\nGuardrails: human",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "9c5854e8-d578-469c-8da2-b0d7b4a8a76d",
+      "name": "Nothing to do",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        880
+      ],
+      "parameters": {},
+      "notes": "Empty or unknown event.",
+      "notesInFlow": false
+    },
+    {
+      "id": "97b52005-7ba3-48ee-8a4e-a702f9a92ac1",
+      "name": "Claim message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1960,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with m as (\n  insert into messages (wamid, inbox_id, type, body) values ($1, $2, $3, $4::jsonb)\n  on conflict (wamid) do nothing returning id\n) select coalesce((select id from m), 0) as message_id;",
+        "options": {
+          "queryReplacement": "={{ [($json.wamid) ?? null, ($json.inbox_id) ?? null, ($json.type) ?? null, (JSON.stringify($json)) ?? null] }}"
+        }
+      },
+      "notes": "Insert by WhatsApp message id. Meta can send the same message twice; the second one gets id 0.\nGuardrails: dedupe, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "5e0332cc-25cc-475e-84c3-ba95593c71eb",
+      "name": "First time we see it?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.message_id > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Duplicates stop here.",
+      "notesInFlow": false
+    },
+    {
+      "id": "4c10add7-c1be-4c7d-8057-2a31aa663393",
+      "name": "Duplicate: ignore",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2520,
+        200
+      ],
+      "parameters": {},
+      "notes": "Already processed.",
+      "notesInFlow": false
+    },
+    {
+      "id": "863fcb90-55fb-453a-80f9-4876aea8dbc0",
+      "name": "Who sent it?",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2520,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with c as (\n  update contacts set last_inbound_at = now()\n  where id = (select c2.id from contacts c2 join mobilisations mo on mo.id = c2.mobilisation_id\n              where c2.phone = $1 and mo.phase <> 'closed' order by mo.visit_date desc limit 1)\n  returning id, mobilisation_id, role\n) update messages set contact_id = (select id from c), mobilisation_id = (select mobilisation_id from c)\n  where id = $2\n  returning id as message_id, contact_id, mobilisation_id, coalesce((select role from c), '') as role;",
+        "options": {
+          "queryReplacement": "={{ [($('Split into events').item.json.from) ?? null, ($json.message_id) ?? null] }}"
+        }
+      },
+      "notes": "Phone number → contact, role, site. Also restarts the 24-hour window.\nGuardrails: window",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "de93bda7-647d-4db4-8214-3a1e40d9557f",
+      "name": "Known person?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2800,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$json.contact_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Only registered contractor, engineer and reviewer numbers are processed.\nGuardrails: auth",
+      "notesInFlow": false
+    },
+    {
+      "id": "fe9cf505-4207-44ca-89f9-8df0410fbf7e",
+      "name": "Log unknown number",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3080,
+        600
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update messages set state = 'done', error = 'unknown sender' where id = $1 returning id;",
+        "options": {
+          "queryReplacement": "={{ [($json.message_id) ?? null] }}"
+        }
+      },
+      "notes": "Nothing is read from unknown numbers. Vera ops sees the count daily.\nGuardrails: audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "874444ba-4d51-48fd-8b91-b65f698e051a",
+      "name": "Process the message",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3080,
+        400
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob02Process",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 02 Process one message",
+          "cachedResultUrl": "/workflow/veraMob02Process"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message_id": "={{ $json.message_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "Hands over to WF-02 and does not wait, so the router stays fast.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "WhatsApp verify (GET)": {
+      "main": [
+        [
+          {
+            "node": "Verify token right?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify token right?": {
+      "main": [
+        [
+          {
+            "node": "Echo challenge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp events (POST)": {
+      "main": [
+        [
+          {
+            "node": "Check Meta signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Meta signature": {
+      "main": [
+        [
+          {
+            "node": "Signed by Meta?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tell Meta: try again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signed by Meta?": {
+      "main": [
+        [
+          {
+            "node": "Save raw to inbox",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject unsigned",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save raw to inbox": {
+      "main": [
+        [
+          {
+            "node": "Tell Meta: received",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tell Meta: try again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell Meta: received": {
+      "main": [
+        [
+          {
+            "node": "Split into events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split into events": {
+      "main": [
+        [
+          {
+            "node": "Message or status?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message or status?": {
+      "main": [
+        [
+          {
+            "node": "Claim message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update delivery status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing to do",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update delivery status": {
+      "main": [
+        [
+          {
+            "node": "Send failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send failed?": {
+      "main": [
+        [
+          {
+            "node": "Flag failed send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim message": {
+      "main": [
+        [
+          {
+            "node": "First time we see it?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "First time we see it?": {
+      "main": [
+        [
+          {
+            "node": "Who sent it?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Duplicate: ignore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Who sent it?": {
+      "main": [
+        [
+          {
+            "node": "Known person?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known person?": {
+      "main": [
+        [
+          {
+            "node": "Process the message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log unknown number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

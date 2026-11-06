@@ -1,0 +1,220 @@
+{
+  "id": "veraMob00Errors1",
+  "name": "Vera 05 · 00 Errors and stuck messages",
+  "nodes": [
+    {
+      "id": "4a14dde2-a007-4dcf-8625-5f4e8a3d6ba6",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 00 Errors and stuck messages\nCatch-all for every Desk 05 workflow. Logs the failure, emails Vera ops (a different channel from WhatsApp, so a WhatsApp outage cannot hide itself), and every 10 minutes sends messages stuck in \"processing\" to the review queue.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "73a78fca-a29e-419c-8c27-f1a532505e4c",
+      "name": "When any workflow fails",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {},
+      "notes": "Set as the error workflow on WF-01 to WF-09.",
+      "notesInFlow": false
+    },
+    {
+      "id": "097630d4-88ab-4fa5-8c9d-e64a34666814",
+      "name": "Describe the failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: one readable alert; never includes message contents or secrets.\nconst e = $input.item.json;\nconst ex = e.execution || {};\nconst err = ex.error || {};\nreturn { json: {\n  workflow: (e.workflow || {}).name || '', execution_id: ex.id || '', node: ex.lastNodeExecuted || '', url: ex.url || '',\n  message: String(err.message || 'unknown error').slice(0, 500),\n  subject: 'Vera Desk 05: ' + ((e.workflow || {}).name || 'workflow') + ' failed at ' + (ex.lastNodeExecuted || '?'),\n  text: 'Workflow: ' + ((e.workflow || {}).name || '') + '\\nNode: ' + (ex.lastNodeExecuted || '') + '\\nError: ' + String(err.message || '').slice(0, 500) + '\\nExecution: ' + (ex.url || '') +\n    '\\n\\nThe message is not lost: the raw webhook is in inbox, and messages stuck in \"processing\" go to the review queue in 10 minutes.',\n} };"
+      },
+      "notes": "Workflow, node, error, link. No message contents, no secrets.",
+      "notesInFlow": false
+    },
+    {
+      "id": "ba84666a-98e0-4bc0-8b02-46286672cd28",
+      "name": "Log the error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into errors (workflow, execution_id, node, message, url) values ($1, $2, $3, $4, $5) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($json.workflow) ?? null, ($json.execution_id) ?? null, ($json.node) ?? null, ($json.message) ?? null, ($json.url) ?? null] }}"
+        }
+      },
+      "notes": "Kept even if email fails.\nGuardrails: audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "f3f08125-fe5e-4337-8d33-74014b40bf67",
+      "name": "Email Vera ops",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "fromEmail": "={{ $env.VERA_OPS_FROM }}",
+        "toEmail": "={{ $env.VERA_OPS_EMAIL }}",
+        "subject": "={{ $('Describe the failure').item.json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $('Describe the failure').item.json.text }}",
+        "options": {}
+      },
+      "notes": "Email, not WhatsApp: a WhatsApp outage must not hide its own alert.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "smtp": {
+          "id": "veraOpsSmtp001",
+          "name": "Vera ops email"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "f2c4e83c-7ecd-4228-88f3-f4c0b70613de",
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        280
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "notes": "Sweeper.",
+      "notesInFlow": false
+    },
+    {
+      "id": "444690fd-c2e2-42a5-8bb1-818820214acb",
+      "name": "Messages stuck in processing",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        280
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with s as (\n  update messages set state = 'needs_human', error = 'stuck in processing' where state = 'processing' and state_at < now() - interval '10 minutes' returning id, mobilisation_id\n) insert into review_queue (mobilisation_id, message_id, reason) select mobilisation_id, id, 'Stuck in processing for 10 minutes' from s returning id;",
+        "options": {}
+      },
+      "notes": "A crash between nodes still ends with a person looking at the message.\nGuardrails: human",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "When any workflow fails": {
+      "main": [
+        [
+          {
+            "node": "Describe the failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Describe the failure": {
+      "main": [
+        [
+          {
+            "node": "Log the error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log the error": {
+      "main": [
+        [
+          {
+            "node": "Email Vera ops",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Vera ops",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Messages stuck in processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

@@ -1,0 +1,2541 @@
+{
+  "id": "veraMob02Process",
+  "name": "Vera 05 · 02 Process one message",
+  "nodes": [
+    {
+      "id": "ada20721-c7af-4b64-80e3-8e92b03036ef",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 02 Process one message\nFiles one photo, paper, voice note or text against the right checklist line. Deterministic binding first; AI only picks from open lines; unsure answers go back to the sender as buttons or to a person.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "888974f6-4ff5-4f95-8cf2-71f0ea2edd6c",
+      "name": "From the router",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "message_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "notes": "Gets one message id from WF-01.",
+      "notesInFlow": false
+    },
+    {
+      "id": "abc37b39-a74a-499c-8e0e-54e23cd814b0",
+      "name": "Load and lock message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update messages set state = 'processing', state_at = now() where id = $1 and state in ('new', 'needs_human')\nreturning id as message_id, contact_id, mobilisation_id, body as message,\n  (select role from contacts where id = messages.contact_id) as contact_role,\n  (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'evidence', evidence, 'when', \"when\",\n          'severity', severity, 'docType', doc_type, 'rules', rules, 'hint', hint, 'status', status) order by code)\n     from lines where mobilisation_id = messages.mobilisation_id) as lines,\n  (select json_agg(json_build_object('wamid', wamid, 'kind', kind, 'area', area, 'line', line_code))\n     from outbound where contact_id = messages.contact_id and sent_at > now() - interval '30 days') as prompts,\n  (select json_build_object('line', line_code, 'at', extract(epoch from at) * 1000) from pending_picks where contact_id = messages.contact_id) as \"pendingPick\",\n  (select json_agg(json_build_object('sha256', sha256, 'line_code', line_code)) from evidence where mobilisation_id = messages.mobilisation_id) as known_hashes,\n  (select row_to_json(mo) from mobilisations mo where mo.id = messages.mobilisation_id) as mob;",
+        "options": {
+          "queryReplacement": "={{ [($json.message_id) ?? null] }}"
+        }
+      },
+      "notes": "Message, sender, site, open lines, our recent prompts. Marked \"processing\" so a stuck one is found later.\nGuardrails: idempotent, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "81fdee5d-6e3f-4c1d-86a2-52654cdabdd9",
+      "name": "What kind of message?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        560,
+        400
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "rightValue": "media",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "media"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "rightValue": "text",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "rightValue": "interactive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "interactive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "rightValue": "location",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "location"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "Photo / PDF / voice, typed text, a button answer, or a location pin.",
+      "notesInFlow": false
+    },
+    {
+      "id": "9c90e097-eaec-41b8-8e60-5c0748fc9a5c",
+      "name": "Get media link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v23.0/{{ $json.message.media_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "notes": "Meta gives a download link valid for 5 minutes.\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraWaToken001",
+          "name": "WhatsApp Cloud API token (Authorization: Bearer …)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "53d7cfe9-cc45-4406-8148-a808fa4d1a1b",
+      "name": "Download the file",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "notes": "Downloaded at once, before the link expires.\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraWaToken001",
+          "name": "WhatsApp Cloud API token (Authorization: Bearer …)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "03f8e697-9232-4d00-87a3-b1785ab0cb88",
+      "name": "Hash and size check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: hashing the downloaded bytes and checking size limits needs the binary buffer.\nconst crypto = require('crypto');\nconst item = $input.item;\nconst ctx = $('Load and lock message').item.json;\nconst buf = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\nconst sha = crypto.createHash('sha256').update(buf).digest('hex');\nconst mime = (item.binary && item.binary.data && item.binary.data.mimeType) || ctx.message.mime || '';\nconst limits = { image: 5e6, document: 25e6, audio: 16e6, video: 16e6 };\nconst tooBig = buf.length > (limits[ctx.message.type] || 5e6);\nconst reused = (ctx.known_hashes || []).find((h) => h.sha256 === sha) || null;\nconst ext = (mime.split('/')[1] || 'bin').replace('jpeg', 'jpg').replace(/[^a-z0-9]/g, '');\nreturn {\n  json: { ...ctx, file: { sha256: sha, bytes: buf.length, mime, tooBig, reused_from: reused ? reused.line_code || 'another line' : '' },\n          s3_key: 'mob/' + ctx.mobilisation_id + '/' + sha.slice(0, 2) + '/' + sha + '.' + ext,\n          file_ok: !tooBig && !reused },\n  binary: item.binary,\n};"
+      },
+      "notes": "SHA-256 of the file. Same file already used on another line, or too large: stopped.\nGuardrails: dedupe, schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "9b4d52ab-a2ac-4537-87aa-62326b474155",
+      "name": "File OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.file_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Reused or oversized files do not get filed.",
+      "notesInFlow": false
+    },
+    {
+      "id": "bc3234bb-3d5f-4dd2-85a2-f43b7c3dc4a2",
+      "name": "Explain file problem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        -200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Explain file problem: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'text', text: { body: input.file.reused_from ? 'This exact file was already sent for ' + input.file.reused_from + '. Please send a new photo for this line.' : 'This file is too large. Please send a smaller photo or a PDF under 25 MB.' } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Tells the sender why, in one line.",
+      "notesInFlow": false
+    },
+    {
+      "id": "7a2d1633-9764-4320-88cf-502acf5c0a3c",
+      "name": "Send file problem",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        -200
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "reply",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09.",
+      "notesInFlow": false
+    },
+    {
+      "id": "f2aa53b1-707f-4c29-82a0-e240937c40ff",
+      "name": "Voice note?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1960,
+        -320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.message.type === 'audio' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Voice is typed out first, so a spoken line code (\"LC teen\") can bind it.",
+      "notesInFlow": false
+    },
+    {
+      "id": "ed8485d4-50fd-4db7-8fc8-da2fea382794",
+      "name": "Transcribe voice (Sarvam)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        -480
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.sarvam.ai/speech-to-text",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "model",
+              "value": "saaras:v3"
+            },
+            {
+              "name": "mode",
+              "value": "transcribe"
+            },
+            {
+              "name": "language_code",
+              "value": "unknown"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "notes": "Hindi / Marathi / Hinglish → text in its own script. English comes in the report.\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraSarvam0001",
+          "name": "Sarvam API key (api-subscription-key)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9ca0d7e6-3c4b-4aaa-82ae-854311e9f7f9",
+      "name": "Add transcript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        -480
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: puts the transcript on the message and keeps the audio file on the item.\nconst ctx = $('Hash and size check').item;\nconst r = $input.item.json;\nconst t = r && r.transcript ? String(r.transcript) : '';\nconst message = { ...ctx.json.message, text: t, transcript_lang: (r && r.language_code) || '' };\nreturn { json: { ...ctx.json, message, transcript: t || '[voice note: transcription failed, listen in Vera]', transcript_lang: message.transcript_lang }, binary: ctx.binary };"
+      },
+      "notes": "If transcription failed, the audio is still filed and the report says \"listen\".",
+      "notesInFlow": false
+    },
+    {
+      "id": "b105f40f-023d-4e87-89d4-e05ac9a649ed",
+      "name": "Store in evidence bucket",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        -200
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "bucketName": "={{ $env.VERA_S3_BUCKET }}",
+        "fileName": "={{ $json.s3_key }}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {}
+      },
+      "notes": "Encrypted bucket in Mumbai (ap-south-1). Key = hash, so the same file is stored once.\nGuardrails: retry, idempotent, error-out",
+      "notesInFlow": false,
+      "credentials": {
+        "aws": {
+          "id": "veraS3Evidence",
+          "name": "Vera evidence bucket (ap-south-1)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "3e8608ce-514d-4189-87cd-ac5e7c8115e8",
+      "name": "Keep file after upload",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3080,
+        -40
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranchMode": "waitForAll",
+        "output": "specifiedInput",
+        "useDataOfInput": 1
+      },
+      "notes": "Waits for the upload, then carries the original item (with the file) on. Upload failed = never reaches here.",
+      "notesInFlow": false
+    },
+    {
+      "id": "ed3708e7-2209-4fc5-803a-54f46f135823",
+      "name": "Bind to checklist line",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        -40
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Bind to checklist line: generated from n8n/mobilise/logic.mjs bindLine. Edit there, then rebuild.\nconst __fn = function bindLine(input) {\n  const m = input.message || {}\n  const lines = Array.isArray(input.lines) ? input.lines : []\n  const prompts = Array.isArray(input.prompts) ? input.prompts : []\n  const now = Number(input.now || Date.now())\n  const byCode = {}\n  for (const l of lines) byCode[l.code] = l\n  const areas = [...new Set(lines.map((l) => l.area))]\n  const isMedia = ['image', 'document', 'audio', 'video'].includes(m.type)\n  const done = (o) => ({ ...o, area: o.line ? byCode[o.line].area : o.area || '', needsAi: !!o.needsAi })\n\n  const prompt = m.context_wamid ? prompts.find((p) => p.wamid === m.context_wamid) : null\n  if (prompt && (prompt.kind === 'line' || prompt.kind === 'open_item' || prompt.kind === 'confirm') && byCode[prompt.line]) {\n    return done({ line: prompt.line, method: prompt.kind === 'open_item' ? 'reply-to-open-item' : 'reply-to-line', confidence: 1, candidates: [] })\n  }\n\n  const text = [m.caption, m.text, m.filename].filter(Boolean).join(' ')\n  const codeRe = new RegExp('(?<![A-Za-z0-9])(' + areas.join('|') + ')[\\\\s_\\\\-\\\\.]*0*(\\\\d{1,2})(?!\\\\d)', 'gi')\n  const found = new Set()\n  let hit\n  while (areas.length && (hit = codeRe.exec(text))) {\n    const code = hit[1].toUpperCase() + '-' + String(Number(hit[2])).padStart(2, '0')\n    if (byCode[code]) found.add(code)\n  }\n  if (found.size === 1) return done({ line: [...found][0], method: 'caption-code', confidence: 1, candidates: [] })\n  if (found.size > 1) return done({ line: '', method: 'ambiguous-caption', confidence: 0, candidates: [...found], needsAi: false, ask: true })\n\n  const promptArea = prompt && prompt.kind === 'area' ? prompt.area : ''\n  if (promptArea) {\n    const n = (m.caption || m.text || '').trim().match(/^#?\\s*(\\d{1,2})\\b/)\n    const code = n ? promptArea + '-' + String(Number(n[1])).padStart(2, '0') : ''\n    if (code && byCode[code]) return done({ line: code, method: 'area-reply-number', confidence: 1, candidates: [] })\n  }\n\n  const pick = input.pendingPick\n  if (pick && pick.line && byCode[pick.line] && now - Number(pick.at) <= 10 * 60 * 1000 && isMedia) {\n    return done({ line: pick.line, method: 'picked-from-list', confidence: 1, candidates: [] })\n  }\n\n  if (!isMedia) return done({ line: '', method: 'not-evidence', confidence: 0, candidates: [], needsAi: false })\n\n  // Candidates for AI: open lines only, of the known area if any, that take this kind of evidence.\n  const area = promptArea || input.gpsArea || ''\n  const wants = (l) => (m.type === 'audio' ? true : m.type === 'document' ? l.evidence !== 'photo' : true)\n  const open = (l) => !['accepted', 'ok', 'na'].includes(l.status)\n  let candidates = lines.filter((l) => open(l) && wants(l) && (!area || l.area === area)).map((l) => l.code)\n  if (!candidates.length) candidates = lines.filter((l) => open(l) && wants(l)).map((l) => l.code)\n  return done({ line: '', area, method: 'ai', confidence: 0, candidates, needsAi: candidates.length > 0 })\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = { ...input, binding: __fn(input) };\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Reply-to-line, code in caption, reply-to-area + number, picked from list. Only if none: AI.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "d7b39725-824f-4515-8dc9-4dcbdd0dc5b0",
+      "name": "How was it bound?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3640,
+        -40
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.binding.line ? \"bound\" : $json.binding.needsAi ? \"ai\" : \"ask\" }}",
+                    "rightValue": "bound",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "bound"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.binding.line ? \"bound\" : $json.binding.needsAi ? \"ai\" : \"ask\" }}",
+                    "rightValue": "ai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ai"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.binding.line ? \"bound\" : $json.binding.needsAi ? \"ai\" : \"ask\" }}",
+                    "rightValue": "ask",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ask"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "Bound for sure / AI must choose / ask the sender.",
+      "notesInFlow": false
+    },
+    {
+      "id": "131b1d42-ff1d-47e8-8686-1b98aec6b738",
+      "name": "Build classify request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3920,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build classify request: generated from n8n/mobilise/logic.mjs buildClassifyRequest. Edit there, then rebuild.\nconst __fn = function buildClassifyRequest(input) {\n  const lines = (input.lines || []).filter((l) => (input.binding.candidates || []).includes(l.code))\n  const codes = lines.map((l) => l.code).concat(['NONE'])\n  const docTypes = [...new Set((input.lines || []).map((l) => l.docType).filter(Boolean))].concat(['other_paper', 'not_a_paper'])\n  const media = input.__media || {}\n  const isVoice = input.message.type === 'audio'\n  const block = isVoice\n    ? { type: 'text', text: 'Voice note transcript (' + (input.message.transcript_lang || 'unknown language') + '): ' + (input.message.text || '(empty)') }\n    : media.mime === 'application/pdf'\n      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: media.b64 } }\n      : { type: 'image', source: { type: 'base64', media_type: media.mime || 'image/jpeg', data: media.b64 } }\n  const list = lines.map((l) => '- ' + l.code + ': ' + l.text + (l.hint ? ' (good evidence: ' + l.hint + ')' : '')).join('\\n')\n  const system = [\n    'You file evidence for a construction site mobilisation checklist in India.',\n    'You get one photo, document or voice-note transcript and a list of open checklist lines. Say which single line it is evidence for.',\n    'Rules:',\n    '- Choose only from the list. If it fits none, or you cannot tell, answer NONE.',\n    '- Confidence is your honest probability (0 to 1) that the chosen line is right. Do not round up.',\n    '- Do not judge whether the site is compliant. Only say which line the evidence is for.',\n    '- If it is a paper (certificate, policy, licence), say what kind of paper it is.',\n    '- Captions and file names may be in Hindi, Marathi, English or a mix. Use them.',\n    '- Flag it if it looks like a screenshot, a forwarded old photo, or shows another project name.',\n  ].join('\\n')\n  const user = [\n    'Open checklist lines:', list, '',\n    'Sender: ' + (input.sender_role || 'contractor') + '. Stage: ' + (input.stage || 'paper check') + '.',\n    'Caption / file name: ' + ([input.message.caption, input.message.filename].filter(Boolean).join(' | ') || '(none)'),\n  ].join('\\n')\n  const schema = {\n    type: 'object', additionalProperties: false,\n    required: ['line_code', 'confidence', 'alternatives', 'evidence_kind', 'doc_type', 'readable', 'suspicious', 'reason'],\n    properties: {\n      line_code: { type: 'string', enum: codes },\n      confidence: { type: 'number' },\n      alternatives: {\n        type: 'array',\n        items: { type: 'object', additionalProperties: false, required: ['line_code', 'confidence'], properties: { line_code: { type: 'string', enum: codes }, confidence: { type: 'number' } } },\n      },\n      evidence_kind: { type: 'string', enum: ['site_photo', 'photo_of_paper', 'pdf', 'screenshot', 'other'] },\n      doc_type: { type: 'string', enum: docTypes },\n      readable: { type: 'boolean' },\n      suspicious: { type: 'boolean' },\n      reason: { type: 'string' },\n    },\n  }\n  return {\n    ...input,\n    __media: undefined,\n    request: {\n      model: input.model || 'claude-opus-5-5',\n      max_tokens: 1024,\n      fallbacks: 'default',\n      output_config: { effort: 'low', format: { type: 'json_schema', schema } },\n      system,\n      messages: [{ role: 'user', content: [block, { type: 'text', text: user }] }],\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nif (item.binary && item.binary.data && !(input.message && input.message.type === 'audio')) {\n  const buf = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\n  input.__media = { b64: buf.toString('base64'), mime: String(item.binary.data.mimeType || '').split(';')[0] };\n}\n\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Photo, PDF or voice transcript + the short list of open lines. The answer schema only allows those codes or NONE.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "b7fc7741-adb7-48c6-8943-7f43ac0a3f50",
+      "name": "Claude: which line?",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4200,
+        200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "notes": "AI chooses a line and gives an honest confidence. It never says whether the site is OK.\nGuardrails: retry, error-out, timeout, schema",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraAnthropic01",
+          "name": "Anthropic API key (x-api-key)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "281696c6-26d2-4b3d-81f7-7a1b0a610861",
+      "name": "Confidence gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4480,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Confidence gate: generated from n8n/mobilise/logic.mjs gateMatch. Edit there, then rebuild.\nconst __fn = function gateMatch(input) {\n  const t = Object.assign({ auto: 0.9, margin: 0.3, ask: 0.45 }, input.thresholds || {})\n  const res = input.ai || {}\n  const candidates = (input.binding && input.binding.candidates) || []\n  const fail = (why) => ({ ...input, decision: 'human', reason: why, options: [] })\n  if (res.stop_reason === 'refusal') return fail('AI declined to read this item')\n  if (res.stop_reason === 'max_tokens') return fail('AI answer was cut off')\n  const textBlock = (res.content || []).find((b) => b.type === 'text')\n  let a\n  try { a = JSON.parse(textBlock ? textBlock.text : '') } catch (e) { return fail('AI answer was not valid JSON') }\n  const ok = (c) => c === 'NONE' || candidates.includes(c)\n  const conf = (x) => (typeof x === 'number' && x >= 0 && x <= 1 ? x : -1)\n  if (!a || !ok(a.line_code) || conf(a.confidence) < 0 || !Array.isArray(a.alternatives)) return fail('AI answer did not match the schema')\n  const ranked = [{ line_code: a.line_code, confidence: a.confidence }]\n    .concat(a.alternatives.filter((x) => ok(x.line_code) && conf(x.confidence) >= 0))\n    .filter((x) => x.line_code !== 'NONE')\n    .sort((p, q) => q.confidence - p.confidence)\n    .filter((x, i, arr) => arr.findIndex((y) => y.line_code === x.line_code) === i)\n  const top = ranked[0]\n  const second = ranked[1] ? ranked[1].confidence : 0\n  const base = { ...input, ai_answer: a }\n  if (!a.readable) return { ...base, decision: 'human', reason: 'Not readable: ask for a clearer photo', options: [] }\n  if (a.suspicious) return { ...base, decision: 'human', reason: 'Looks reused or from another project: ' + a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  if (!top) return { ...base, decision: 'confirm', reason: 'AI could not place it', options: [] }\n  if (a.line_code !== 'NONE' && top.line_code === a.line_code && top.confidence >= t.auto && top.confidence - second >= t.margin) {\n    return { ...base, decision: 'auto', line: top.line_code, confidence: top.confidence, reason: a.reason, options: [] }\n  }\n  if (top.confidence >= t.ask) return { ...base, decision: 'confirm', line: '', confidence: top.confidence, reason: a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  return { ...base, decision: 'confirm', reason: 'Low confidence', options: [] }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...$('Build classify request').item.json, request: undefined, ai: $input.item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "≥ 0.90 with a 0.30 lead: file it. 0.45–0.90: ask the sender. Unreadable, suspicious, refused or malformed: a person.\nGuardrails: human, schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "b3d5003d-407e-442c-8122-90bb773f4a50",
+      "name": "Sure enough?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4760,
+        200
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "auto",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "auto"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "confirm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "confirm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "human",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "human"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "File it / ask the sender / a person.\nGuardrails: human",
+      "notesInFlow": false
+    },
+    {
+      "id": "513d6d16-5c5b-4e83-8f77-1f23556d7ada",
+      "name": "Build confirm buttons",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        420
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build confirm buttons: generated from n8n/mobilise/logic.mjs buildConfirm. Edit there, then rebuild.\nconst __fn = function buildConfirm(input) {\n  const opts = (input.options || []).slice(0, 10)\n  const byCode = {}\n  for (const l of input.lines || []) byCode[l.code] = l\n  const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)\n  const ev = input.evidence_id || input.message_id\n  const body = { text: 'Which checklist line is this for?' + (input.reason ? '\\n' + short(input.reason, 200) : '') }\n  let interactive\n  if (opts.length && opts.length <= 2) {\n    interactive = {\n      type: 'button', body,\n      action: { buttons: opts.map((c) => ({ type: 'reply', reply: { id: 'bind:' + ev + ':' + c, title: short(c + ' ' + (byCode[c] ? byCode[c].text : ''), 20) } })).concat([{ type: 'reply', reply: { id: 'bind:' + ev + ':OTHER', title: 'Something else' } }]) },\n    }\n  } else {\n    const rows = (opts.length ? opts : (input.lines || []).filter((l) => !['accepted', 'ok', 'na'].includes(l.status)).slice(0, 9).map((l) => l.code))\n      .map((c) => ({ id: 'bind:' + ev + ':' + c, title: short(c, 24), description: short(byCode[c] ? byCode[c].text : '', 72) }))\n    rows.push({ id: 'bind:' + ev + ':OTHER', title: 'Something else', description: 'Type the line code, e.g. LC-03' })\n    interactive = { type: 'list', body, action: { button: 'Choose line', sections: [{ title: 'Open lines', rows: rows.slice(0, 10) }] } }\n  }\n  return { ...input, request: { body: { type: 'interactive', context: input.wamid ? { message_id: input.wamid } : undefined, interactive } } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Top 3 lines as one-tap buttons, plus \"Something else\".",
+      "notesInFlow": false
+    },
+    {
+      "id": "0bea59cb-0911-47d3-8949-0ba1566a6f4d",
+      "name": "Ask sender to confirm",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        5320,
+        420
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "confirm",
+            "area": "",
+            "line_code": "",
+            "ref": "={{ String($json.message_id) }}",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "The answer comes back as a button reply and is applied in one transaction.",
+      "notesInFlow": false
+    },
+    {
+      "id": "91a5448d-cc3d-460b-8909-d3b22f1f26e5",
+      "name": "Send to review queue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5040,
+        660
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into review_queue (mobilisation_id, message_id, reason, options) values ($1, $2, $3, $4::jsonb) returning id as review_id;",
+        "options": {
+          "queryReplacement": "={{ [($('Load and lock message').item.json.mobilisation_id) ?? null, ($('Load and lock message').item.json.message_id) ?? null, ($json.reason || ($json.error && $json.error.message) || 'Could not process automatically') ?? null, (JSON.stringify($json.options || [])) ?? null] }}"
+        }
+      },
+      "notes": "A person files it, usually within the hour. The sender is told it is being checked.\nGuardrails: human, audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "56aeead6-8c52-4207-8b2d-04ff13ed605b",
+      "name": "Mark needs a person",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5320,
+        660
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update messages set state = 'needs_human', state_at = now(), error = $2 where id = $1 returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Load and lock message').item.json.message_id) ?? null, (($json.error && $json.error.message) || $json.reason || 'step failed') ?? null] }}"
+        }
+      },
+      "notes": "Any failed step lands here: download, storage, AI. The message is never dropped.\nGuardrails: human, error-out",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "46908663-60bb-485e-89ea-7e93cd6c64da",
+      "name": "Is it a paper line?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5040,
+        -40
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ ['document','both'].includes((($json.lines || []).find(l => l.code === ($json.binding.line || $json.line)) || {}).evidence) && $json.message.type !== 'audio' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Papers get read and checked; site photos wait for the engineer.",
+      "notesInFlow": false
+    },
+    {
+      "id": "87b77e2d-c10f-441c-8627-d98ffc5a5ee9",
+      "name": "Build extract request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5320,
+        -280
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build extract request: generated from n8n/mobilise/logic.mjs buildExtractRequest. Edit there, then rebuild.\nconst __fn = function buildExtractRequest(input) {\n  const media = input.__media || {}\n  const block = media.mime === 'application/pdf'\n    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: media.b64 } }\n    : { type: 'image', source: { type: 'base64', media_type: media.mime || 'image/jpeg', data: media.b64 } }\n  const str = { type: ['string', 'null'] }\n  const num = { type: ['number', 'null'] }\n  const schema = {\n    type: 'object', additionalProperties: false,\n    required: ['doc_type', 'holder_name', 'site_address', 'document_number', 'issuer', 'issue_date', 'valid_from', 'valid_to', 'next_due_date',\n      'workers_covered', 'sum_insured_inr', 'principal_named', 'officers_count', 'serial_number', 'contains_unmasked_id', 'readable'],\n    properties: {\n      doc_type: { type: 'string' }, holder_name: str, site_address: str, document_number: str, issuer: str,\n      issue_date: str, valid_from: str, valid_to: str, next_due_date: str,\n      workers_covered: num, sum_insured_inr: num, principal_named: { type: ['boolean', 'null'] }, officers_count: num,\n      serial_number: str, contains_unmasked_id: { type: 'boolean' }, readable: { type: 'boolean' },\n    },\n  }\n  return {\n    ...input,\n    __media: undefined,\n    request: {\n      model: input.model || 'claude-opus-5-5',\n      max_tokens: 2048,\n      fallbacks: 'default',\n      output_config: { effort: 'low', format: { type: 'json_schema', schema } },\n      system: [\n        'You read Indian construction compliance papers: registrations, labour licences, insurance policies, calibration and test certificates, consent orders.',\n        'Copy fields exactly as printed. Dates as YYYY-MM-DD. Amounts in rupees as plain numbers (1.5 crore = 15000000).',\n        'If a field is not printed or you cannot read it, return null. Never guess or infer a value.',\n        'principal_named: true only if the developer / principal / employer is named as an insured party.',\n        'contains_unmasked_id: true if a full 12-digit Aadhaar number is visible.',\n      ].join('\\n'),\n      messages: [{ role: 'user', content: [block, { type: 'text', text: 'Paper expected for line ' + input.line.code + ': ' + input.line.text + '. Expected type: ' + input.line.docType + '.' }] }],\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.line = (input.lines || []).find((l) => l.code === (input.binding.line || input.line));\nif (item.binary && item.binary.data && !(input.message && input.message.type === 'audio')) {\n  const buf = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\n  input.__media = { b64: buf.toString('base64'), mime: String(item.binary.data.mimeType || '').split(';')[0] };\n}\n\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Asks AI to copy the fields exactly. Null when not printed: never a guess.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "fe528973-dc08-4601-892a-8e2f72713213",
+      "name": "Claude: read the paper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5600,
+        -280
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "notes": "Name, address, dates, workers covered, sum insured…\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraAnthropic01",
+          "name": "Anthropic API key (x-api-key)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "e7050b96-3346-4549-8654-1d43e6468ec6",
+      "name": "Parse the fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5880,
+        -280
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: read the structured answer, and refuse anything that is not one.\nconst item = $input.item;\nconst res = item.json;\nconst ctx = $('Build extract request').item.json;\nconst tb = (res.content || []).find((b) => b.type === 'text');\nlet fields = null;\ntry { fields = res.stop_reason === 'end_turn' ? JSON.parse(tb.text) : null; } catch (e) { fields = null; }\nreturn { json: { ...ctx, request: undefined, fields: fields || { readable: false }, fields_ok: !!fields } };"
+      },
+      "notes": "Anything that is not a clean answer counts as unread.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "1d9ea5b3-daae-4123-89d9-073be59d362f",
+      "name": "Check paper rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6160,
+        -280
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check paper rules: generated from n8n/mobilise/logic.mjs checkPaper. Edit there, then rebuild.\nconst __fn = function checkPaper(input) {\n  const line = input.line || {}\n  const f = input.fields || {}\n  const mob = input.mob || {}\n  const P = Object.assign({ calibrationMaxAgeDays: 180, coverBeyondStartDays: 90, workersPerSafetyOfficer: 500 }, input.params || {})\n  const day = (s) => (typeof s === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00Z') : NaN)\n  const has = (v) => v !== null && v !== undefined && v !== '' && !(typeof v === 'number' && !Number.isFinite(v))\n  const addDays = (t, n) => t + n * 86400000\n  const iso = (t) => new Date(t).toISOString().slice(0, 10)\n  const norm = (s) => String(s || '').toLowerCase().replace(/\\b(private|pvt|limited|ltd|llp|co|company|and|&|m\\/s|the)\\b/g, ' ').replace(/[^a-z0-9ऀ-ॿ]+/g, ' ').trim()\n  const nameOk = (name) => {\n    const want = [mob.contractor_name].concat(mob.contractor_aliases || []).map(norm).filter(Boolean)\n    const got = norm(name)\n    return want.some((w) => {\n      if (!w || !got) return false\n      if (got.includes(w) || w.includes(got)) return true\n      const a = new Set(w.split(' ')), b = got.split(' ')\n      return b.filter((x) => a.has(x)).length / Math.max(a.size, 1) >= 0.6\n    })\n  }\n  const start = day(mob.start_date)\n  const visit = day(mob.visit_date || mob.start_date)\n  const checks = []\n  const need = (rule, v, label) => (has(v) ? true : (checks.push({ rule, result: 'missing', note: label + ' not printed or not read' }), false))\n  const pass = (rule, ok, note) => checks.push({ rule, result: ok ? 'pass' : 'fail', note })\n\n  if (f.readable === false) checks.push({ rule: 'readable', result: 'missing', note: 'Paper could not be read' })\n  if (f.contains_unmasked_id) pass('idMasked', false, 'A full Aadhaar number is visible. Ask for a masked copy and delete this one.')\n  if (line.docType && f.doc_type && f.doc_type !== line.docType) checks.push({ rule: 'docType', result: 'missing', note: 'Looks like ' + f.doc_type + ', expected ' + line.docType })\n\n  for (const rule of line.rules || []) {\n    if (rule === 'nameMatchesContractor') {\n      if (need(rule, f.holder_name, 'Name')) pass(rule, nameOk(f.holder_name), 'Name on paper: \"' + f.holder_name + '\"')\n    } else if (rule === 'siteMatches') {\n      if (need(rule, f.site_address, 'Site address')) {\n        const a = norm(f.site_address)\n        const keys = (mob.site_keywords || []).map(norm).filter(Boolean)\n        pass(rule, keys.some((k) => a.includes(k)), 'Address on paper: \"' + f.site_address + '\"')\n      }\n    } else if (rule === 'validOnStart') {\n      if (need(rule, f.valid_to, 'Valid-to date')) {\n        const from = has(f.valid_from) ? day(f.valid_from) : -Infinity\n        pass(rule, from <= start && day(f.valid_to) >= start, 'Valid ' + (f.valid_from || '?') + ' to ' + f.valid_to + '; start ' + mob.start_date)\n      }\n    } else if (rule === 'validBeyondStart') {\n      if (need(rule, f.valid_to, 'Valid-to date')) {\n        const until = addDays(start, P.coverBeyondStartDays)\n        pass(rule, day(f.valid_to) >= until, 'Valid to ' + f.valid_to + '; must cover at least ' + iso(until))\n      }\n    } else if (rule === 'coversPeakWorkers') {\n      if (need(rule, f.workers_covered, 'Number of workers')) pass(rule, Number(f.workers_covered) >= Number(mob.peak_workers), f.workers_covered + ' workers covered; planned peak ' + mob.peak_workers)\n    } else if (rule === 'sumInsuredCoversContract') {\n      if (need(rule, f.sum_insured_inr, 'Sum insured')) pass(rule, Number(f.sum_insured_inr) >= Number(mob.contract_value_inr), 'Sum insured ₹' + Number(f.sum_insured_inr).toLocaleString('en-IN') + '; contract ₹' + Number(mob.contract_value_inr).toLocaleString('en-IN'))\n    } else if (rule === 'principalNamed') {\n      if (need(rule, f.principal_named, 'Insured parties')) pass(rule, f.principal_named === true, f.principal_named ? 'Developer named as principal' : 'Developer not named as an insured party')\n    } else if (rule === 'calibrationCurrent') {\n      if (has(f.next_due_date)) pass(rule, day(f.next_due_date) >= visit, 'Next calibration due ' + f.next_due_date)\n      else if (need(rule, f.issue_date, 'Calibration date')) pass(rule, day(f.issue_date) >= addDays(visit, -P.calibrationMaxAgeDays), 'Calibrated ' + f.issue_date + '; limit ' + P.calibrationMaxAgeDays + ' days')\n    } else if (rule === 'safetyOfficersEnough') {\n      const needN = Math.max(1, Math.ceil(Number(mob.peak_workers || 0) / P.workersPerSafetyOfficer))\n      if (need(rule, f.officers_count, 'Number of safety officers')) pass(rule, Number(f.officers_count) >= needN, f.officers_count + ' named; ' + needN + ' needed for ' + mob.peak_workers + ' workers')\n    }\n  }\n  const failed = checks.filter((c) => c.result === 'fail')\n  const missing = checks.filter((c) => c.result === 'missing')\n  const status = failed.length ? 'rejected' : missing.length ? 'review' : 'accepted'\n  return { ...input, paper: { status, checks, expires_on: has(f.valid_to) ? f.valid_to : has(f.next_due_date) ? f.next_due_date : null } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.mob = input.mob || {}; input.params = {\"calibrationMaxAgeDays\":180,\"coverBeyondStartDays\":90,\"workersPerToilet\":25,\"workersPerSafetyOfficer\":500,\"cementStackMaxBags\":10,\"geofence\":{\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10}};\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Plain code: valid on start? covers peak labour? sum insured ≥ contract? Each check says why.\nGuardrails: audit",
+      "notesInFlow": false
+    },
+    {
+      "id": "a20e08ca-4a06-42f0-894d-afb851a16433",
+      "name": "Make reply fragment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6440,
+        -40
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Make reply fragment: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => {\n        const p = input.paper || {}\n        const line = (input.binding && input.binding.line) || input.line\n        const kind = p.status === 'accepted' ? 'accepted' : p.status === 'rejected' ? 'rejected' : p.status === 'review' ? 'review' : 'filed'\n        const reason = (p.checks || []).filter((c) => c.result !== 'pass').map((c) => c.note).join('; ')\n        return { ...input, saved_line: line, fragment: { kind, line, reason, photo: input.message.type === 'image' } }\n      };\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "One line for the reply: accepted / sent back (with why) / filed.",
+      "notesInFlow": false
+    },
+    {
+      "id": "1c294feb-c29a-47e7-85e7-ebae350a271d",
+      "name": "Save evidence and line",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6720,
+        -40
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with e as (\n  insert into evidence (mobilisation_id, line_code, message_id, kind, s3_key, sha256, mime, bytes, bind_method, bind_confidence, ai, fields, checks, created_by, transcript, transcript_lang)\n  values ($1, nullif($2, ''), $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, nullif($18, ''), nullif($19, '')) returning id\n), l as (\n  update lines set status = case\n      when $15 = 'accepted' then 'accepted' when $15 = 'rejected' then 'rejected' when $15 = 'review' then 'review'\n      when status in ('open', 'rejected') then 'filed' else status end,\n    reason = nullif($16, ''), expires_on = nullif($17, '')::date, status_at = now()\n  where mobilisation_id = $1 and code = $2 and status not in ('ok', 'not_ok', 'na')  -- never overwrite the engineer's decision\n  returning code\n), a as (\n  insert into audit_log (actor, action, entity, entity_id, detail)\n  select case when $9 like 'ai%' then 'ai' else 'contact:' || $14 end, 'file_evidence', 'line', $2, json_build_object('evidence', (select id from e), 'method', $9, 'paper', $15)\n)\nselect (select id from e) as evidence_id, (select code from l) as line_updated;",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id) ?? null, ($json.saved_line) ?? null, ($json.message_id) ?? null, ($json.message.type === 'document' ? 'document' : $json.message.type === 'audio' ? 'audio' : 'photo') ?? null, ($json.s3_key) ?? null, ($json.file.sha256) ?? null, ($json.file.mime) ?? null, ($json.file.bytes) ?? null, ($json.binding.line ? $json.binding.method : 'ai-auto') ?? null, ($json.binding.line ? 1 : $json.confidence) ?? null, (JSON.stringify($json.ai_answer || null)) ?? null, (JSON.stringify($json.fields || null)) ?? null, (JSON.stringify(($json.paper || {}).checks || null)) ?? null, ($json.contact_id) ?? null, (($json.paper || {}).status || 'filed') ?? null, ($json.fragment.reason) ?? null, (($json.paper || {}).expires_on || '') ?? null, ($json.transcript || '') ?? null, ($json.transcript_lang || '') ?? null] }}"
+        }
+      },
+      "notes": "Evidence row + line status + audit entry, in one statement. Never overwrites the engineer's own decision.\nGuardrails: audit, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "db21836f-9d1c-45ab-8694-5e590fdc0918",
+      "name": "Queue the reply",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        7000,
+        -40
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into reply_queue (mobilisation_id, contact_id, fragment) values ($1, $2, $3::jsonb) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Make reply fragment').item.json.mobilisation_id) ?? null, ($('Make reply fragment').item.json.contact_id) ?? null, (JSON.stringify($('Make reply fragment').item.json.fragment)) ?? null] }}"
+        }
+      },
+      "notes": "WF-05 sends one reply per burst, not one per photo.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "68687c53-201a-4c5e-8bfe-72e5e635ee35",
+      "name": "Mark done",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        7280,
+        -40
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update messages set state = 'done', state_at = now() where id = $1 returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Load and lock message').item.json.message_id) ?? null] }}"
+        }
+      },
+      "notes": "Finished.",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "e6d8b150-537e-4538-8f5a-3ea2bb018c79",
+      "name": "Read typed text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        800
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Read typed text: generated from n8n/mobilise/logic.mjs readTextCommand. Edit there, then rebuild.\nconst __fn = function readTextCommand(input) {\n  const t = String((input.message && input.message.text) || '').trim()\n  const low = t.toLowerCase()\n  const words = (list) => list.some((w) => low === w || low.startsWith(w + ' ') || low.includes(' ' + w))\n  if (!t) return { ...input, command: 'empty' }\n  if (words(['status', 'pending', 'baki', 'baaki', 'बाकी', 'kya bacha', 'kitna bacha', 'missing', 'list'])) return { ...input, command: 'gap_list' }\n  if (words(['help', 'madad', 'मदद', 'kaise'])) return { ...input, command: 'help' }\n  const na = t.match(/\\b([A-Z]{2,3})[\\s\\-]*0*(\\d{1,2})\\b\\s*(?:[-:]\\s*)?(?:na|n\\/a|not applicable|lagu nahi|लागू नहीं)\\b(.*)$/i)\n  if (na) return { ...input, command: 'request_na', line: na[1].toUpperCase() + '-' + String(Number(na[2])).padStart(2, '0'), reason: na[3].trim() }\n  return { ...input, command: 'remark' }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "\"status\", \"baki kya hai\", \"LC-10 NA creche not needed\", or a remark.",
+      "notesInFlow": false
+    },
+    {
+      "id": "d0560cae-d7c7-49f5-8d73-83a26cf5a7e9",
+      "name": "Which command?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        800
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "gap_list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "gap_list"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "help",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "request_na",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "request_na"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "remark",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "remark"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "notes": "Small, fixed set of commands. Anything else is a remark.",
+      "notesInFlow": false
+    },
+    {
+      "id": "a85532ad-a7d1-4e70-81ac-b4b4525fd139",
+      "name": "Send the gap list now",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1400,
+        680
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob04GapList",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 04 Evening gap list",
+          "cachedResultUrl": "/workflow/veraMob04GapList"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "mobilisation_id": "={{ $json.mobilisation_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "Same list as 7 PM, on demand.",
+      "notesInFlow": false
+    },
+    {
+      "id": "4010c1c4-9f17-453a-8378-913a67161927",
+      "name": "Build help text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        880
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build help text: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'text', text: { body: 'Send photos or PDFs as a *reply* to the area message, with the line number in the caption (e.g. 3). Send *status* to see what is still needed. Voice notes are fine.' } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Two lines of help.",
+      "notesInFlow": false
+    },
+    {
+      "id": "d71fb515-8f0f-4993-8e99-cf9f6a4c7c4a",
+      "name": "Send help",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        880
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "help",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09.",
+      "notesInFlow": false
+    },
+    {
+      "id": "b7721ff4-6677-4824-83f1-857f90fecd62",
+      "name": "Build N/A request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        1080
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build N/A request: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'interactive', interactive: { type: 'button', body: { text: 'Contractor asks to mark ' + input.line + ' as not applicable: \"' + (input.reason || 'no reason given') + '\". Approve?' }, action: { buttons: [{ type: 'reply', reply: { id: 'na:' + input.line + ':approve', title: 'Approve N/A' } }, { type: 'reply', reply: { id: 'na:' + input.line + ':reject', title: 'Reject' } }] } } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Only the engineer can mark a line N/A.\nGuardrails: human",
+      "notesInFlow": false
+    },
+    {
+      "id": "0bde2e89-b62a-434b-8f49-959dd99ca3e1",
+      "name": "Ask engineer about N/A",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        1080
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.mob.engineer_contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "confirm",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Engineer decides with one tap.",
+      "notesInFlow": false
+    },
+    {
+      "id": "ea55ab41-877c-47de-8130-bbe65a28f8fe",
+      "name": "Save remark",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1400,
+        1280
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into evidence (mobilisation_id, line_code, message_id, kind, transcript, bind_method, created_by) values ($1, null, $2, 'remark', $3, 'text', $4) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id) ?? null, ($json.message_id) ?? null, ($json.message.text) ?? null, ($json.contact_id) ?? null] }}"
+        }
+      },
+      "notes": "Kept against the site; shown to the engineer.\nGuardrails: audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "dd1d3705-d03d-4f56-8ab9-16c622310f3e",
+      "name": "Read button answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        1480
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Read button answer: generated from n8n/mobilise/logic.mjs parseAnswer. Edit there, then rebuild.\nconst __fn = function parseAnswer(input) {\n  const i = (input.message && input.message.interactive) || {}\n  const [verb, ref, value] = String(i.id || '').split(':')\n  const allowed = { bind: ['contractor', 'engineer', 'reviewer'], pick: ['contractor', 'engineer'], na: ['engineer'], close: ['engineer'], sign: ['engineer'], review: ['reviewer'] }\n  const role = input.contact_role || ''\n  if (!allowed[verb]) return { ...input, answer: { ok: false, why: 'Unknown button' } }\n  if (!allowed[verb].includes(role)) return { ...input, answer: { ok: false, why: 'Only ' + allowed[verb].join(' / ') + ' can do this' } }\n  if (verb === 'sign' && !['approve', 'conditions', 'hold'].includes(value)) return { ...input, answer: { ok: false, why: 'Unknown sign-off choice' } }\n  return { ...input, answer: { ok: true, verb, ref, value, by: input.contact_id, at: new Date(Number(input.now || Date.now())).toISOString() } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "The button id says what it is: bind / pick / na / close / sign. Role checked: only the engineer can sign.\nGuardrails: auth",
+      "notesInFlow": false
+    },
+    {
+      "id": "cf7fd889-485f-409a-8048-bf42f1645b06",
+      "name": "Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        1480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.answer.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Wrong role or unknown button: refused.",
+      "notesInFlow": false
+    },
+    {
+      "id": "a3fb7f4f-b886-43a5-8874-2ebf7907fa0d",
+      "name": "Apply answer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1400,
+        1480
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select apply_answer($1::jsonb) as result;",
+        "options": {
+          "queryReplacement": "={{ [(JSON.stringify({ ...$json.answer, wamid: $json.message.wamid })) ?? null] }}"
+        }
+      },
+      "notes": "One database transaction, with an audit entry.\nGuardrails: audit, idempotent",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "99dace82-ec5e-4182-8e97-c1453796bdf6",
+      "name": "Save location pin",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        840,
+        1720
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into zones (mobilisation_id, area, name, shape, source)\nselect $1, o.area, o.area || ' (pin from contractor)', json_build_object('circle', json_build_object('lat', $2::float, 'lng', $3::float, 'radius_m', 30)), 'contractor_pin'\nfrom outbound o where o.wamid = $4 and o.kind = 'area' returning id;",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id) ?? null, ($json.message.location.lat) ?? null, ($json.message.location.lng) ?? null, ($json.message.context_wamid) ?? null] }}"
+        }
+      },
+      "notes": "A pin sent as a reply to an area prompt becomes a 30 m circle for that area. The engineer can redraw it.",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "934a9f15-25a3-4fd8-8d17-f638f672a99e",
+      "name": "Build \"what we accept\"",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        1960
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build \"what we accept\": generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'text', text: { body: 'Please send a photo, a PDF or a voice note. Videos and stickers are not filed.' } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Unsupported types get a polite line, not silence.",
+      "notesInFlow": false
+    },
+    {
+      "id": "161bf735-0686-4b0d-8ed1-be07b67792e6",
+      "name": "Send \"what we accept\"",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        1960
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "help",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "From the router": {
+      "main": [
+        [
+          {
+            "node": "Load and lock message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load and lock message": {
+      "main": [
+        [
+          {
+            "node": "What kind of message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What kind of message?": {
+      "main": [
+        [
+          {
+            "node": "Get media link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read typed text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read button answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save location pin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build \"what we accept\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get media link": {
+      "main": [
+        [
+          {
+            "node": "Download the file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the file": {
+      "main": [
+        [
+          {
+            "node": "Hash and size check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hash and size check": {
+      "main": [
+        [
+          {
+            "node": "File OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File OK?": {
+      "main": [
+        [
+          {
+            "node": "Voice note?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Explain file problem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explain file problem": {
+      "main": [
+        [
+          {
+            "node": "Send file problem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voice note?": {
+      "main": [
+        [
+          {
+            "node": "Transcribe voice (Sarvam)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Store in evidence bucket",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Keep file after upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe voice (Sarvam)": {
+      "main": [
+        [
+          {
+            "node": "Add transcript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add transcript": {
+      "main": [
+        [
+          {
+            "node": "Store in evidence bucket",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Keep file after upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in evidence bucket": {
+      "main": [
+        [
+          {
+            "node": "Keep file after upload",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Mark needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keep file after upload": {
+      "main": [
+        [
+          {
+            "node": "Bind to checklist line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bind to checklist line": {
+      "main": [
+        [
+          {
+            "node": "How was it bound?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "How was it bound?": {
+      "main": [
+        [
+          {
+            "node": "Is it a paper line?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build classify request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build confirm buttons",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build classify request": {
+      "main": [
+        [
+          {
+            "node": "Claude: which line?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: which line?": {
+      "main": [
+        [
+          {
+            "node": "Confidence gate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confidence gate": {
+      "main": [
+        [
+          {
+            "node": "Sure enough?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sure enough?": {
+      "main": [
+        [
+          {
+            "node": "Is it a paper line?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build confirm buttons",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build confirm buttons": {
+      "main": [
+        [
+          {
+            "node": "Ask sender to confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is it a paper line?": {
+      "main": [
+        [
+          {
+            "node": "Build extract request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Make reply fragment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build extract request": {
+      "main": [
+        [
+          {
+            "node": "Claude: read the paper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: read the paper": {
+      "main": [
+        [
+          {
+            "node": "Parse the fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse the fields": {
+      "main": [
+        [
+          {
+            "node": "Check paper rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check paper rules": {
+      "main": [
+        [
+          {
+            "node": "Make reply fragment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make reply fragment": {
+      "main": [
+        [
+          {
+            "node": "Save evidence and line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save evidence and line": {
+      "main": [
+        [
+          {
+            "node": "Queue the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue the reply": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to review queue": {
+      "main": [
+        [
+          {
+            "node": "Mark needs a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read typed text": {
+      "main": [
+        [
+          {
+            "node": "Which command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Which command?": {
+      "main": [
+        [
+          {
+            "node": "Send the gap list now",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build help text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build N/A request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save remark",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save remark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build help text": {
+      "main": [
+        [
+          {
+            "node": "Send help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build N/A request": {
+      "main": [
+        [
+          {
+            "node": "Ask engineer about N/A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read button answer": {
+      "main": [
+        [
+          {
+            "node": "Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Apply answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build \"what we accept\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build \"what we accept\"": {
+      "main": [
+        [
+          {
+            "node": "Send \"what we accept\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

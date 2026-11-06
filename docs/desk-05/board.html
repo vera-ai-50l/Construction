@@ -1,0 +1,667 @@
+<title>One-day Mobilisation Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a whiteboard canvas (pan / zoom) of frames: story, decisions, the live n8n node map, guardrails. "Read as page" stacks the same frames. */
+:root {
+  --canvas: #e9ecf0; --dot: #c9cfd8; --frame: #ffffff; --frame-line: #d3d8df; --ink: #1b2330; --ink-2: #4a5566; --ink-3: #7a8494;
+  --accent: #2f5bea; --accent-ink: #ffffff;
+  --sticky-y: #fff1a8; --sticky-p: #ffd6e2; --sticky-g: #d4f2d9; --sticky-b: #d6e6ff; --sticky-o: #ffe0bf; --sticky-ink: #2a2a22;
+  --ok: #1f8f4e; --warn: #b7791f; --bad: #c93b3b; --info: #2f5bea;
+  --k-trigger: #2f5bea; --k-code: #7b4ddb; --k-ai: #e0632b; --k-http: #138a8a; --k-db: #3d5a80; --k-store: #2e8b57; --k-decide: #c98a12; --k-respond: #6b7280; --k-call: #4f46e5;
+  --edge: #8a94a6; --shadow: 0 1px 2px rgb(20 30 50 / .08), 0 6px 18px rgb(20 30 50 / .06);
+  --f-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --canvas: #14171c; --dot: #2a3039; --frame: #1d2128; --frame-line: #323944; --ink: #e8ebf0; --ink-2: #b3bac6; --ink-3: #8790a0;
+  --accent: #7d9cff; --accent-ink: #0d1220;
+  --sticky-y: #4a4420; --sticky-p: #4d2a36; --sticky-g: #22422b; --sticky-b: #233552; --sticky-o: #4d3620; --sticky-ink: #f1eee0;
+  --ok: #4cc27f; --warn: #e0ad4f; --bad: #f07272; --info: #7d9cff;
+  --k-trigger: #7d9cff; --k-code: #a98bf0; --k-ai: #f08a57; --k-http: #4cc2c2; --k-db: #8fb0d9; --k-store: #5fc48c; --k-decide: #e0ad4f; --k-respond: #9aa3b2; --k-call: #9c95ff;
+  --edge: #6d7686; --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .3); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --canvas: #14171c; --dot: #2a3039; --frame: #1d2128; --frame-line: #323944; --ink: #e8ebf0; --ink-2: #b3bac6; --ink-3: #8790a0;
+  --accent: #7d9cff; --accent-ink: #0d1220;
+  --sticky-y: #4a4420; --sticky-p: #4d2a36; --sticky-g: #22422b; --sticky-b: #233552; --sticky-o: #4d3620; --sticky-ink: #f1eee0;
+  --ok: #4cc27f; --warn: #e0ad4f; --bad: #f07272; --info: #7d9cff;
+  --k-trigger: #7d9cff; --k-code: #a98bf0; --k-ai: #f08a57; --k-http: #4cc2c2; --k-db: #8fb0d9; --k-store: #5fc48c; --k-decide: #e0ad4f; --k-respond: #9aa3b2; --k-call: #9c95ff;
+  --edge: #6d7686; --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 6px 18px rgb(0 0 0 / .3); color-scheme: dark }
+
+html, body { height: 100%; }
+body { background: var(--canvas); color: var(--ink); font: 14px/1.45 var(--f-body); overflow: hidden; }
+body.list { overflow: auto; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* top bar */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--frame) 92%, transparent); border-bottom: 1px solid var(--frame-line); backdrop-filter: blur(8px); }
+.brand { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.brand b { font: 800 16px/1.1 var(--f-display); letter-spacing: .01em; }
+.brand span { color: var(--ink-3); font-size: 12px; }
+.tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { border: 1px solid var(--frame-line); background: var(--frame); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 13px; line-height: 1.2; }
+.btn:hover { border-color: var(--accent); }
+.btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+select.btn { padding-right: 24px; max-width: 46vw; }
+.zoom { font: 500 12px var(--f-mono); color: var(--ink-3); min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* canvas */
+.viewport { position: fixed; inset: 0; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--canvas); background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px); background-size: 22px 22px; }
+.viewport.drag { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+body.list .viewport { position: static; overflow: visible; touch-action: auto; cursor: auto; background-image: none; padding: calc(84px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); }
+body.list .world { position: static; transform: none !important; display: flex; flex-direction: column; gap: 20px; max-width: 1200px; margin: 0 auto; }
+
+/* frames */
+.frame { position: absolute; background: var(--frame); border: 1px solid var(--frame-line); border-radius: 6px; box-shadow: var(--shadow); padding: 26px 28px 28px; }
+body.list .frame { position: relative; left: auto !important; top: auto !important; width: auto !important; max-width: 100%; }
+.frame-tag { position: absolute; top: -26px; left: 0; font: 600 13px var(--f-body); color: var(--ink-2); white-space: nowrap; }
+body.list .frame-tag { position: static; display: block; margin-bottom: 6px; }
+.frame h2 { font: 800 30px/1.1 var(--f-display); margin: 0 0 6px; text-wrap: balance; letter-spacing: -.005em; }
+.frame h3 { font: 700 18px/1.2 var(--f-display); margin: 0 0 8px; text-wrap: balance; }
+.frame p { margin: 0 0 10px; max-width: 70ch; color: var(--ink-2); }
+.lede { font-size: 16px; color: var(--ink-2); max-width: 72ch; }
+.eyebrow { font: 600 11px var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.col { flex: 1 1 260px; min-width: 0; }
+
+.sticky { background: var(--sticky-y); color: var(--sticky-ink); padding: 14px 16px; border-radius: 2px; box-shadow: 0 2px 0 rgb(0 0 0 / .06), 0 8px 16px rgb(0 0 0 / .07); min-width: 0; }
+.sticky.p { background: var(--sticky-p); } .sticky.g { background: var(--sticky-g); } .sticky.b { background: var(--sticky-b); } .sticky.o { background: var(--sticky-o); }
+.sticky h4 { margin: 0 0 6px; font: 700 14px/1.25 var(--f-body); }
+.sticky ul { margin: 0; padding-left: 18px; } .sticky li { margin: 3px 0; }
+.sticky p { color: inherit; opacity: .85; margin: 0; }
+.tilt-l { transform: rotate(-0.8deg); } .tilt-r { transform: rotate(0.7deg); }
+
+table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
+.t th, .t td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--frame-line); }
+.t th { font: 600 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.scroll { overflow-x: auto; max-width: 100%; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font: 600 11px var(--f-mono); letter-spacing: .03em; white-space: nowrap; border: 1px solid currentColor; }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); } .pill.info { color: var(--info); }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* timeline */
+.lanes { display: grid; grid-template-columns: 150px 1fr; gap: 10px 14px; align-items: stretch; }
+.lane-name { font: 700 13px var(--f-body); padding-top: 10px; }
+.lane { display: flex; gap: 8px; flex-wrap: wrap; }
+.step { flex: 1 1 150px; min-width: 0; border: 1px solid var(--frame-line); border-left: 4px solid var(--edge); border-radius: 4px; padding: 8px 10px; background: color-mix(in srgb, var(--frame) 94%, var(--canvas)); }
+.step b { display: block; font-size: 12px; font-family: var(--f-mono); color: var(--ink-3); font-weight: 500; }
+.step.today { border-left-color: var(--bad); } .step.vera { border-left-color: var(--ok); }
+
+/* checklist bars */
+.areas { display: grid; gap: 8px; }
+.area { display: grid; grid-template-columns: 52px 1fr 120px; gap: 10px; align-items: center; }
+.area .code { font: 600 12px var(--f-mono); }
+.bars { display: flex; height: 14px; border-radius: 3px; overflow: hidden; background: var(--canvas); }
+.bars i { display: block; height: 100%; }
+.area small { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+/* binding ladder */
+.ladder { display: grid; gap: 8px; counter-reset: rung; }
+.rung { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--frame-line); border-radius: 6px; }
+.rung::before { counter-increment: rung; content: counter(rung); font: 800 20px/1 var(--f-display); color: var(--ink-3); }
+.rung h4 { margin: 0 0 3px; font-size: 14px; }
+.rung p { margin: 0; font-size: 13px; }
+
+/* accuracy rings */
+.rings { width: 100%; max-width: 360px; height: auto; display: block; }
+
+/* overview map */
+.ov { position: relative; }
+.ovbox { position: absolute; width: 208px; border: 1px solid var(--frame-line); border-radius: 8px; padding: 10px 12px; background: var(--frame); box-shadow: var(--shadow); cursor: pointer; }
+.ovbox:hover { border-color: var(--accent); }
+.ovbox b { display: block; font: 700 13px/1.25 var(--f-body); }
+.ovbox span { display: block; font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.ovbox .id { font: 600 11px var(--f-mono); color: var(--accent); }
+.ovbox.actor { background: var(--sticky-b); color: var(--sticky-ink); border-style: dashed; cursor: default; }
+.ovbox.actor span { color: inherit; opacity: .8; }
+
+/* n8n nodes */
+.wf-canvas { position: relative; }
+body.list .wf-wrap { overflow-x: auto; max-width: 100%; border: 1px solid var(--frame-line); border-radius: 6px; background: var(--canvas); background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 22px 22px; }
+.node { position: absolute; width: 214px; background: var(--frame); border: 1px solid var(--frame-line); border-top: 4px solid var(--kc, var(--edge)); border-radius: 6px; padding: 8px 10px 9px; box-shadow: var(--shadow); cursor: pointer; text-align: left; }
+.node:hover { border-color: var(--accent); border-top-color: var(--kc); }
+.node.sel { outline: 2px solid var(--accent); outline-offset: 2px; }
+.node .type { display: flex; justify-content: space-between; gap: 6px; font: 500 10.5px var(--f-mono); color: var(--kc); text-transform: lowercase; }
+.node .nm { display: block; font: 600 13px/1.25 var(--f-body); margin: 3px 0 4px; color: var(--ink); }
+.node .ds { display: block; font-size: 11.5px; line-height: 1.35; color: var(--ink-2); }
+.node .gd { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+.gchip { font: 500 10px var(--f-mono); padding: 1px 5px; border-radius: 3px; background: color-mix(in srgb, var(--g, var(--edge)) 14%, transparent); color: var(--g, var(--ink-2)); }
+svg.edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+svg.edges path { fill: none; stroke-width: 1.6; }
+svg.edges text { font: 500 10px var(--f-mono); fill: var(--ink-3); }
+
+/* side panel */
+.panel { position: fixed; z-index: 30; right: max(12px, env(safe-area-inset-right, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: min(380px, calc(100vw - 24px)); max-height: calc(100% - 90px); overflow: auto;
+  background: var(--frame); border: 1px solid var(--frame-line); border-radius: 10px; box-shadow: var(--shadow); padding: 16px 18px; }
+.panel h3 { margin: 4px 0 6px; font: 700 18px/1.2 var(--f-display); }
+.panel dl { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; margin: 10px 0 0; font-size: 13px; }
+.panel dt { color: var(--ink-3); font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+.panel dd { margin: 0; min-width: 0; }
+.panel .x { position: absolute; right: 10px; top: 10px; }
+
+.legend { display: flex; gap: 10px 16px; flex-wrap: wrap; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.sw { width: 12px; height: 12px; border-radius: 3px; background: var(--c); display: inline-block; }
+.ln { width: 22px; height: 0; border-top: 2px solid var(--c); display: inline-block; }
+.ln.d { border-top-style: dashed; }
+
+.hint { position: fixed; z-index: 15; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--ink-3); background: var(--frame); border: 1px solid var(--frame-line); border-radius: 8px; padding: 6px 10px; }
+body.list .hint { display: none; }
+
+@media (max-width: 640px) {
+  .brand span { display: none; }
+  .lanes { grid-template-columns: 1fr; }
+  .area { grid-template-columns: 44px 1fr; } .area small { grid-column: 2; }
+  .frame { padding: 20px 18px; }
+  .frame h2 { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="bar">
+  <div class="brand"><b>Desk 05 · One-day Mobilisation</b><span>Node map, decisions and guardrails · prepared for a Mumbai developer · Nov 2026</span></div>
+  <div class="tools" role="toolbar" aria-label="Board controls">
+    <label class="sr" for="jump" hidden>Go to frame</label>
+    <select id="jump" class="btn" aria-label="Go to frame"></select>
+    <button class="btn" id="zout" aria-label="Zoom out">−</button>
+    <span class="zoom" id="zl">100%</span>
+    <button class="btn" id="zin" aria-label="Zoom in">+</button>
+    <button class="btn" id="fit">Fit all</button>
+    <button class="btn" id="mode" aria-pressed="false">Read as page</button>
+  </div>
+</header>
+
+<div class="viewport" id="vp"><div class="world" id="world"></div></div>
+<aside class="panel" id="panel" hidden aria-live="polite"></aside>
+<div class="hint" id="hint">Drag to move · scroll or pinch to zoom · click a node for details</div>
+
+<script>
+const DATA = {"version":"mob-v1","areas":[{"code":"PAP","name":"Papers and licences","icon":"FileText","walk":false},{"code":"DR","name":"Drawings and design readiness","icon":"Ruler","walk":true},{"code":"LC","name":"Labour camp","icon":"Tent","walk":true},{"code":"SY","name":"Stores yard","icon":"Warehouse","walk":true},{"code":"BP","name":"Batching plant / RMC","icon":"Factory","walk":true},{"code":"FW","name":"Formwork and scaffolding","icon":"Stack","walk":true},{"code":"SF","name":"Safety set-up","icon":"HardHat","walk":true}],"lineCount":77,"byArea":[{"code":"PAP","name":"Papers and licences","lines":16,"critical":9},{"code":"DR","name":"Drawings and design readiness","lines":8,"critical":2},{"code":"LC","name":"Labour camp","lines":14,"critical":6},{"code":"SY","name":"Stores yard","lines":10,"critical":2},{"code":"BP","name":"Batching plant / RMC","lines":10,"critical":3},{"code":"FW","name":"Formwork and scaffolding","lines":5,"critical":0},{"code":"SF","name":"Safety set-up","lines":14,"critical":6}],"workflows":[{"id":"veraMob01Inbound","name":"Vera 05 · 01 WhatsApp in (router)","purpose":"The one door for WhatsApp. Checks the message is really from Meta, stores it before anything else, answers Meta at once, drops duplicates, and hands each message to WF-02.","nodes":[{"name":"WhatsApp verify (GET)","kind":"webhook","type":"webhook","x":0,"y":0,"does":"Meta checks the webhook URL once, when it is set up.","guard":["auth"],"onError":false,"retry":false},{"name":"Verify token right?","kind":"if","type":"if","x":280,"y":0,"does":"Only our own token passes.","guard":["auth"],"onError":false,"retry":false},{"name":"Echo challenge","kind":"respond","type":"respondToWebhook","x":560,"y":-100,"does":"Meta gets its challenge back.","guard":[],"onError":false,"retry":false},{"name":"Reject verify","kind":"respond","type":"respondToWebhook","x":560,"y":100,"does":"Wrong token: refused.","guard":[],"onError":false,"retry":false},{"name":"WhatsApp events (POST)","kind":"webhook","type":"webhook","x":0,"y":400,"does":"Every message and delivery status from Meta arrives here.","guard":[],"onError":false,"retry":false},{"name":"Check Meta signature","kind":"code","type":"code","x":280,"y":400,"does":"HMAC of the raw body with the app secret. Anything not signed by Meta stops here.","guard":["auth","error-out"],"onError":true,"retry":false},{"name":"Signed by Meta?","kind":"if","type":"if","x":560,"y":400,"does":"Pass or refuse.","guard":[],"onError":false,"retry":false},{"name":"Reject unsigned","kind":"respond","type":"respondToWebhook","x":840,"y":600,"does":"Not from Meta: 401, nothing stored.","guard":[],"onError":false,"retry":false},{"name":"Save raw to inbox","kind":"pg","type":"postgres","x":840,"y":400,"does":"The raw body is written first. If anything later breaks, it can be replayed.","guard":["retry","idempotent","error-out","audit"],"onError":true,"retry":true},{"name":"Tell Meta: try again","kind":"respond","type":"respondToWebhook","x":1120,"y":640,"does":"Database down: Meta gets a 500 and redelivers later. Nothing is lost.","guard":[],"onError":false,"retry":false},{"name":"Tell Meta: received","kind":"respond","type":"respondToWebhook","x":1120,"y":400,"does":"Meta gets 200 within a second. Work continues after this.","guard":["timeout"],"onError":false,"retry":false},{"name":"Split into events","kind":"code","type":"code","x":1400,"y":400,"does":"One item per message and per delivery status.","guard":[],"onError":false,"retry":false},{"name":"Message or status?","kind":"switch","type":"switch","x":1680,"y":400,"does":"Statuses update what we sent; messages get processed.","guard":[],"onError":false,"retry":false},{"name":"Update delivery status","kind":"pg","type":"postgres","x":1960,"y":640,"does":"Sent / delivered / read / failed, on our outbound log.","guard":["retry"],"onError":false,"retry":true},{"name":"Send failed?","kind":"if","type":"if","x":2240,"y":640,"does":"A failed send must not go unnoticed.","guard":[],"onError":false,"retry":false},{"name":"Flag failed send","kind":"pg","type":"postgres","x":2520,"y":640,"does":"Goes to the review queue with the error code.","guard":["human"],"onError":false,"retry":true},{"name":"Nothing to do","kind":"noop","type":"noOp","x":1960,"y":880.0000000000001,"does":"Empty or unknown event.","guard":[],"onError":false,"retry":false},{"name":"Claim message","kind":"pg","type":"postgres","x":1960,"y":400,"does":"Insert by WhatsApp message id. Meta can send the same message twice; the second one gets id 0.","guard":["dedupe","retry"],"onError":false,"retry":true},{"name":"First time we see it?","kind":"if","type":"if","x":2240,"y":400,"does":"Duplicates stop here.","guard":[],"onError":false,"retry":false},{"name":"Duplicate: ignore","kind":"noop","type":"noOp","x":2520,"y":200,"does":"Already processed.","guard":[],"onError":false,"retry":false},{"name":"Who sent it?","kind":"pg","type":"postgres","x":2520,"y":400,"does":"Phone number → contact, role, site. Also restarts the 24-hour window.","guard":["window"],"onError":false,"retry":true},{"name":"Known person?","kind":"if","type":"if","x":2800,"y":400,"does":"Only registered contractor, engineer and reviewer numbers are processed.","guard":["auth"],"onError":false,"retry":false},{"name":"Log unknown number","kind":"pg","type":"postgres","x":3080,"y":600,"does":"Nothing is read from unknown numbers. Vera ops sees the count daily.","guard":["audit"],"onError":false,"retry":true},{"name":"Process the message","kind":"exec","type":"executeWorkflow","x":3080,"y":400,"does":"Hands over to WF-02 and does not wait, so the router stays fast.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"WhatsApp verify (GET)","to":"Verify token right?","kind":"main"},{"from":"Verify token right?","to":"Echo challenge","kind":"true"},{"from":"Verify token right?","to":"Reject verify","kind":"false"},{"from":"WhatsApp events (POST)","to":"Check Meta signature","kind":"main"},{"from":"Check Meta signature","to":"Signed by Meta?","kind":"main"},{"from":"Check Meta signature","to":"Tell Meta: try again","kind":"error"},{"from":"Signed by Meta?","to":"Save raw to inbox","kind":"true"},{"from":"Signed by Meta?","to":"Reject unsigned","kind":"false"},{"from":"Save raw to inbox","to":"Tell Meta: received","kind":"main"},{"from":"Save raw to inbox","to":"Tell Meta: try again","kind":"error"},{"from":"Tell Meta: received","to":"Split into events","kind":"main"},{"from":"Split into events","to":"Message or status?","kind":"main"},{"from":"Message or status?","to":"Claim message","kind":"message"},{"from":"Message or status?","to":"Update delivery status","kind":"status"},{"from":"Message or status?","to":"Nothing to do","kind":"Other"},{"from":"Update delivery status","to":"Send failed?","kind":"main"},{"from":"Send failed?","to":"Flag failed send","kind":"true"},{"from":"Claim message","to":"First time we see it?","kind":"main"},{"from":"First time we see it?","to":"Who sent it?","kind":"true"},{"from":"First time we see it?","to":"Duplicate: ignore","kind":"false"},{"from":"Who sent it?","to":"Known person?","kind":"main"},{"from":"Known person?","to":"Process the message","kind":"true"},{"from":"Known person?","to":"Log unknown number","kind":"false"}]},{"id":"veraMob02Process","name":"Vera 05 · 02 Process one message","purpose":"Files one photo, paper, voice note or text against the right checklist line. Deterministic binding first; AI only picks from open lines; unsure answers go back to the sender as buttons or to a person.","nodes":[{"name":"From the router","kind":"sub","type":"executeWorkflowTrigger","x":0,"y":400,"does":"Gets one message id from WF-01.","guard":[],"onError":false,"retry":false},{"name":"Load and lock message","kind":"pg","type":"postgres","x":280,"y":400,"does":"Message, sender, site, open lines, our recent prompts. Marked \"processing\" so a stuck one is found later.","guard":["idempotent","retry"],"onError":false,"retry":true},{"name":"What kind of message?","kind":"switch","type":"switch","x":560,"y":400,"does":"Photo / PDF / voice, typed text, a button answer, or a location pin.","guard":[],"onError":false,"retry":false},{"name":"Get media link","kind":"http","type":"httpRequest","x":840,"y":0,"does":"Meta gives a download link valid for 5 minutes.","guard":["retry","error-out","timeout"],"onError":true,"retry":true},{"name":"Download the file","kind":"http","type":"httpRequest","x":1120,"y":0,"does":"Downloaded at once, before the link expires.","guard":["retry","error-out","timeout"],"onError":true,"retry":true},{"name":"Hash and size check","kind":"code","type":"code","x":1400,"y":0,"does":"SHA-256 of the file. Same file already used on another line, or too large: stopped.","guard":["dedupe","schema"],"onError":false,"retry":false},{"name":"File OK?","kind":"if","type":"if","x":1680,"y":0,"does":"Reused or oversized files do not get filed.","guard":[],"onError":false,"retry":false},{"name":"Explain file problem","kind":"code","type":"code","x":1960,"y":-200,"does":"Tells the sender why, in one line.","guard":[],"onError":false,"retry":false},{"name":"Send file problem","kind":"exec","type":"executeWorkflow","x":2240,"y":-200,"does":"Through WF-09.","guard":[],"onError":false,"retry":false},{"name":"Voice note?","kind":"if","type":"if","x":1960,"y":-320,"does":"Voice is typed out first, so a spoken line code (\"LC teen\") can bind it.","guard":[],"onError":false,"retry":false},{"name":"Transcribe voice (Sarvam)","kind":"http","type":"httpRequest","x":2240,"y":-480,"does":"Hindi / Marathi / Hinglish → text in its own script. English comes in the report.","guard":["retry","error-out","timeout"],"onError":true,"retry":true},{"name":"Add transcript","kind":"code","type":"code","x":2520,"y":-480,"does":"If transcription failed, the audio is still filed and the report says \"listen\".","guard":[],"onError":false,"retry":false},{"name":"Store in evidence bucket","kind":"s3","type":"awsS3","x":2800,"y":-200,"does":"Encrypted bucket in Mumbai (ap-south-1). Key = hash, so the same file is stored once.","guard":["retry","idempotent","error-out"],"onError":true,"retry":true},{"name":"Keep file after upload","kind":"merge","type":"merge","x":3080,"y":-40,"does":"Waits for the upload, then carries the original item (with the file) on. Upload failed = never reaches here.","guard":[],"onError":false,"retry":false},{"name":"Bind to checklist line","kind":"code","type":"code","x":3360,"y":-40,"does":"Reply-to-line, code in caption, reply-to-area + number, picked from list. Only if none: AI.","guard":["schema"],"onError":false,"retry":false},{"name":"How was it bound?","kind":"switch","type":"switch","x":3640,"y":-40,"does":"Bound for sure / AI must choose / ask the sender.","guard":[],"onError":false,"retry":false},{"name":"Build classify request","kind":"code","type":"code","x":3920,"y":200,"does":"Photo, PDF or voice transcript + the short list of open lines. The answer schema only allows those codes or NONE.","guard":["schema"],"onError":false,"retry":false},{"name":"Claude: which line?","kind":"http","type":"httpRequest","x":4200,"y":200,"does":"AI chooses a line and gives an honest confidence. It never says whether the site is OK.","guard":["retry","error-out","timeout","schema"],"onError":true,"retry":true},{"name":"Confidence gate","kind":"code","type":"code","x":4480,"y":200,"does":"≥ 0.90 with a 0.30 lead: file it. 0.45–0.90: ask the sender. Unreadable, suspicious, refused or malformed: a person.","guard":["human","schema"],"onError":false,"retry":false},{"name":"Sure enough?","kind":"switch","type":"switch","x":4760,"y":200,"does":"File it / ask the sender / a person.","guard":["human"],"onError":false,"retry":false},{"name":"Build confirm buttons","kind":"code","type":"code","x":5040,"y":420,"does":"Top 3 lines as one-tap buttons, plus \"Something else\".","guard":[],"onError":false,"retry":false},{"name":"Ask sender to confirm","kind":"exec","type":"executeWorkflow","x":5320,"y":420,"does":"The answer comes back as a button reply and is applied in one transaction.","guard":[],"onError":false,"retry":false},{"name":"Send to review queue","kind":"pg","type":"postgres","x":5040,"y":660,"does":"A person files it, usually within the hour. The sender is told it is being checked.","guard":["human","audit"],"onError":false,"retry":true},{"name":"Mark needs a person","kind":"pg","type":"postgres","x":5320,"y":660,"does":"Any failed step lands here: download, storage, AI. The message is never dropped.","guard":["human","error-out"],"onError":false,"retry":true},{"name":"Is it a paper line?","kind":"if","type":"if","x":5040,"y":-40,"does":"Papers get read and checked; site photos wait for the engineer.","guard":[],"onError":false,"retry":false},{"name":"Build extract request","kind":"code","type":"code","x":5320,"y":-280,"does":"Asks AI to copy the fields exactly. Null when not printed: never a guess.","guard":["schema"],"onError":false,"retry":false},{"name":"Claude: read the paper","kind":"http","type":"httpRequest","x":5600,"y":-280,"does":"Name, address, dates, workers covered, sum insured…","guard":["retry","error-out","timeout"],"onError":true,"retry":true},{"name":"Parse the fields","kind":"code","type":"code","x":5880,"y":-280,"does":"Anything that is not a clean answer counts as unread.","guard":["schema"],"onError":false,"retry":false},{"name":"Check paper rules","kind":"code","type":"code","x":6160,"y":-280,"does":"Plain code: valid on start? covers peak labour? sum insured ≥ contract? Each check says why.","guard":["audit"],"onError":false,"retry":false},{"name":"Make reply fragment","kind":"code","type":"code","x":6440,"y":-40,"does":"One line for the reply: accepted / sent back (with why) / filed.","guard":[],"onError":false,"retry":false},{"name":"Save evidence and line","kind":"pg","type":"postgres","x":6720,"y":-40,"does":"Evidence row + line status + audit entry, in one statement. Never overwrites the engineer's own decision.","guard":["audit","retry"],"onError":false,"retry":true},{"name":"Queue the reply","kind":"pg","type":"postgres","x":7000,"y":-40,"does":"WF-05 sends one reply per burst, not one per photo.","guard":["retry"],"onError":false,"retry":true},{"name":"Mark done","kind":"pg","type":"postgres","x":7280,"y":-40,"does":"Finished.","guard":[],"onError":false,"retry":true},{"name":"Read typed text","kind":"code","type":"code","x":840,"y":800,"does":"\"status\", \"baki kya hai\", \"LC-10 NA creche not needed\", or a remark.","guard":[],"onError":false,"retry":false},{"name":"Which command?","kind":"switch","type":"switch","x":1120,"y":800,"does":"Small, fixed set of commands. Anything else is a remark.","guard":[],"onError":false,"retry":false},{"name":"Send the gap list now","kind":"exec","type":"executeWorkflow","x":1400,"y":680,"does":"Same list as 7 PM, on demand.","guard":[],"onError":false,"retry":false},{"name":"Build help text","kind":"code","type":"code","x":1400,"y":880.0000000000001,"does":"Two lines of help.","guard":[],"onError":false,"retry":false},{"name":"Send help","kind":"exec","type":"executeWorkflow","x":1680,"y":880.0000000000001,"does":"Through WF-09.","guard":[],"onError":false,"retry":false},{"name":"Build N/A request","kind":"code","type":"code","x":1400,"y":1080,"does":"Only the engineer can mark a line N/A.","guard":["human"],"onError":false,"retry":false},{"name":"Ask engineer about N/A","kind":"exec","type":"executeWorkflow","x":1680,"y":1080,"does":"Engineer decides with one tap.","guard":[],"onError":false,"retry":false},{"name":"Save remark","kind":"pg","type":"postgres","x":1400,"y":1280,"does":"Kept against the site; shown to the engineer.","guard":["audit"],"onError":false,"retry":true},{"name":"Read button answer","kind":"code","type":"code","x":840,"y":1480,"does":"The button id says what it is: bind / pick / na / close / sign. Role checked: only the engineer can sign.","guard":["auth"],"onError":false,"retry":false},{"name":"Allowed?","kind":"if","type":"if","x":1120,"y":1480,"does":"Wrong role or unknown button: refused.","guard":[],"onError":false,"retry":false},{"name":"Apply answer","kind":"pg","type":"postgres","x":1400,"y":1480,"does":"One database transaction, with an audit entry.","guard":["audit","idempotent"],"onError":false,"retry":true},{"name":"Save location pin","kind":"pg","type":"postgres","x":840,"y":1720,"does":"A pin sent as a reply to an area prompt becomes a 30 m circle for that area. The engineer can redraw it.","guard":[],"onError":false,"retry":true},{"name":"Build \"what we accept\"","kind":"code","type":"code","x":840,"y":1960.0000000000002,"does":"Unsupported types get a polite line, not silence.","guard":[],"onError":false,"retry":false},{"name":"Send \"what we accept\"","kind":"exec","type":"executeWorkflow","x":1120,"y":1960.0000000000002,"does":"Through WF-09.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"From the router","to":"Load and lock message","kind":"main"},{"from":"Load and lock message","to":"What kind of message?","kind":"main"},{"from":"What kind of message?","to":"Get media link","kind":"media"},{"from":"What kind of message?","to":"Read typed text","kind":"text"},{"from":"What kind of message?","to":"Read button answer","kind":"interactive"},{"from":"What kind of message?","to":"Save location pin","kind":"location"},{"from":"What kind of message?","to":"Build \"what we accept\"","kind":"Other"},{"from":"Get media link","to":"Download the file","kind":"main"},{"from":"Get media link","to":"Mark needs a person","kind":"error"},{"from":"Download the file","to":"Hash and size check","kind":"main"},{"from":"Download the file","to":"Mark needs a person","kind":"error"},{"from":"Hash and size check","to":"File OK?","kind":"main"},{"from":"File OK?","to":"Voice note?","kind":"true"},{"from":"File OK?","to":"Explain file problem","kind":"false"},{"from":"Explain file problem","to":"Send file problem","kind":"main"},{"from":"Voice note?","to":"Transcribe voice (Sarvam)","kind":"true"},{"from":"Voice note?","to":"Store in evidence bucket","kind":"false"},{"from":"Voice note?","to":"Keep file after upload","kind":"false"},{"from":"Transcribe voice (Sarvam)","to":"Add transcript","kind":"main"},{"from":"Transcribe voice (Sarvam)","to":"Add transcript","kind":"error"},{"from":"Add transcript","to":"Store in evidence bucket","kind":"main"},{"from":"Add transcript","to":"Keep file after upload","kind":"main"},{"from":"Store in evidence bucket","to":"Keep file after upload","kind":"in2"},{"from":"Store in evidence bucket","to":"Mark needs a person","kind":"error"},{"from":"Keep file after upload","to":"Bind to checklist line","kind":"main"},{"from":"Bind to checklist line","to":"How was it bound?","kind":"main"},{"from":"How was it bound?","to":"Is it a paper line?","kind":"bound"},{"from":"How was it bound?","to":"Build classify request","kind":"ai"},{"from":"How was it bound?","to":"Build confirm buttons","kind":"ask"},{"from":"How was it bound?","to":"Send to review queue","kind":"Other"},{"from":"Build classify request","to":"Claude: which line?","kind":"main"},{"from":"Claude: which line?","to":"Confidence gate","kind":"main"},{"from":"Claude: which line?","to":"Send to review queue","kind":"error"},{"from":"Confidence gate","to":"Sure enough?","kind":"main"},{"from":"Sure enough?","to":"Is it a paper line?","kind":"auto"},{"from":"Sure enough?","to":"Build confirm buttons","kind":"confirm"},{"from":"Sure enough?","to":"Send to review queue","kind":"human"},{"from":"Sure enough?","to":"Send to review queue","kind":"Other"},{"from":"Build confirm buttons","to":"Ask sender to confirm","kind":"main"},{"from":"Is it a paper line?","to":"Build extract request","kind":"true"},{"from":"Is it a paper line?","to":"Make reply fragment","kind":"false"},{"from":"Build extract request","to":"Claude: read the paper","kind":"main"},{"from":"Claude: read the paper","to":"Parse the fields","kind":"main"},{"from":"Claude: read the paper","to":"Send to review queue","kind":"error"},{"from":"Parse the fields","to":"Check paper rules","kind":"main"},{"from":"Check paper rules","to":"Make reply fragment","kind":"main"},{"from":"Make reply fragment","to":"Save evidence and line","kind":"main"},{"from":"Save evidence and line","to":"Queue the reply","kind":"main"},{"from":"Queue the reply","to":"Mark done","kind":"main"},{"from":"Send to review queue","to":"Mark needs a person","kind":"main"},{"from":"Read typed text","to":"Which command?","kind":"main"},{"from":"Which command?","to":"Send the gap list now","kind":"gap_list"},{"from":"Which command?","to":"Build help text","kind":"help"},{"from":"Which command?","to":"Build N/A request","kind":"request_na"},{"from":"Which command?","to":"Save remark","kind":"remark"},{"from":"Which command?","to":"Save remark","kind":"Other"},{"from":"Build help text","to":"Send help","kind":"main"},{"from":"Build N/A request","to":"Ask engineer about N/A","kind":"main"},{"from":"Read button answer","to":"Allowed?","kind":"main"},{"from":"Allowed?","to":"Apply answer","kind":"true"},{"from":"Allowed?","to":"Build \"what we accept\"","kind":"false"},{"from":"Build \"what we accept\"","to":"Send \"what we accept\"","kind":"main"}]},{"id":"veraMob03WalkApi","name":"Vera 05 · 03 Walk page API","purpose":"Back end for the engineer's phone page on the visit day: load the checklist, take each capture (photo + GPS + status + voice), record the GPS trail, finish the walk.","nodes":[{"name":"Walk page opens (GET)","kind":"webhook","type":"webhook","x":0,"y":0,"does":"The page asks for this site's checklist.","guard":["auth"],"onError":false,"retry":false},{"name":"Check walk link","kind":"code","type":"code","x":280,"y":0,"does":"Signed link, expires the day after the visit.","guard":["auth","error-out"],"onError":true,"retry":false},{"name":"Link valid?","kind":"if","type":"if","x":560,"y":0,"does":"Forwarded or expired links stop here.","guard":[],"onError":false,"retry":false},{"name":"Respond 401","kind":"respond","type":"respondToWebhook","x":840,"y":200,"does":"Clear message for the page.","guard":[],"onError":false,"retry":false},{"name":"Load checklist for walk","kind":"pg","type":"postgres","x":840,"y":0,"does":"Lines, statuses, papers already accepted, and the drawn areas.","guard":["retry"],"onError":false,"retry":true},{"name":"Send checklist","kind":"respond","type":"respondToWebhook","x":1120,"y":0,"does":"The page caches it, so it works with no signal.","guard":[],"onError":false,"retry":false},{"name":"Walk page posts (POST)","kind":"webhook","type":"webhook","x":0,"y":500,"does":"capture / trail / finish (body.action). The page retries until it gets an answer.","guard":["auth"],"onError":false,"retry":false},{"name":"Check walk link ","kind":"code","type":"code","x":280,"y":500,"does":"Same check.","guard":["auth","error-out"],"onError":true,"retry":false},{"name":"Link valid? ","kind":"if","type":"if","x":560,"y":500,"does":"Forwarded or expired links stop here.","guard":[],"onError":false,"retry":false},{"name":"Respond 401 ","kind":"respond","type":"respondToWebhook","x":840,"y":700,"does":"Page shows \"ask for a new link\".","guard":[],"onError":false,"retry":false},{"name":"Which action?","kind":"switch","type":"switch","x":840,"y":500,"does":"Three kinds of post.","guard":[],"onError":false,"retry":false},{"name":"Load walk","kind":"pg","type":"postgres","x":1120,"y":320,"does":"Lines, areas, and whether this capture was already saved.","guard":["retry"],"onError":false,"retry":true},{"name":"Validate capture","kind":"code","type":"code","x":1400,"y":320,"does":"UUID per capture, known line code, size limits, sane GPS, phone clock vs server clock.","guard":["schema","error-out"],"onError":true,"retry":false},{"name":"Capture valid?","kind":"if","type":"if","x":1680,"y":320,"does":"Bad input gets a 400 with the reasons.","guard":["schema"],"onError":false,"retry":false},{"name":"Respond 400","kind":"respond","type":"respondToWebhook","x":1960,"y":520,"does":"The page shows the reason and keeps the capture.","guard":[],"onError":false,"retry":false},{"name":"Already saved?","kind":"if","type":"if","x":1960,"y":320,"does":"Same capture_id = a retry from a weak network. Answer as before, save nothing twice.","guard":["idempotent"],"onError":false,"retry":false},{"name":"Respond saved (again)","kind":"respond","type":"respondToWebhook","x":2240,"y":120,"does":"Idempotent answer.","guard":[],"onError":false,"retry":false},{"name":"Place on site map","kind":"code","type":"code","x":2240,"y":320,"does":"Phone fix (with its own ± metres) against the area drawn for this line: in / edge / out / unknown. Never blocks the capture.","guard":[],"onError":true,"retry":false},{"name":"Photo to file","kind":"code","type":"code","x":2520,"y":320,"does":"Base64 from the page → a file.","guard":["error-out"],"onError":true,"retry":false},{"name":"Store walk photo","kind":"s3","type":"awsS3","x":2800,"y":320,"does":"Same bucket as WhatsApp evidence.","guard":["retry","error-out"],"onError":true,"retry":true},{"name":"Respond: try again","kind":"respond","type":"respondToWebhook","x":3080,"y":520,"does":"Storage down: the page keeps the capture and retries.","guard":[],"onError":false,"retry":false},{"name":"Save capture and line","kind":"pg","type":"postgres","x":3080,"y":320,"does":"The line was chosen before the shutter: binding is certain. Status is the engineer's own.","guard":["idempotent","audit","retry"],"onError":false,"retry":true},{"name":"Respond saved","kind":"respond","type":"respondToWebhook","x":3360,"y":320,"does":"The page shows \"inside Labour camp\" or \"38 m outside: are you in the right area?\"","guard":[],"onError":false,"retry":false},{"name":"Voice remark attached?","kind":"if","type":"if","x":3640,"y":320,"does":"Voice is transcribed after the page has its answer.","guard":[],"onError":false,"retry":false},{"name":"Voice to file","kind":"code","type":"code","x":3920,"y":220.00000000000003,"does":"Base64 → audio file.","guard":[],"onError":false,"retry":false},{"name":"Transcribe remark","kind":"http","type":"httpRequest","x":4200,"y":220.00000000000003,"does":"Original words kept; English comes in the report.","guard":["retry","error-out"],"onError":true,"retry":true},{"name":"Save remark transcript","kind":"pg","type":"postgres","x":4480,"y":220.00000000000003,"does":"If transcription failed, the report says so.","guard":["retry"],"onError":false,"retry":true},{"name":"Save trail points","kind":"pg","type":"postgres","x":1120,"y":680,"does":"Batches of GPS points every 20 s while the page is open. Duplicates ignored.","guard":["idempotent","retry"],"onError":false,"retry":true},{"name":"Respond 204","kind":"respond","type":"respondToWebhook","x":1400,"y":680,"does":"No body.","guard":[],"onError":false,"retry":false},{"name":"Mark walk finished","kind":"pg","type":"postgres","x":1120,"y":919.9999999999999,"does":"Once only.","guard":["idempotent"],"onError":false,"retry":true},{"name":"Respond 202","kind":"respond","type":"respondToWebhook","x":1400,"y":919.9999999999999,"does":"The page can close.","guard":[],"onError":false,"retry":false},{"name":"Draft the NOC report","kind":"exec","type":"executeWorkflow","x":1680,"y":919.9999999999999,"does":"WF-06 runs in the background.","guard":[],"onError":false,"retry":false},{"name":"Respond 500","kind":"respond","type":"respondToWebhook","x":560,"y":1160,"does":"Any step that breaks still answers the page, so it keeps the capture and retries.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"Walk page opens (GET)","to":"Check walk link","kind":"main"},{"from":"Check walk link","to":"Link valid?","kind":"main"},{"from":"Link valid?","to":"Load checklist for walk","kind":"true"},{"from":"Link valid?","to":"Respond 401","kind":"false"},{"from":"Load checklist for walk","to":"Send checklist","kind":"main"},{"from":"Walk page posts (POST)","to":"Check walk link ","kind":"main"},{"from":"Check walk link ","to":"Link valid? ","kind":"main"},{"from":"Link valid? ","to":"Which action?","kind":"true"},{"from":"Link valid? ","to":"Respond 401 ","kind":"false"},{"from":"Which action?","to":"Load walk","kind":"capture"},{"from":"Which action?","to":"Save trail points","kind":"trail"},{"from":"Which action?","to":"Mark walk finished","kind":"finish"},{"from":"Which action?","to":"Respond 401 ","kind":"Other"},{"from":"Load walk","to":"Validate capture","kind":"main"},{"from":"Validate capture","to":"Capture valid?","kind":"main"},{"from":"Capture valid?","to":"Already saved?","kind":"true"},{"from":"Capture valid?","to":"Respond 400","kind":"false"},{"from":"Already saved?","to":"Respond saved (again)","kind":"true"},{"from":"Already saved?","to":"Place on site map","kind":"false"},{"from":"Place on site map","to":"Photo to file","kind":"main"},{"from":"Photo to file","to":"Store walk photo","kind":"main"},{"from":"Store walk photo","to":"Save capture and line","kind":"main"},{"from":"Store walk photo","to":"Respond: try again","kind":"error"},{"from":"Save capture and line","to":"Respond saved","kind":"main"},{"from":"Respond saved","to":"Voice remark attached?","kind":"main"},{"from":"Voice remark attached?","to":"Voice to file","kind":"true"},{"from":"Voice to file","to":"Transcribe remark","kind":"main"},{"from":"Transcribe remark","to":"Save remark transcript","kind":"main"},{"from":"Transcribe remark","to":"Save remark transcript","kind":"error"},{"from":"Save trail points","to":"Respond 204","kind":"main"},{"from":"Mark walk finished","to":"Respond 202","kind":"main"},{"from":"Respond 202","to":"Draft the NOC report","kind":"main"},{"from":"Check walk link","to":"Respond 500","kind":"error"},{"from":"Check walk link ","to":"Respond 500","kind":"error"},{"from":"Validate capture","to":"Respond 500","kind":"error"},{"from":"Place on site map","to":"Respond 500","kind":"error"},{"from":"Photo to file","to":"Respond 500","kind":"error"}]},{"id":"veraMob04GapList","name":"Vera 05 · 04 Evening gap list","purpose":"7 PM, three days before the visit until the day before: what is still missing goes to the contractor, and a one-line readiness note goes to the engineer.","nodes":[{"name":"Every evening 7 PM","kind":"cron","type":"scheduleTrigger","x":0,"y":0,"does":"IST (instance timezone Asia/Kolkata).","guard":[],"onError":false,"retry":false},{"name":"On demand (status)","kind":"sub","type":"executeWorkflowTrigger","x":0,"y":240,"does":"When the contractor types \"status\".","guard":[],"onError":false,"retry":false},{"name":"Sites in paper-check window","kind":"pg","type":"postgres","x":280,"y":120,"does":"Every site whose visit is in the next 3 days (or the one that asked).","guard":["retry"],"onError":false,"retry":true},{"name":"One site at a time","kind":"loop","type":"splitInBatches","x":560,"y":120,"does":"A failure on one site does not stop the others.","guard":[],"onError":false,"retry":false},{"name":"Build gap list","kind":"code","type":"code","x":840,"y":0,"does":"Missing papers by severity, what was sent back and why, how many site photos so far.","guard":[],"onError":false,"retry":false},{"name":"Send to contractor","kind":"exec","type":"executeWorkflow","x":1120,"y":0,"does":"Free inside 24 h of their last message; otherwise the approved utility template.","guard":["window"],"onError":false,"retry":false},{"name":"Tell the engineer","kind":"exec","type":"executeWorkflow","x":1400,"y":0,"does":"\"Ready to travel\" or the list of critical papers still open.","guard":[],"onError":false,"retry":false},{"name":"All sites done","kind":"noop","type":"noOp","x":840,"y":320,"does":"End of run.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"Every evening 7 PM","to":"Sites in paper-check window","kind":"main"},{"from":"On demand (status)","to":"Sites in paper-check window","kind":"main"},{"from":"Sites in paper-check window","to":"One site at a time","kind":"main"},{"from":"One site at a time","to":"Build gap list","kind":"loop"},{"from":"One site at a time","to":"All sites done","kind":"done"},{"from":"Build gap list","to":"Send to contractor","kind":"main"},{"from":"Send to contractor","to":"Tell the engineer","kind":"main"},{"from":"Tell the engineer","to":"One site at a time","kind":"main"}]},{"id":"veraMob05Replies","name":"Vera 05 · 05 One reply per burst","purpose":"Contractors send 20 photos in a minute. Instead of 20 replies, Vera waits until the burst goes quiet for 90 seconds and sends one summary.","nodes":[{"name":"Every minute","kind":"cron","type":"scheduleTrigger","x":0,"y":0,"does":"Small, cheap query.","guard":[],"onError":false,"retry":false},{"name":"Bursts that went quiet","kind":"pg","type":"postgres","x":280,"y":0,"does":"Claims each burst once, so two runs never send the same reply.","guard":["idempotent","retry"],"onError":false,"retry":true},{"name":"Compose one reply","kind":"code","type":"code","x":560,"y":0,"does":"\"✅ Accepted PAP-03. ↩️ PAP-04 sent back: sum insured below contract value. Still open: 6.\"","guard":[],"onError":false,"retry":false},{"name":"Send the reply","kind":"exec","type":"executeWorkflow","x":840,"y":0,"does":"Through WF-09.","guard":[],"onError":false,"retry":false},{"name":"Mark reply sent","kind":"pg","type":"postgres","x":1120,"y":0,"does":"Done.","guard":[],"onError":false,"retry":true}],"edges":[{"from":"Every minute","to":"Bursts that went quiet","kind":"main"},{"from":"Bursts that went quiet","to":"Compose one reply","kind":"main"},{"from":"Compose one reply","to":"Send the reply","kind":"main"},{"from":"Send the reply","to":"Mark reply sent","kind":"main"}]},{"id":"veraMob06NocRprt","name":"Vera 05 · 06 NOC report draft","purpose":"When the walk ends: code scores the checklist and decides the recommendation; AI only words the engineer's remarks in English; the wording is checked; a PDF goes to the engineer to sign with one tap.","nodes":[{"name":"When the walk is finished","kind":"sub","type":"executeWorkflowTrigger","x":0,"y":0,"does":"From WF-03.","guard":[],"onError":false,"retry":false},{"name":"Every night 9 PM (safety net)","kind":"cron","type":"scheduleTrigger","x":0,"y":280,"does":"Catches a walk the engineer forgot to finish.","guard":[],"onError":false,"retry":false},{"name":"Walks with no report","kind":"pg","type":"postgres","x":280,"y":280,"does":"Today's visits without a draft.","guard":[],"onError":false,"retry":true},{"name":"Load the visit","kind":"pg","type":"postgres","x":560,"y":120,"does":"Every line, photo count, transcript, GPS fix and area.","guard":["retry"],"onError":false,"retry":true},{"name":"Which areas were walked","kind":"code","type":"code","x":840,"y":120,"does":"An area counts as walked only with GPS fixes inside it (allowing for each fix's own error).","guard":[],"onError":false,"retry":false},{"name":"Score the visit","kind":"code","type":"code","x":1120,"y":120,"does":"Recommendation by rule: any critical open or an area not walked → not ready; majors open → ready with conditions.","guard":["audit"],"onError":false,"retry":false},{"name":"Build wording request","kind":"code","type":"code","x":1400,"y":120,"does":"Remarks + open items, already decided. AI is told not to decide anything.","guard":[],"onError":false,"retry":false},{"name":"Claude: word the observations","kind":"http","type":"httpRequest","x":1680,"y":120,"does":"Hindi / Marathi remarks → plain English observations, citing line codes.","guard":["retry","error-out","timeout"],"onError":true,"retry":true},{"name":"Check the wording","kind":"code","type":"code","x":1960,"y":120,"does":"Only known line codes, no verdict words. If it fails, the engineer's own transcripts go in instead.","guard":["schema"],"onError":false,"retry":false},{"name":"Build report page","kind":"code","type":"code","x":2240,"y":120,"does":"Recommendation, open items with due dates, areas walked, observations. Says which parts AI wrote.","guard":[],"onError":false,"retry":false},{"name":"Page to file","kind":"code","type":"code","x":2520,"y":120,"does":"index.html for the PDF service.","guard":[],"onError":false,"retry":false},{"name":"HTML to PDF (Gotenberg)","kind":"http","type":"httpRequest","x":2800,"y":120,"does":"Self-hosted, next to n8n. No report leaves our servers to be printed.","guard":["retry","error-out"],"onError":true,"retry":true},{"name":"Store report PDF","kind":"s3","type":"awsS3","x":3080,"y":120,"does":"Versioned: a re-draft never overwrites a signed report.","guard":["retry","audit"],"onError":false,"retry":true},{"name":"Save NOC draft","kind":"pg","type":"postgres","x":3360,"y":120,"does":"Draft saved.","guard":["idempotent"],"onError":false,"retry":true},{"name":"Create open items","kind":"pg","type":"postgres","x":3640,"y":120,"does":"Each open line becomes a dated item for WF-07.","guard":[],"onError":false,"retry":true},{"name":"Build sign-off message","kind":"code","type":"code","x":3920,"y":120,"does":"PDF + Approve / With conditions / Hold buttons.","guard":[],"onError":false,"retry":false},{"name":"Send to engineer to sign","kind":"exec","type":"executeWorkflow","x":4200,"y":120,"does":"The button reply from his own number is the sign-off, kept with its WhatsApp id. The NOC is never issued without it.","guard":["human","audit"],"onError":false,"retry":false},{"name":"Alert: report failed","kind":"pg","type":"postgres","x":3080,"y":400,"does":"Vera ops sends it by hand; the engineer is not left waiting.","guard":["human"],"onError":false,"retry":true}],"edges":[{"from":"When the walk is finished","to":"Load the visit","kind":"main"},{"from":"Every night 9 PM (safety net)","to":"Walks with no report","kind":"main"},{"from":"Walks with no report","to":"Load the visit","kind":"main"},{"from":"Load the visit","to":"Which areas were walked","kind":"main"},{"from":"Which areas were walked","to":"Score the visit","kind":"main"},{"from":"Score the visit","to":"Build wording request","kind":"main"},{"from":"Build wording request","to":"Claude: word the observations","kind":"main"},{"from":"Claude: word the observations","to":"Check the wording","kind":"main"},{"from":"Claude: word the observations","to":"Check the wording","kind":"error"},{"from":"Check the wording","to":"Build report page","kind":"main"},{"from":"Build report page","to":"Page to file","kind":"main"},{"from":"Page to file","to":"HTML to PDF (Gotenberg)","kind":"main"},{"from":"HTML to PDF (Gotenberg)","to":"Store report PDF","kind":"main"},{"from":"HTML to PDF (Gotenberg)","to":"Alert: report failed","kind":"error"},{"from":"Store report PDF","to":"Save NOC draft","kind":"main"},{"from":"Save NOC draft","to":"Create open items","kind":"main"},{"from":"Create open items","to":"Build sign-off message","kind":"main"},{"from":"Build sign-off message","to":"Send to engineer to sign","kind":"main"}]},{"id":"veraMob07Closure","name":"Vera 05 · 07 Open items after the visit","purpose":"Every morning: reminders for items due, escalation for critical items overdue. The contractor replies to the reminder with a photo; the engineer approves it from the photo, not another visit.","nodes":[{"name":"Every morning 9 AM","kind":"cron","type":"scheduleTrigger","x":0,"y":0,"does":"IST.","guard":[],"onError":false,"retry":false},{"name":"Items due or overdue","kind":"pg","type":"postgres","x":280,"y":0,"does":"Only items that are due.","guard":["retry"],"onError":false,"retry":true},{"name":"Each item","kind":"loop","type":"splitInBatches","x":560,"y":0,"does":"One at a time.","guard":[],"onError":false,"retry":false},{"name":"Reminder or escalate?","kind":"code","type":"code","x":840,"y":-100,"does":"Critical and overdue → the project head hears about it.","guard":[],"onError":false,"retry":false},{"name":"Remind the contractor","kind":"exec","type":"executeWorkflow","x":1120,"y":-100,"does":"Sent as a message they can reply to: the reply binds to this item for sure.","guard":[],"onError":false,"retry":false},{"name":"Escalate?","kind":"if","type":"if","x":1400,"y":-100,"does":"Only critical items, only when overdue.","guard":[],"onError":false,"retry":false},{"name":"Tell the project head","kind":"exec","type":"executeWorkflow","x":1680,"y":-240,"does":"One line with the item and days overdue.","guard":[],"onError":false,"retry":false},{"name":"All reminders sent","kind":"noop","type":"noOp","x":840,"y":200,"does":"End of run.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"Every morning 9 AM","to":"Items due or overdue","kind":"main"},{"from":"Items due or overdue","to":"Each item","kind":"main"},{"from":"Each item","to":"Reminder or escalate?","kind":"loop"},{"from":"Each item","to":"All reminders sent","kind":"done"},{"from":"Reminder or escalate?","to":"Remind the contractor","kind":"main"},{"from":"Remind the contractor","to":"Escalate?","kind":"main"},{"from":"Escalate?","to":"Tell the project head","kind":"true"},{"from":"Escalate?","to":"Each item","kind":"false"},{"from":"Tell the project head","to":"Each item","kind":"main"}]},{"id":"veraMob08SetupMb","name":"Vera 05 · 08 Set up a new site","purpose":"The engineer (or planning) fills one form: site, contractor, dates, contract value, peak labour, phones. Vera creates the checklist, sends the contractor the area prompts, and sends the engineer his walk link.","nodes":[{"name":"New site form","kind":"form","type":"formTrigger","x":0,"y":0,"does":"An n8n form behind login. No spreadsheet to keep in sync.","guard":["auth"],"onError":false,"retry":false},{"name":"Read the form","kind":"code","type":"code","x":280,"y":0,"does":"Labels → field names.","guard":[],"onError":false,"retry":false},{"name":"Check the form","kind":"code","type":"code","x":560,"y":0,"does":"Dates in order, numbers are numbers, phones have country code.","guard":["schema"],"onError":false,"retry":false},{"name":"Form OK?","kind":"if","type":"if","x":840,"y":0,"does":"Wrong input stops here, with reasons.","guard":[],"onError":false,"retry":false},{"name":"Show what is wrong","kind":"stop","type":"stopAndError","x":1120,"y":200,"does":"The form shows the error.","guard":[],"onError":false,"retry":false},{"name":"Copy checklist for this site","kind":"code","type":"code","x":1120,"y":0,"does":"Template mob-v1: only the lines that apply (plant or RMC, crane, creche, excavation).","guard":[],"onError":false,"retry":false},{"name":"Create site, lines, contacts","kind":"pg","type":"postgres","x":1400,"y":0,"does":"All in one statement: either the whole site is created or nothing is.","guard":["audit"],"onError":false,"retry":true},{"name":"Build area prompts","kind":"code","type":"code","x":1680,"y":0,"does":"One message per area, each listing its lines by number.","guard":[],"onError":false,"retry":false},{"name":"Send area prompts","kind":"exec","type":"executeWorkflow","x":1960,"y":0,"does":"The first one goes as the welcome template (outside the 24 h window); the contractor's reply opens the window for the rest.","guard":[],"onError":false,"retry":false},{"name":"Sign the walk link","kind":"code","type":"code","x":1680,"y":240,"does":"Signed link for the engineer, valid until the day after the visit.","guard":["auth"],"onError":false,"retry":false},{"name":"Send engineer the walk link","kind":"exec","type":"executeWorkflow","x":1960,"y":240,"does":"Through WF-09.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"New site form","to":"Read the form","kind":"main"},{"from":"Read the form","to":"Check the form","kind":"main"},{"from":"Check the form","to":"Form OK?","kind":"main"},{"from":"Form OK?","to":"Copy checklist for this site","kind":"true"},{"from":"Form OK?","to":"Show what is wrong","kind":"false"},{"from":"Copy checklist for this site","to":"Create site, lines, contacts","kind":"main"},{"from":"Create site, lines, contacts","to":"Build area prompts","kind":"main"},{"from":"Create site, lines, contacts","to":"Sign the walk link","kind":"main"},{"from":"Build area prompts","to":"Send area prompts","kind":"main"},{"from":"Sign the walk link","to":"Send engineer the walk link","kind":"main"}]},{"id":"veraMob09SendWa1","name":"Vera 05 · 09 Send on WhatsApp","purpose":"The only way Vera sends anything. Picks session message or template by the 24-hour window, logs every message id (so replies bind to lines), backs off on rate limits, and never fails silently.","nodes":[{"name":"Asked to send","kind":"sub","type":"executeWorkflowTrigger","x":0,"y":0,"does":"Who, what, and why (kind / area / line).","guard":[],"onError":false,"retry":false},{"name":"Load contact and window","kind":"pg","type":"postgres","x":280,"y":0,"does":"Phone and when they last wrote to us.","guard":["retry"],"onError":false,"retry":true},{"name":"Session or template?","kind":"code","type":"code","x":560,"y":0,"does":"Inside 24 h of their last message: the message itself (free). Outside: the approved template, or not sent.","guard":["window"],"onError":false,"retry":false},{"name":"Can send?","kind":"if","type":"if","x":840,"y":0,"does":"No phone, or outside the window with no template: not sent, logged.","guard":["window"],"onError":false,"retry":false},{"name":"Log not sent","kind":"pg","type":"postgres","x":1120,"y":240,"does":"Shows up in the daily ops list.","guard":["human","audit"],"onError":false,"retry":true},{"name":"Send to WhatsApp","kind":"http","type":"httpRequest","x":1120,"y":0,"does":"Graph API messages endpoint.","guard":["error-out","timeout"],"onError":true,"retry":false},{"name":"Log what we sent","kind":"pg","type":"postgres","x":1400,"y":0,"does":"The message id is what makes \"reply to this message\" bind for sure.","guard":["audit","retry"],"onError":false,"retry":true},{"name":"Why did it fail?","kind":"code","type":"code","x":1400,"y":440.00000000000006,"does":"Reads the WhatsApp error code: rate limit, window closed, bad number.","guard":[],"onError":false,"retry":false},{"name":"Retry?","kind":"switch","type":"switch","x":1680,"y":440.00000000000006,"does":"Rate limit → wait and retry (max 3). Window closed → template. Bad number → a person.","guard":[],"onError":false,"retry":false},{"name":"Wait 30 s","kind":"wait","type":"wait","x":1960,"y":320,"does":"WhatsApp limits how fast one person can be messaged.","guard":[],"onError":false,"retry":false}],"edges":[{"from":"Asked to send","to":"Load contact and window","kind":"main"},{"from":"Load contact and window","to":"Session or template?","kind":"main"},{"from":"Session or template?","to":"Can send?","kind":"main"},{"from":"Can send?","to":"Send to WhatsApp","kind":"true"},{"from":"Can send?","to":"Log not sent","kind":"false"},{"from":"Send to WhatsApp","to":"Log what we sent","kind":"main"},{"from":"Send to WhatsApp","to":"Why did it fail?","kind":"error"},{"from":"Why did it fail?","to":"Retry?","kind":"main"},{"from":"Retry?","to":"Wait 30 s","kind":"retry"},{"from":"Retry?","to":"Session or template?","kind":"needs_template"},{"from":"Retry?","to":"Log not sent","kind":"Other"},{"from":"Wait 30 s","to":"Send to WhatsApp","kind":"main"}]},{"id":"veraMob00Errors1","name":"Vera 05 · 00 Errors and stuck messages","purpose":"Catch-all for every Desk 05 workflow. Logs the failure, emails Vera ops (a different channel from WhatsApp, so a WhatsApp outage cannot hide itself), and every 10 minutes sends messages stuck in \"processing\" to the review queue.","nodes":[{"name":"When any workflow fails","kind":"errorTrigger","type":"errorTrigger","x":0,"y":0,"does":"Set as the error workflow on WF-01 to WF-09.","guard":[],"onError":false,"retry":false},{"name":"Describe the failure","kind":"code","type":"code","x":280,"y":0,"does":"Workflow, node, error, link. No message contents, no secrets.","guard":[],"onError":false,"retry":false},{"name":"Log the error","kind":"pg","type":"postgres","x":560,"y":0,"does":"Kept even if email fails.","guard":["audit"],"onError":true,"retry":true},{"name":"Email Vera ops","kind":"email","type":"emailSend","x":840,"y":0,"does":"Email, not WhatsApp: a WhatsApp outage must not hide its own alert.","guard":["retry"],"onError":false,"retry":true},{"name":"Every 10 minutes","kind":"cron","type":"scheduleTrigger","x":0,"y":280,"does":"Sweeper.","guard":[],"onError":false,"retry":false},{"name":"Messages stuck in processing","kind":"pg","type":"postgres","x":280,"y":280,"does":"A crash between nodes still ends with a person looking at the message.","guard":["human"],"onError":false,"retry":true}],"edges":[{"from":"When any workflow fails","to":"Describe the failure","kind":"main"},{"from":"Describe the failure","to":"Log the error","kind":"main"},{"from":"Log the error","to":"Email Vera ops","kind":"main"},{"from":"Log the error","to":"Email Vera ops","kind":"error"},{"from":"Every 10 minutes","to":"Messages stuck in processing","kind":"main"}]}]};
+
+// ------------------------------------------------------------------ content
+const K = {
+  webhook: ['trigger', 'k-trigger'], cron: ['trigger', 'k-trigger'], sub: ['trigger', 'k-trigger'], form: ['trigger', 'k-trigger'], errorTrigger: ['trigger', 'k-trigger'],
+  code: ['code', 'k-code'], http: ['http', 'k-http'], pg: ['postgres', 'k-db'], s3: ['s3 store', 'k-store'], if: ['if', 'k-decide'], switch: ['switch', 'k-decide'],
+  respond: ['respond', 'k-respond'], exec: ['sub-workflow', 'k-call'], wait: ['wait', 'k-respond'], noop: ['no-op', 'k-respond'], stop: ['stop', 'k-respond'],
+  loop: ['loop', 'k-decide'], email: ['email', 'k-http'], merge: ['merge', 'k-decide'],
+};
+const GUARD = {
+  retry: ['retry ×3', '--info', 'Retries 3 times, 5 s apart, before anything is called a failure.'],
+  dedupe: ['dedupe', '--ok', 'The same item twice is recognised and processed once.'],
+  idempotent: ['safe to repeat', '--ok', 'Running it again gives the same result and stores nothing twice.'],
+  'error-out': ['error path', '--bad', 'If this step fails, the item goes down a wired error path. Nothing fails silently.'],
+  human: ['person', '--warn', 'A person decides here, or the item goes to the review queue.'],
+  schema: ['schema', '--k-code', 'Input or AI output is checked against a fixed shape; anything else is refused.'],
+  auth: ['auth', '--k-trigger', 'Only signed, known callers get past this step.'],
+  window: ['24 h window', '--k-call', 'Respects WhatsApp’s 24-hour rule: free reply inside it, approved template outside.'],
+  timeout: ['timeout', '--info', 'Has a time limit, so a slow service cannot hold the line.'],
+  audit: ['audit', '--k-db', 'Writes who did what and when, kept with the evidence.'],
+};
+const isAI = (n) => /Claude|Sarvam|Transcribe/.test(n.name);
+
+const STORY = [
+  { id: 'start', tag: 'Start here', w: 1180, html: () => `
+    <div class="eyebrow">Desk 05 · One-day Mobilisation · board v1</div>
+    <h2>Open a new site in one day, not three</h2>
+    <p class="lede">The contractor sends papers and photos on WhatsApp three days before. Vera checks each paper against the site's own facts and tells him what is missing every evening. On the day, the engineer taps a line, takes the photo and speaks his remark; GPS is stored with each photo. By evening the NOC report is drafted and waits for his signature.</p>
+    <div class="row" style="margin-top:16px">
+      <div class="sticky col tilt-l"><h4>What this board shows</h4><ul><li>Who uses it, and their day today</li><li>Three decisions: which WhatsApp, how accurate GPS is, who tags each photo to its line</li><li>All 10 n8n workflows, node by node, as they run</li><li>Every failure we planned for and what happens then</li></ul></div>
+      <div class="sticky g col"><h4>The rule for the whole desk</h4><p>AI reads: voice notes, handwriting, papers, which line a photo belongs to. Code decides: is the paper valid, is the line closed, is the site ready. The engineer signs. When code cannot decide from what AI read, a person looks. Nothing is guessed.</p></div>
+      <div class="sticky b col tilt-r"><h4>Built and checked so far</h4><ul><li><span class="num">${DATA.workflows.length}</span> workflows, <span class="num">${DATA.workflows.reduce((a, w) => a + w.nodes.length, 0)}</span> nodes, one source file</li><li>Checked against n8n's own node definitions: 0 errors</li><li>Imported into n8n 2.44.5 and run against a real database</li><li><span class="num">${DATA.lineCount}</span>-line checklist, template ${DATA.version}</li></ul></div>
+    </div>
+    <div class="legend" style="margin-top:18px">
+      ${Object.entries({ Trigger: 'k-trigger', 'Code (rules)': 'k-code', 'AI call': 'k-ai', Database: 'k-db', 'File store': 'k-store', Decision: 'k-decide', 'Calls a workflow': 'k-call', Reply: 'k-respond' }).map(([l, c]) => `<span><i class="sw" style="--c:var(--${c})"></i>${l}</span>`).join('')}
+      <span><i class="ln" style="--c:var(--edge)"></i>next step</span><span><i class="ln" style="--c:var(--ok)"></i>yes</span><span><i class="ln" style="--c:var(--warn)"></i>no / other</span><span><i class="ln d" style="--c:var(--bad)"></i>on error</span>
+    </div>` },
+
+  { id: 'people', tag: '1 · Who we are building for', w: 1180, html: () => `
+    <h2>Two people at the developer, one at the site</h2>
+    <p>The developer's engineer signs the NOC. If something goes wrong later, that signature is what gets asked about. Design wants the site to start on the right drawings and approved schemes. The contractor's team does the sending.</p>
+    <div class="row" style="margin-top:14px">
+      <div class="sticky o col"><h4>Senior engineer (signs the NOC)</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> walks 50 to 100 items over 2 to 3 days, chases papers over email, writes the report the next day.</p>
+        <ul><li>Wants papers settled before he travels, not argued at the gate</li><li>Checks details by hand: policy period, sum insured, workers covered, licence capacity vs planned labour</li><li>Gets old or borrowed photos from contractors</li><li>His signature is his liability: he needs proof of what he saw, where and when</li></ul></div>
+      <div class="sticky p col tilt-r"><h4>Chief of design</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> hears about drawing problems after work has started.</p>
+        <ul><li>Site must work from the latest GFC drawings; old ones withdrawn</li><li>Formwork and shoring scheme, mix designs approved by the structural consultant before the first pour</li><li>Crane, batching plant and material routes as per the approved logistics plan</li><li>One standard checklist across projects, changed in one place</li></ul></div>
+      <div class="sticky b col tilt-l"><h4>Contractor's site team (sends the evidence)</h4>
+        <p style="margin-bottom:8px"><b>Today:</b> forwards PDFs on email and WhatsApp to whoever asks.</p>
+        <ul><li>Voice notes in Hindi or Marathi; papers sent from WhatsApp Web</li><li>Weak network in basements and new plots</li><li>Will not install an app or fill a portal</li><li>Needs to know exactly what is still missing, and why a paper came back</li></ul></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <div class="col"><h3>What Vera gives each of them</h3>
+        <div class="scroll"><table class="t"><tr><th>Person</th><th>Gets</th></tr>
+        <tr><td>Engineer</td><td>Papers checked before travel · 7 PM list · on the day: tap, photo, speak · report 80% written · signs with one tap · open items closed on photos</td></tr>
+        <tr><td>Design</td><td>8 design-readiness lines (DR-01 to DR-08) on every site · drawing register photo against the design register · checklist versioned, one change applies everywhere</td></tr>
+        <tr><td>Contractor</td><td>No app · reply to the area message with photos · one-tap buttons when Vera is unsure · the exact reason when a paper is sent back</td></tr></table></div></div>
+    </div>` },
+
+  { id: 'timeline', tag: '2 · The day, before and after', w: 1180, html: () => `
+    <h2>Three days of walking and chasing becomes one day</h2>
+    <div class="lanes" style="margin-top:14px">
+      <div class="lane-name">Today</div>
+      <div class="lane">
+        <div class="step today"><b>Day −5 to 0</b>Papers chased on email, partly received</div>
+        <div class="step today"><b>Day 1–3</b>Engineer walks camp, stores, plant, formwork, safety with a paper checklist</div>
+        <div class="step today"><b>Day 4</b>Report typed from notes and photos on his phone</div>
+        <div class="step today"><b>Later</b>Re-visit to check fixes</div>
+      </div>
+      <div class="lane-name">With Vera</div>
+      <div class="lane">
+        <div class="step vera"><b>T−5 · set-up (WF-08)</b>Form: site facts. Checklist copied. Area messages to contractor. Walk link to engineer.</div>
+        <div class="step vera"><b>T−3 to T−1 (WF-01, 02, 05)</b>Papers and photos on WhatsApp. Each paper read and checked. One reply per burst.</div>
+        <div class="step vera"><b>7 PM daily (WF-04)</b>Gap list to contractor; "ready to travel?" line to engineer</div>
+        <div class="step vera"><b>Visit day (WF-03)</b>Tap line → photo → status → voice. GPS on each photo. Works offline.</div>
+        <div class="step vera"><b>Evening (WF-06)</b>Report drafted, PDF on WhatsApp, Approve / With conditions / Hold</div>
+        <div class="step vera"><b>After (WF-07)</b>Open items with due dates; closed on photos; overdue criticals escalated</div>
+      </div>
+    </div>` },
+
+  { id: 'checklist', tag: '3 · The checklist', w: 700, html: () => {
+    const max = Math.max(...DATA.byArea.map((a) => a.lines));
+    return `<h2>${DATA.lineCount} lines, 7 areas</h2>
+    <p>Every line has a fixed code (LC-03), an evidence type (paper, photo or both), a severity and, for papers, the checks code runs on it. Lines that do not apply are dropped at set-up: an RMC site gets no batching plant consent; no crane, no load test.</p>
+    <div class="areas" style="margin-top:12px">${DATA.byArea.map((a) => `<div class="area"><span class="code">${a.code}</span><div class="bars" title="${a.critical} critical of ${a.lines}" style="width:${Math.round((a.lines / max) * 100)}%"><i style="width:${(a.critical / a.lines) * 100}%;background:var(--bad)"></i><i style="flex:1;background:var(--k-db)"></i></div><small>${a.lines} lines · ${a.critical} critical</small></div>`).join('')}</div>
+    <div class="legend" style="margin-top:10px"><span><i class="sw" style="--c:var(--bad)"></i>critical: open = no NOC</span><span><i class="sw" style="--c:var(--k-db)"></i>major or minor: NOC with a dated condition, or a note</span></div>
+    <p style="margin-top:10px">${DATA.areas.map((a) => `<b>${a.code}</b> ${a.name}`).join(' · ')}</p>
+    <div class="sticky y" style="margin-top:10px"><h4>Papers the code checks (examples)</h4><ul><li>CAR policy: insured name, project address, period beyond start, sum insured ≥ contract value, developer named as principal</li><li>Labour licence: valid 90+ days past start; workers allowed ≥ planned peak</li><li>Calibration: next due date after the visit, or calibrated within 180 days</li><li>Worker list with a full Aadhaar number visible: sent back for a masked copy</li></ul></div>`
+  } },
+
+  { id: 'channel', tag: '4 · Decision: which WhatsApp', w: 1180, html: () => `
+    <h2>Cloud API with our own workflow, plus a web page for the visit day</h2>
+    <p>The question was whether to use a WhatsApp business agent, a generic AI agent on a Meta number, or something else. The filing, checking and signing need rules we control and can show to an auditor, so the agent options do not fit the core. They may fit later for open questions.</p>
+    <div class="scroll" style="margin-top:10px"><table class="t">
+      <tr><th>Option</th><th>What it is</th><th>For this desk</th><th>Verdict</th></tr>
+      <tr><td><b>Meta Business Agent</b> in the WhatsApp Business app</td><td>Meta's built-in AI that answers customers from your catalogue and website; launched in India in 2026</td><td>Made for sales and support questions. Meta decides when it hands a chat to a person, and the hand-off is one way. No control over how evidence is filed or checked; no audit trail of our own.</td><td><span class="pill bad">Not for this</span></td></tr>
+      <tr><td><b>Meta Business Agent Platform</b> (enterprise)</td><td>Same agent with your own knowledge sources and connector tools; early access</td><td>Could answer "what is still open for Tower B?" later. Filing and paper checks would still sit in our rules. Integrators report early-access gaps in file handling.</td><td><span class="pill warn">Watch</span></td></tr>
+      <tr><td><b>Generic AI agent</b> on a Meta number</td><td>An LLM with tools that decides each step itself</td><td>Hard to audit and can guess. Meta's terms (from 15 Jan 2026) bar general-purpose assistants on the Business API; a task-specific business bot is allowed.</td><td><span class="pill bad">No</span></td></tr>
+      <tr><td><b>WhatsApp Cloud API + n8n workflow + narrow AI calls</b></td><td>Meta's API direct. Our workflow decides; AI only reads and suggests a line from a short list</td><td>Full control: webhooks, media, buttons, lists, reply context, templates. Replies inside 24 h of the person's message are free; reminders outside it use approved utility templates (about ₹0.12 to ₹0.15 each, per BSP rate cards).</td><td><span class="pill ok">Recommended</span></td></tr>
+      <tr><td><b>Through a BSP</b> (Gupshup, Wati, AiSensy, 360dialog)</td><td>Same Cloud API with a partner's inbox and onboarding</td><td>Useful for the review queue inbox, or if the developer already has a contract and number with one. Adds a data processor and a mark-up.</td><td><span class="pill info">Optional</span></td></tr>
+      <tr><td><b>Vera walk page</b> (link opened from WhatsApp)</td><td>A phone web page, no install, works offline</td><td>Needed for the visit day: WhatsApp removes location data from photos, and a location pin sent in chat can be moved by hand and has no accuracy figure. The page stores GPS with each photo and the line is chosen before the photo is taken.</td><td><span class="pill ok">Required</span></td></tr>
+    </table></div>
+    <div class="row" style="margin-top:14px">
+      <div class="sticky col"><h4>Number and name</h4><p>A dedicated business number. Either Vera's own ("Vera Site Desk"), or the developer's own WhatsApp Business account with Vera added as the technology provider, if they want their name on it.</p></div>
+      <div class="sticky g col"><h4>Groups</h4><p>Use one-to-one chats with the Vera number, not site groups. Every message then has a known sender, role and site, and replies bind to the message they answer.</p></div>
+      <div class="sticky b col"><h4>Speech</h4><p>Hindi, Marathi and Hinglish voice notes go to Sarvam's speech-to-text (Indian languages, code-mixed mode). Claude reads photos and PDFs and writes the English remarks.</p></div>
+    </div>` },
+
+  { id: 'gps', tag: '5 · Decision: GPS', w: 1180, html: () => `
+    <h2>GPS proves which area he stood in, not which room</h2>
+    <div class="row" style="margin-top:8px">
+      <div class="col" style="flex:1 1 360px">
+        <svg class="rings" viewBox="0 0 360 300" role="img" aria-label="Phone GPS error by surroundings: about 5 metres in the open, 10 to 30 metres near towers, 30 to 100 metres indoors">
+          <rect x="0" y="0" width="360" height="300" fill="var(--canvas)" rx="6"/>
+          <circle cx="150" cy="150" r="130" fill="var(--bad)" fill-opacity=".10" stroke="var(--bad)" stroke-dasharray="4 4"/>
+          <circle cx="150" cy="150" r="62" fill="var(--warn)" fill-opacity=".14" stroke="var(--warn)"/>
+          <circle cx="150" cy="150" r="16" fill="var(--ok)" fill-opacity=".25" stroke="var(--ok)"/>
+          <circle cx="150" cy="150" r="3" fill="var(--ink)"/>
+          <text x="172" y="140" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±3–5 m open sky</text>
+          <text x="214" y="104" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±10–30 m</text>
+          <text x="214" y="118" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">next to towers, under slabs</text>
+          <text x="240" y="40" fill="var(--ink)" font-size="12" font-family="IBM Plex Mono, monospace">±30–100 m</text>
+          <text x="240" y="54" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">indoors, basements</text>
+          <text x="12" y="290" fill="var(--ink-3)" font-size="11" font-family="IBM Plex Sans, sans-serif">Rings to scale: 1 px ≈ 0.8 m. Labour camp to stores yard is usually 50–300 m.</text>
+        </svg>
+        <p style="margin-top:8px;font-size:12px">Typical smartphone figures from published field studies; dual-frequency (L1 + L5) phones do better near buildings. Height and floor are not reliable from GPS.</p>
+      </div>
+      <div class="col" style="flex:1 1 520px">
+        <h3>How it works</h3>
+        <div class="scroll"><table class="t">
+          <tr><td><b>Tool</b></td><td>The walk page uses the phone browser's location service (high-accuracy mode). It keeps reading for up to 20 s until the error is under 15 m, then stores latitude, longitude, the phone's own error radius in metres (95%), and the time.</td></tr>
+          <tr><td><b>Areas</b></td><td>Drawn once on a satellite map, or the contractor sends a location pin as a reply to each area message at T−3 (Vera makes a 30 m circle). The engineer corrects them on the day.</td></tr>
+          <tr><td><b>Each photo</b></td><td><span class="pill ok">in</span> <span class="pill info">edge</span> <span class="pill warn">out</span> <span class="pill bad">unknown</span>. Edge means inside once the phone's own error is allowed for. A weak fix gives unknown, never out. The photo is saved whatever the result.</td></tr>
+          <tr><td><b>Walked or not</b></td><td>The page sends a point every 20 s while open. An area counts as walked only with fixes inside it. An area with no record makes the report "not ready" until the engineer explains.</td></tr>
+          <tr><td><b>Limits</b></td><td>A web page cannot detect fake-GPS apps. Cross-checks: the photo itself, server time vs phone time, a continuous trail. For a room or floor (site lab, basement store), an optional QR sticker at the door, scanned by the same page.</td></tr>
+        </table></div>
+      </div>
+    </div>` },
+
+  { id: 'tagging', tag: '6 · Decision: who tags each photo to its line', w: 1180, html: () => `
+    <h2>Nobody types it. The strongest signal wins; AI only fills the gap, from a short list</h2>
+    <p>Two different senders, two different paths. The engineer never tags anything: he picks the line first. The contractor tags by replying to the right message; AI is used only when he gives nothing, and then only to pick among that area's open lines.</p>
+    <div class="row" style="margin-top:10px">
+      <div class="col" style="flex:1 1 640px"><div class="ladder">
+        <div class="rung"><div><h4>Engineer on the visit day: line first, then the photo</h4><p>He taps LC-03 on the walk page, the camera opens, the photo is saved on LC-03 with GPS and time. His voice remark on that screen goes to the same line.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Contractor replies to a line or open-item message</h4><p>WhatsApp tells us which message was replied to. Vera logs the id of every message it sends, so the reply lands on that line.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Line code in caption or file name</h4><p>"LC 3", "lc-03", "CAR_PAP-04.pdf". Two codes in one caption: Vera asks, never picks.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Reply to the area message, with a number</h4><p>Each area gets one message listing its lines by number. Photo as a reply, "3" as the caption.</p></div><span class="pill ok">certain</span></div>
+        <div class="rung"><div><h4>Nothing given: AI picks from that area's open lines</h4><p>13 choices instead of 74; the answer format only allows those codes or NONE. ≥ 0.90 with a clear lead: filed. 0.45 to 0.90: the sender taps one of three buttons. Lower, unreadable or suspicious: a person.</p></div><span class="pill warn">checked</span></div>
+      </div></div>
+      <div class="col" style="flex:1 1 380px">
+        <div class="sticky o"><h4>How the AI step stays safe</h4><ul>
+          <li>AI files; it never says a line is OK. Site photos are judged by the engineer on the day.</li>
+          <li>Papers: AI copies the fields, code checks them, every check says why.</li>
+          <li>First two sites in shadow mode: every AI filing confirmed by a person. The threshold is then set so that auto-filed items are at least 98% right.</li>
+          <li>Each photo shows how it was filed. The engineer moves a wrong one with one tap; the move is logged and feeds the next accuracy check.</li>
+          <li>The same file sent for two lines is stopped by its fingerprint (SHA-256).</li>
+          <li>Optional for T−3 photos: a paper slip with today's date and site code in the frame.</li>
+        </ul></div>
+      </div>
+    </div>` },
+];
+
+const TAIL = [
+  { id: 'guardrails', tag: '8 · Guardrails and exceptions', w: 1180, html: () => `
+    <h2>Every failure we planned for, and what happens</h2>
+    <p>Three nets under everything: the raw webhook is stored before any work; any step that breaks routes to a wired error path; and a sweeper sends anything stuck for 10 minutes to the review queue. Error alerts go by email, so a WhatsApp outage cannot hide its own alert.</p>
+    <div class="scroll" style="margin-top:8px"><table class="t">
+      <tr><th>What goes wrong</th><th>What Vera does</th><th>Where</th></tr>
+      ${[
+        ['A request claims to be from Meta but is not signed', 'Refused with 401, nothing stored', 'WF-01'],
+        ['Meta delivers the same message twice', 'Second copy recognised by message id and dropped', 'WF-01'],
+        ['Database is down when a message arrives', 'Meta gets 500 and delivers again later; nothing lost', 'WF-01'],
+        ['Message from a number not on the site', 'Nothing read; logged for Vera ops', 'WF-01'],
+        ['Media link expires (Meta: 5 minutes)', 'Downloaded at once, 3 retries; then a person', 'WF-02'],
+        ['Same photo sent again for another line', 'Stopped; sender asked for a new photo', 'WF-02'],
+        ['Voice note cannot be transcribed', 'Audio filed; report says "listen"', 'WF-02, 03'],
+        ['AI not sure which line', 'Sender gets one-tap buttons', 'WF-02'],
+        ['AI answer unreadable, refused, malformed, or a code not on the list', 'Review queue; a person files it', 'WF-02'],
+        ['A field on a paper is not printed or not readable', 'Marked "being checked"; never guessed', 'WF-02'],
+        ['Paper fails a check', 'Sent back with the exact reason, e.g. sum insured ₹90 Cr below contract ₹125 Cr', 'WF-02, 05'],
+        ['Full Aadhaar number visible', 'Paper sent back for a masked copy', 'WF-02'],
+        ['Contractor upload after the engineer decided', 'Engineer’s decision is never overwritten', 'WF-02'],
+        ['More than 24 h since the person last wrote', 'Approved template instead; no template = not sent, logged', 'WF-09'],
+        ['WhatsApp rate limit', 'Wait 30 s, retry up to 3 times, then a person', 'WF-09'],
+        ['Number cannot receive WhatsApp', 'Review queue with the error code', 'WF-01, 09'],
+        ['No signal on the visit day', 'Captures queue on the phone and resend; a repeated capture is saved once', 'WF-03'],
+        ['Weak or no GPS', 'Photo saved, place marked unknown; the area is not counted as walked', 'WF-03, 06'],
+        ['Forwarded or expired walk link', 'Refused; engineer asks for a new link', 'WF-03'],
+        ['Engineer forgets to press Finish', '9 PM safety net drafts the report', 'WF-06'],
+        ['AI wording names a line that does not exist, or states a verdict', 'Engineer’s own transcribed words used instead, with a note', 'WF-06'],
+        ['PDF service down', 'Vera ops alerted; report sent by hand', 'WF-06'],
+        ['Someone other than the engineer taps Approve', 'Refused: only the engineer’s number can sign', 'WF-02'],
+        ['Any workflow crashes', 'Error logged, ops emailed; stuck message to review in 10 min', 'WF-00'],
+      ].map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="mono">${c}</td></tr>`).join('')}
+    </table></div>` },
+
+  { id: 'next', tag: '9 · Open questions for the developer team', w: 1180, html: () => `
+    <h2>What we need from you to run the first site</h2>
+    <div class="row" style="margin-top:10px">
+      <div class="sticky col"><h4>Checklist</h4><ul><li>Your current mobilisation checklist, so the template matches it line for line</li><li>QA / EHS values: calibration age, policy cover after start, toilets per worker, cement stack height</li><li>Which lines are critical for your NOC</li></ul></div>
+      <div class="sticky p col tilt-r"><h4>Design</h4><ul><li>Export of the drawing register, to compare with the site register (DR-01)</li><li>Who approves formwork schemes and mix designs, so their approval is a named check</li></ul></div>
+      <div class="sticky g col"><h4>WhatsApp and data</h4><ul><li>Vera's number or yours</li><li>Where evidence is kept: Vera's Mumbai bucket, or your own storage</li><li>How long to keep it; who may see worker lists</li></ul></div>
+      <div class="sticky b col tilt-l"><h4>Pilot</h4><ul><li>One site with a visit 5 or more days away</li><li>Engineer and contractor phone numbers</li><li>First two sites in shadow mode (every AI filing checked)</li></ul></div>
+    </div>` },
+];
+
+// overview of the 10 workflows (positions in board px)
+const OV = [
+  { a: 'Engineer / planning', d: 'fills the site form', x: 0, y: 0 },
+  { w: 'veraMob08SetupMb', id: 'WF-08', x: 250, y: 0 },
+  { w: 'veraMob09SendWa1', id: 'WF-09', x: 500, y: 110 },
+  { a: 'Contractor on WhatsApp', d: 'papers, photos, voice, buttons', x: 750, y: 0 },
+  { w: 'veraMob01Inbound', id: 'WF-01', x: 1000, y: 0 },
+  { w: 'veraMob02Process', id: 'WF-02', x: 1250, y: 0 },
+  { w: 'veraMob05Replies', id: 'WF-05', x: 1250, y: 170 },
+  { w: 'veraMob04GapList', id: 'WF-04', x: 750, y: 220 },
+  { a: 'Engineer on the visit day', d: 'walk page on his phone', x: 0, y: 330 },
+  { w: 'veraMob03WalkApi', id: 'WF-03', x: 250, y: 330 },
+  { w: 'veraMob06NocRprt', id: 'WF-06', x: 500, y: 330 },
+  { w: 'veraMob07Closure', id: 'WF-07', x: 750, y: 400 },
+  { w: 'veraMob00Errors1', id: 'WF-00', x: 1250, y: 400 },
+];
+const OVL = [['Engineer / planning', 'veraMob08SetupMb'], ['veraMob08SetupMb', 'veraMob09SendWa1'], ['veraMob09SendWa1', 'Contractor on WhatsApp'], ['Contractor on WhatsApp', 'veraMob01Inbound'], ['veraMob01Inbound', 'veraMob02Process'], ['veraMob02Process', 'veraMob05Replies'], ['veraMob05Replies', 'veraMob09SendWa1'], ['veraMob04GapList', 'veraMob09SendWa1'], ['Engineer on the visit day', 'veraMob03WalkApi'], ['veraMob03WalkApi', 'veraMob06NocRprt'], ['veraMob06NocRprt', 'veraMob09SendWa1'], ['veraMob06NocRprt', 'veraMob07Closure'], ['veraMob07Closure', 'veraMob09SendWa1']];
+
+// ------------------------------------------------------------------ build frames
+const world = document.getElementById('world');
+const vp = document.getElementById('vp');
+const frames = [];
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = (wf) => 'WF-' + wf.id.slice(7, 9);
+
+function addFrame(f) {
+  const el = document.createElement('section');
+  el.className = 'frame';
+  el.id = 'f-' + f.id;
+  el.style.width = f.w + 'px';
+  el.innerHTML = `<div class="frame-tag">${esc(f.tag)}</div>` + (typeof f.html === 'function' ? f.html() : '');
+  world.appendChild(el);
+  frames.push({ ...f, el });
+  return el;
+}
+
+STORY.forEach(addFrame);
+
+// Workflow overview frame
+{
+  const el = addFrame({ id: 'overview', tag: '7 · The workflows', w: 1520, html: () => `<h2>Ten n8n workflows, one door in, one door out</h2>
+    <p>Everything from WhatsApp enters through WF-01. Everything sent goes out through WF-09, which logs each message id so a reply binds to its line. WF-00 watches all of them. Click a box to jump to its node map.</p>
+    <div class="ov" style="height:520px;margin-top:14px"><svg class="edges" id="ovsvg" width="1460" height="520"></svg></div>` })
+  const ov = el.querySelector('.ov');
+  const pos = {};
+  for (const b of OV) {
+    const d = document.createElement(b.w ? 'button' : 'div');
+    d.className = 'ovbox' + (b.a ? ' actor' : '');
+    d.style.left = b.x + 'px'; d.style.top = b.y + 'px';
+    if (b.w) {
+      const wf = DATA.workflows.find((x) => x.id === b.w);
+      d.innerHTML = `<span class="id">${b.id}</span><b>${esc(wf.name.replace(/^Vera 05 · \d\d /, ''))}</b><span>${wf.nodes.length} nodes</span>`;
+      d.addEventListener('click', () => goTo('wf-' + b.w));
+      d.type = 'button';
+    } else d.innerHTML = `<b>${esc(b.a)}</b><span>${esc(b.d)}</span>`;
+    ov.appendChild(d);
+    pos[b.w || b.a] = d;
+  }
+  requestAnimationFrame(() => {
+    const svg = el.querySelector('#ovsvg');
+    let s = '';
+    for (const [a, b] of OVL) {
+      const A = pos[a], B = pos[b];
+      const ax = A.offsetLeft + A.offsetWidth, ay = A.offsetTop + A.offsetHeight / 2, bx = B.offsetLeft, by = B.offsetTop + B.offsetHeight / 2;
+      const back = bx < ax;
+      const p = back ? `M${A.offsetLeft + A.offsetWidth / 2},${A.offsetTop + A.offsetHeight} C${A.offsetLeft + A.offsetWidth / 2},${A.offsetTop + A.offsetHeight + 60} ${B.offsetLeft + B.offsetWidth / 2},${B.offsetTop + B.offsetHeight + 60} ${B.offsetLeft + B.offsetWidth / 2},${B.offsetTop + B.offsetHeight}` : `M${ax},${ay} C${ax + 40},${ay} ${bx - 40},${by} ${bx},${by}`;
+      s += `<path d="${p}" stroke="var(--edge)" marker-end="url(#ar)"/>`;
+    }
+    svg.innerHTML = `<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--edge)"/></marker></defs>` + s;
+  });
+}
+
+// One frame per workflow, nodes at their n8n positions
+const COLW = 250, ROWH = 175, NODEW = 214;
+const edgeColor = (k) => (k === 'true' ? 'var(--ok)' : k === 'false' || k === 'Other' ? 'var(--warn)' : k === 'error' ? 'var(--bad)' : k === 'loop' || k === 'done' ? 'var(--k-call)' : 'var(--edge)');
+const wfFrames = [];
+for (const wf of DATA.workflows) {
+  const xs = wf.nodes.map((n) => n.x), ys = wf.nodes.map((n) => n.y);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const cols = Math.round((Math.max(...xs) - minX) / 280) + 1;
+  const width = Math.max(760, cols * COLW + 40);
+  const el = addFrame({ id: 'wf-' + wf.id, tag: short(wf) + ' · ' + wf.name.replace(/^Vera 05 · \d\d /, ''), w: width + 56, html: () => `
+    <div class="eyebrow">${short(wf)} · n8n workflow <span class="mono">${wf.id}</span></div>
+    <h2>${esc(wf.name.replace(/^Vera 05 · \d\d /, ''))}</h2><p>${esc(wf.purpose)}</p>
+    <div class="wf-wrap"><div class="wf-canvas"><svg class="edges"></svg></div></div>` });
+  const canvas = el.querySelector('.wf-canvas');
+  const nodes = {};
+  for (const n of wf.nodes) {
+    const [label, kc] = isAI(n) ? ['ai · ' + K[n.kind][0], 'k-ai'] : K[n.kind] || [n.kind, 'edge'];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'node';
+    b.style.setProperty('--kc', `var(--${kc})`);
+    b.innerHTML = `<span class="type"><span>${label}</span>${n.retry ? '<span title="retries">↻</span>' : ''}</span><span class="nm">${esc(n.name)}</span><span class="ds">${esc(n.does)}</span>` +
+      (n.guard.length ? `<span class="gd">${n.guard.map((g) => `<span class="gchip" style="--g:var(${(GUARD[g] || [g, '--edge'])[1]})">${(GUARD[g] || [g])[0]}</span>`).join('')}</span>` : '');
+    b.addEventListener('click', (e) => { e.stopPropagation(); showNode(wf, n, b) });
+    canvas.appendChild(b);
+    nodes[n.name] = { n, el: b, col: Math.round((n.x - minX) / 280), y: ((n.y - minY) / 200) * ROWH };
+  }
+  wfFrames.push({ wf, el, canvas, nodes, width });
+}
+TAIL.forEach(addFrame);
+
+// After fonts load: stack nodes in a column without overlap, draw edges, lay out frames.
+function layoutNodes() {
+  for (const F of wfFrames) {
+    const byCol = {};
+    for (const v of Object.values(F.nodes)) (byCol[v.col] = byCol[v.col] || []).push(v);
+    let maxBottom = 0;
+    for (const list of Object.values(byCol)) {
+      list.sort((a, b) => a.y - b.y);
+      let floor = -Infinity;
+      for (const v of list) {
+        const h = v.el.offsetHeight;
+        v.top = Math.max(v.y, floor + 24);
+        floor = v.top + h;
+        v.h = h;
+      }
+    }
+    for (const v of Object.values(F.nodes)) {
+      v.left = v.col * COLW;
+      v.el.style.left = v.left + 'px';
+      v.el.style.top = v.top + 'px';
+      maxBottom = Math.max(maxBottom, v.top + v.h);
+    }
+    F.canvas.style.width = F.width + 'px';
+    F.canvas.style.height = maxBottom + 40 + 'px';
+    const svg = F.canvas.querySelector('svg');
+    svg.setAttribute('width', F.width);
+    svg.setAttribute('height', maxBottom + 40);
+    let s = `<defs>${['edge', 'ok', 'warn', 'bad', 'k-call'].map((c) => `<marker id="m-${F.wf.id}-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--${c})"/></marker>`).join('')}</defs>`;
+    for (const e of F.wf.edges) {
+      const A = F.nodes[e.from], B = F.nodes[e.to];
+      if (!A || !B) continue;
+      const color = edgeColor(e.kind);
+      const cname = color.match(/--([\w-]+)/)[1];
+      const ax = A.left + NODEW, ay = A.top + Math.min(A.h / 2, 40), bx = B.left, by = B.top + Math.min(B.h / 2, 40);
+      let d;
+      if (bx > ax - 4) d = `M${ax},${ay} C${ax + 36},${ay} ${bx - 36},${by} ${bx},${by}`;
+      else { const low = Math.max(A.top + A.h, B.top + B.h) + 22; d = `M${A.left + NODEW / 2},${A.top + A.h} C${A.left + NODEW / 2},${low + 30} ${B.left + NODEW / 2},${low + 30} ${B.left + NODEW / 2},${B.top + B.h}` }
+      s += `<path d="${d}" stroke="${color}" ${e.kind === 'error' || e.kind === 'Other' ? 'stroke-dasharray="5 4"' : ''} marker-end="url(#m-${F.wf.id}-${cname})"/>`;
+      if (!['main', 'in2'].includes(e.kind)) s += `<text x="${ax + 6}" y="${ay - 5}">${esc(e.kind === 'error' ? 'on error' : e.kind)}</text>`;
+    }
+    svg.innerHTML = s;
+  }
+}
+
+// Frame positions on the whiteboard
+function layoutFrames() {
+  const G = 90;
+  const place = (ids, x0, y0) => { let x = x0, h = 0; for (const id of ids) { const f = frames.find((q) => q.id === id); f.x = x; f.y = y0; f.el.style.left = x + 'px'; f.el.style.top = y0 + 'px'; x += f.el.offsetWidth + G; h = Math.max(h, f.el.offsetHeight) } return h };
+  const placeCol = (ids, x0, y0) => { let y = y0; for (const id of ids) { const f = frames.find((q) => q.id === id); f.x = x0; f.y = y; f.el.style.left = x0 + 'px'; f.el.style.top = y + 'px'; y += f.el.offsetHeight + G } return y };
+  let y = 0;
+  y += place(['start', 'people'], 0, y) + G + 30;
+  y += place(['timeline', 'checklist'], 0, y) + G + 30;
+  y += place(['channel', 'gps', 'tagging'], 0, y) + G + 30;
+  y += place(['overview', 'guardrails'], 0, y) + G + 30;
+  // node maps: WF-01 and WF-02 full width rows, the rest two per row
+  const order = ['veraMob01Inbound', 'veraMob09SendWa1', 'veraMob02Process', 'veraMob03WalkApi', 'veraMob06NocRprt', 'veraMob04GapList', 'veraMob05Replies', 'veraMob07Closure', 'veraMob08SetupMb', 'veraMob00Errors1'].map((x) => 'wf-' + x);
+  const rows = [[order[0], order[1]], [order[2]], [order[3], order[4]], [order[5], order[6], order[7]], [order[8], order[9], 'next']];
+  for (const r of rows) y += place(r, 0, y) + G + 30;
+}
+
+let S = 1, TX = 0, TY = 0;
+const apply = () => { world.style.transform = `translate(${TX}px,${TY}px) scale(${S})`; document.getElementById('zl').textContent = Math.round(S * 100) + '%'; vp.style.backgroundSize = `${22 * S}px ${22 * S}px`; vp.style.backgroundPosition = `${TX}px ${TY}px`; };
+const topH = () => document.querySelector('.bar').offsetHeight;
+function fitTo(x, y, w, h, pad = 40) {
+  const vw = vp.clientWidth, vh = vp.clientHeight - topH();
+  S = Math.min(2, Math.max(0.05, Math.min((vw - pad * 2) / w, (vh - pad * 2) / h)));
+  TX = (vw - w * S) / 2 - x * S;
+  TY = topH() + pad - y * S;
+  apply();
+}
+function bounds(list) {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const f of list) { a = Math.min(a, f.x); b = Math.min(b, f.y - 30); c = Math.max(c, f.x + f.el.offsetWidth); d = Math.max(d, f.y + f.el.offsetHeight) }
+  return [a, b, c - a, d - b];
+}
+function goTo(id) {
+  const f = frames.find((q) => 'f-' + q.id === id || q.id === id);
+  if (!f) return;
+  document.getElementById('jump').value = f.id;
+  if (document.body.classList.contains('list')) { window.scrollTo({ top: f.el.getBoundingClientRect().top + window.scrollY - topH() - 12, behavior: 'smooth' }); return }
+  const [x, y, w, h] = bounds([f]);
+  const vw = vp.clientWidth, vh = vp.clientHeight - topH();
+  // Whole frame if it fits at a readable size; otherwise readable zoom, anchored at its top-left.
+  const fit = Math.min((vw - 60) / w, (vh - 60) / h);
+  S = Math.min(1.15, Math.max(fit, Math.min(0.6, (vw - 60) / 900)));
+  TX = S * w < vw - 60 ? (vw - w * S) / 2 - x * S : 30 - x * S;
+  TY = topH() + 24 - y * S;
+  apply();
+}
+// pan / zoom
+const pts = new Map();
+let last = null, pinch = null;
+vp.addEventListener('pointerdown', (e) => {
+  if (document.body.classList.contains('list') || e.target.closest('.node,.ovbox,button,select,a,table')) return;
+  vp.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); vp.classList.add('drag');
+  if (pts.size === 2) { const [p, q] = [...pts.values()]; pinch = { d: Math.hypot(p[0] - q[0], p[1] - q[1]), s: S, cx: (p[0] + q[0]) / 2, cy: (p[1] + q[1]) / 2, tx: TX, ty: TY } }
+  last = [e.clientX, e.clientY];
+});
+vp.addEventListener('pointermove', (e) => {
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pts.size === 2 && pinch) {
+    const [p, q] = [...pts.values()];
+    const ns = Math.min(2.5, Math.max(0.05, pinch.s * Math.hypot(p[0] - q[0], p[1] - q[1]) / pinch.d));
+    TX = pinch.cx - (pinch.cx - pinch.tx) * (ns / pinch.s); TY = pinch.cy - (pinch.cy - pinch.ty) * (ns / pinch.s); S = ns; apply(); return;
+  }
+  TX += e.clientX - last[0]; TY += e.clientY - last[1]; last = [e.clientX, e.clientY]; apply();
+});
+const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) vp.classList.remove('drag'); const r = [...pts.values()][0]; if (r) last = r };
+vp.addEventListener('pointerup', up); vp.addEventListener('pointercancel', up);
+vp.addEventListener('wheel', (e) => {
+  if (document.body.classList.contains('list')) return;
+  e.preventDefault();
+  const mouseWheel = e.deltaMode !== 0 || (Math.abs(e.deltaY) >= 40 && e.deltaX === 0 && Number.isInteger(e.deltaY));
+  if (!e.ctrlKey && !mouseWheel) { TX -= e.deltaX; TY -= e.deltaY; apply(); return } // trackpad: pan
+  const ns = Math.min(2.5, Math.max(0.05, S * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018))));
+  TX = e.clientX - (e.clientX - TX) * (ns / S); TY = e.clientY - (e.clientY - TY) * (ns / S); S = ns; apply();
+}, { passive: false });
+const zoomBy = (k) => { const cx = vp.clientWidth / 2, cy = vp.clientHeight / 2; const ns = Math.min(2.5, Math.max(0.05, S * k)); TX = cx - (cx - TX) * (ns / S); TY = cy - (cy - TY) * (ns / S); S = ns; apply() };
+document.getElementById('zin').onclick = () => zoomBy(1.25);
+document.getElementById('zout').onclick = () => zoomBy(0.8);
+document.getElementById('fit').onclick = () => { const b = bounds(frames); fitTo(...b, 30) };
+window.addEventListener('keydown', (e) => { if (e.target.closest('select,input')) return; if (e.key === '+' || e.key === '=') zoomBy(1.2); if (e.key === '-') zoomBy(0.83); if (e.key === 'Escape') panel.hidden = true });
+
+// frame jump
+const jump = document.getElementById('jump');
+jump.innerHTML = frames.map((f) => `<option value="${f.id}">${esc(f.tag)}</option>`).join('');
+jump.addEventListener('change', () => goTo(jump.value));
+
+// node details
+const panel = document.getElementById('panel');
+function showNode(wf, n, el) {
+  document.querySelectorAll('.node.sel').forEach((x) => x.classList.remove('sel'));
+  el.classList.add('sel');
+  const ins = wf.edges.filter((e) => e.to === n.name).map((e) => e.from + (e.kind !== 'main' && e.kind !== 'in2' ? ' (' + e.kind + ')' : ''));
+  const outs = wf.edges.filter((e) => e.from === n.name).map((e) => (e.kind === 'main' ? '' : (e.kind === 'error' ? 'on error' : e.kind) + ' → ') + e.to);
+  panel.innerHTML = `<button class="btn x" aria-label="Close">✕</button><div class="eyebrow">${short(wf)} · ${esc(n.type)}</div><h3>${esc(n.name)}</h3><p>${esc(n.does)}</p>
+    <dl><dt>Comes from</dt><dd>${ins.length ? ins.map(esc).join('<br>') : 'Starts the workflow'}</dd>
+    <dt>Goes to</dt><dd>${outs.length ? outs.map(esc).join('<br>') : 'Ends here'}</dd>
+    <dt>If it fails</dt><dd>${n.onError ? 'Item goes down the wired error path.' : n.retry ? 'Retried 3 times; then the error workflow (WF-00) takes over.' : 'The error workflow (WF-00) logs it and alerts Vera ops.'}</dd>
+    ${n.guard.length ? `<dt>Guardrails</dt><dd>${n.guard.map((g) => `<b>${esc((GUARD[g] || [g])[0])}</b>: ${esc((GUARD[g] || ['', '', ''])[2])}`).join('<br>')}</dd>` : ''}</dl>`;
+  panel.hidden = false;
+  panel.querySelector('.x').onclick = () => { panel.hidden = true; el.classList.remove('sel') };
+}
+vp.addEventListener('click', (e) => { if (!e.target.closest('.node')) { panel.hidden = true; document.querySelectorAll('.node.sel').forEach((x) => x.classList.remove('sel')) } });
+
+// read as page
+const modeBtn = document.getElementById('mode');
+function setMode(list) {
+  document.body.classList.toggle('list', list);
+  vp.style.paddingTop = list ? topH() + 20 + 'px' : '';
+  modeBtn.classList.toggle('on', list); modeBtn.setAttribute('aria-pressed', String(list)); modeBtn.textContent = list ? 'Whiteboard' : 'Read as page';
+  try { localStorage.setItem('mob-board-mode', list ? 'list' : 'board') } catch (e) {}
+  if (!list) requestAnimationFrame(() => goTo(jump.value || 'start'));
+}
+modeBtn.onclick = () => setMode(!document.body.classList.contains('list'));
+
+function start() {
+  layoutNodes();
+  layoutFrames();
+  let m = null;
+  try { m = localStorage.getItem('mob-board-mode') } catch (e) {}
+  const narrow = window.innerWidth < 700;
+  if (m === 'list' || (m === null && narrow)) setMode(true);
+  else { const b = bounds(frames.filter((f) => ['start', 'people'].includes(f.id))); fitTo(...b, 30) }
+}
+(document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start);
+window.addEventListener('resize', () => { if (!document.body.classList.contains('list')) apply() });
+</script>

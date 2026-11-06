@@ -1,0 +1,447 @@
+{
+  "id": "veraMob04GapList",
+  "name": "Vera 05 · 04 Evening gap list",
+  "nodes": [
+    {
+      "id": "f3bedd8c-82a8-4faf-8129-aeeebc16d1dd",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 04 Evening gap list\n7 PM, three days before the visit until the day before: what is still missing goes to the contractor, and a one-line readiness note goes to the engineer.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "9a348ef4-9450-49ce-8e9f-a3616b84f8d1",
+      "name": "Every evening 7 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 19 * * *"
+            }
+          ]
+        }
+      },
+      "notes": "IST (instance timezone Asia/Kolkata).",
+      "notesInFlow": false
+    },
+    {
+      "id": "6ab7a595-40cb-411e-8693-80653b392249",
+      "name": "On demand (status)",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "mobilisation_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "notes": "When the contractor types \"status\".",
+      "notesInFlow": false
+    },
+    {
+      "id": "581625c3-1511-48ad-8fb2-0eb7766f80b2",
+      "name": "Sites in paper-check window",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        120
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select mo.id as mobilisation_id, row_to_json(mo) as mob,\n  (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'when', \"when\", 'severity', severity, 'evidence', evidence, 'status', status, 'reason', reason) order by code) from lines where mobilisation_id = mo.id) as lines,\n  c.id as contact_id, extract(epoch from c.last_inbound_at) * 1000 as last_inbound_ms,\n  (select id from contacts where mobilisation_id = mo.id and role = 'engineer' limit 1) as engineer_contact_id\nfrom mobilisations mo join contacts c on c.mobilisation_id = mo.id and c.role = 'contractor'\nwhere mo.phase = 'paper' and (mo.id = nullif($1, '')::bigint or ($1 = '' and mo.visit_date between current_date and current_date + 3));",
+        "options": {
+          "queryReplacement": "={{ [($json.mobilisation_id ? String($json.mobilisation_id) : '') ?? null] }}"
+        }
+      },
+      "notes": "Every site whose visit is in the next 3 days (or the one that asked).\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "ac0493df-dec5-46e4-8bdd-8d1386ba9ea9",
+      "name": "One site at a time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        560,
+        120
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "notes": "A failure on one site does not stop the others.",
+      "notesInFlow": false
+    },
+    {
+      "id": "580ab46a-6028-4618-8d3b-b79bfa043773",
+      "name": "Build gap list",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build gap list: generated from n8n/mobilise/logic.mjs gapList. Edit there, then rebuild.\nconst __fn = function gapList(input) {\n  const mob = input.mob || {}\n  const lines = input.lines || []\n  const now = Number(input.now || Date.now())\n  const todayIst = new Date(now + 5.5 * 3600 * 1000).toISOString().slice(0, 10) // calendar days in India\n  const daysLeft = Math.round((Date.parse(mob.visit_date) - Date.parse(todayIst)) / 86400000)\n  const paper = lines.filter((l) => l.when === 'paper')\n  const label = { open: 'not received', filed: 'received, being checked', review: 'received, being checked', rejected: 'sent back' }\n  const missing = paper.filter((l) => !['accepted', 'na'].includes(l.status))\n  const critical = missing.filter((l) => l.severity === 'critical')\n  const preWalk = lines.filter((l) => l.when === 'walk' && l.evidence !== 'document')\n  const prePhotos = preWalk.filter((l) => l.status === 'filed' || l.status === 'accepted').length\n  const byArea = {}\n  for (const l of missing) (byArea[l.area] = byArea[l.area] || []).push(l)\n  const out = []\n  out.push('*' + (mob.project || 'Site') + ': papers still needed*')\n  out.push(daysLeft > 0 ? 'Engineer visit in ' + daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' (' + mob.visit_date + ').' : 'Engineer visit is today.')\n  out.push(paper.length - missing.length + ' of ' + paper.length + ' papers accepted. ' + critical.length + ' critical still open.')\n  for (const l of missing) {\n    const why = l.status === 'rejected' && l.reason ? ': ' + l.reason : ''\n    out.push((l.severity === 'critical' ? '🔴 ' : '• ') + l.code + ' ' + l.text + ' (' + (label[l.status] || l.status) + why + ')')\n  }\n  out.push('')\n  out.push('Site photos sent so far: ' + prePhotos + ' of ' + preWalk.length + ' lines (optional before the visit).')\n  out.push('Reply to this message with the paper, or write the line code (e.g. PAP-04) with the photo.')\n  const lastIn = Number(input.last_inbound_ms || 0)\n  const inWindow = lastIn > 0 && now - lastIn < 23.5 * 3600 * 1000\n  return {\n    ...input,\n    gap: {\n      text: out.join('\\n'), missing: missing.length, critical: critical.length, total: paper.length,\n      mode: inWindow ? 'session' : 'template',\n      template: { name: 'vera_mob_gap_list', language: 'en', params: [mob.project || 'Site', String(missing.length), String(critical.length), mob.visit_date || ''] },\n      engineer_line: (mob.project || 'Site') + ': ' + (paper.length - missing.length) + '/' + paper.length + ' papers accepted, ' + critical.length + ' critical open' + (critical.length ? ' (' + critical.map((l) => l.code).join(', ') + ')' : '') + '. Site photos on ' + prePhotos + '/' + preWalk.length + ' lines.',\n      ready_to_travel: critical.length === 0,\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Missing papers by severity, what was sent back and why, how many site photos so far.",
+      "notesInFlow": false
+    },
+    {
+      "id": "b2a50957-6fe4-4586-85e8-c6ac6690131f",
+      "name": "Send to contractor",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "gap_list",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ { body: { type: \"text\", text: { preview_url: false, body: $json.gap.text } }, template: $json.gap.template } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Free inside 24 h of their last message; otherwise the approved utility template.\nGuardrails: window",
+      "notesInFlow": false
+    },
+    {
+      "id": "a4a12065-7d4b-4ee0-8675-9bf7ca1fc8eb",
+      "name": "Tell the engineer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.engineer_contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "gap_list",
+            "area": "",
+            "line_code": "",
+            "ref": "",
+            "request": "={{ { body: { type: 'text', text: { body: $json.gap.engineer_line } }, template: { name: 'vera_mob_engineer_brief', language: 'en', params: [$json.gap.engineer_line] } } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "\"Ready to travel\" or the list of critical papers still open.",
+      "notesInFlow": false
+    },
+    {
+      "id": "fdaf08ed-7ded-4cc7-80f0-3c6a9acc773e",
+      "name": "All sites done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        840,
+        320
+      ],
+      "parameters": {},
+      "notes": "End of run.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "Every evening 7 PM": {
+      "main": [
+        [
+          {
+            "node": "Sites in paper-check window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On demand (status)": {
+      "main": [
+        [
+          {
+            "node": "Sites in paper-check window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sites in paper-check window": {
+      "main": [
+        [
+          {
+            "node": "One site at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One site at a time": {
+      "main": [
+        [
+          {
+            "node": "All sites done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build gap list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build gap list": {
+      "main": [
+        [
+          {
+            "node": "Send to contractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to contractor": {
+      "main": [
+        [
+          {
+            "node": "Tell the engineer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell the engineer": {
+      "main": [
+        [
+          {
+            "node": "One site at a time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}
