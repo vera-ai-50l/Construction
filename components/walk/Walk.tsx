@@ -6,14 +6,16 @@
 // (IndexedDB) and are sent to the n8n walk API (WF-03) whenever there is signal.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import sample from '@/content/walk-sample.json'
+import { SiteMap, type Shape } from './SiteMap'
 
 type Line = { code: string; area: string; text: string; evidence: string; when: string; severity: string; hint?: string; status: string }
 type Area = { code: string; name: string }
 type Zone = { area: string; name: string; polygon?: number[][]; circle?: { lat: number; lng: number; radius_m: number } }
 type Fix = { lat: number; lng: number; accuracy: number; ts: string }
 type Capture = {
-  capture_id: string; line: string; status: 'ok' | 'not_ok' | 'na' | 'photo'; remark: string; gps: Fix | null; client_ts: string
+  capture_id: string; line: string; status: 'ok' | 'not_ok' | 'na' | 'photo'; remark: string; gps: Fix | null; client_ts: string; spot?: string
   photo_b64?: string; photo_mime?: string; audio_b64?: string; audio_mime?: string
   state: 'queued' | 'sent' | 'rejected'; geo?: { result: string; note: string }; error?: string
 }
@@ -23,6 +25,17 @@ const API = process.env.NEXT_PUBLIC_VERA_N8N_URL ? process.env.NEXT_PUBLIC_VERA_
 const AREA_NAMES: Record<string, string> = { PAP: 'Papers', DR: 'Drawings', LC: 'Labour camp', SY: 'Stores yard', BP: 'Batching plant', FW: 'Formwork', SF: 'Safety' }
 const GOOD_M = 15
 const WEAK_M = 40
+const SPOT_MIN = 15 // a sticker scan places photos in its area for this many minutes
+
+// The walk token is kept on the phone, so a QR sticker (which carries no token) can open
+// this page and still be recorded against the engineer's walk.
+type Spot = { code: string; area: string; at: number }
+const store = {
+  get: (k: string) => { try { return localStorage.getItem(k) } catch { return null } },
+  set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch {} },
+}
+const lastSpot = (): Spot | null => { try { return JSON.parse(store.get('vera-walk-spot') || 'null') } catch { return null } }
+const freshSpot = (area: string) => { const s = lastSpot(); return s && s.area === area && Date.now() - s.at < SPOT_MIN * 60000 ? s : null }
 
 // ---------------------------------------------------------------- small IndexedDB queue
 const DB = 'vera-walk'
@@ -51,6 +64,10 @@ async function allCaptures(): Promise<Capture[]> {
 
 // ---------------------------------------------------------------- geometry (same rule as logic.mjs geofence)
 function place(fix: Fix | null, zones: Zone[], area: string) {
+  const g = placeByGps(fix, zones, area)
+  return freshSpot(area) ? { result: 'in', note: 'Sticker scanned here · ' + g.note } : g
+}
+function placeByGps(fix: Fix | null, zones: Zone[], area: string) {
   if (!fix) return { result: 'unknown', note: 'No GPS fix' }
   const z = zones.find((x) => x.area === area)
   if (!z) return { result: 'unknown', note: 'No area drawn for ' + (AREA_NAMES[area] || area) }
@@ -116,13 +133,28 @@ export function Walk() {
   const [captures, setCaptures] = useState<Capture[]>([])
   const [online, setOnline] = useState(true)
   const [finished, setFinished] = useState('')
+  const [mapOpen, setMapOpen] = useState(false)
+  const [seen, setSeen] = useState<Fix[]>([])
+  const [spotMsg, setSpotMsg] = useState('')
   const trail = useRef<Fix[]>([])
   const fixRef = useRef<Fix | null>(null)
   const demo = !token || !API
 
-  // token from the link (#t=...), checklist from WF-03 or the sample
+  // token from the link (#t=...) or from this phone; a sticker scan arrives as #s=<code>
   useEffect(() => {
-    const t = new URLSearchParams(location.hash.slice(1)).get('t') || ''
+    const h = new URLSearchParams(location.hash.slice(1))
+    const t = h.get('t') || store.get('vera-walk-token') || ''
+    if (h.get('t')) store.set('vera-walk-token', t)
+    const s = h.get('s')
+    if (s) {
+      const a = s.split('.')[1] || ''
+      store.set('vera-walk-spot', JSON.stringify({ code: s, area: a, at: Date.now() }))
+      const pend = (() => { try { return JSON.parse(store.get('vera-walk-spots') || '[]') } catch { return [] } })()
+      store.set('vera-walk-spots', JSON.stringify([...pend, { code: s, client_ts: new Date().toISOString() }].slice(-50)))
+      if (a) setArea(a)
+      setSpotMsg('Sticker scanned: photos here are placed in ' + (AREA_NAMES[a] || a) + ' for the next ' + SPOT_MIN + ' minutes.')
+    }
+    if (h.get('t') || s) history.replaceState(null, '', location.pathname)
     setToken(t)
     setOnline(navigator.onLine)
     if (!t || !API) { setList(sample as Checklist); return }
@@ -150,7 +182,7 @@ export function Walk() {
       (e) => setGpsError(e.code === 1 ? 'Location is blocked. Allow it for this page, or photos are saved without a place.' : 'Looking for GPS…'),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
     )
-    const tick = setInterval(() => { if (fixRef.current) trail.current.push(fixRef.current) }, 20000)
+    const tick = setInterval(() => { const f = fixRef.current; if (f) { trail.current.push(f); setSeen((x) => [...x.slice(-299), f]) } }, 20000)
     let lock: { release: () => Promise<void> } | null = null
     const wl = (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock
     wl?.request('screen').then((l) => { lock = l }).catch(() => {})
@@ -171,6 +203,17 @@ export function Walk() {
         else if (r.status === 400) await putCapture({ ...c, state: 'rejected', error: (j.details || []).join('; ') })
         else break // 401 / 5xx: keep it queued and try later
       } catch { break }
+    }
+    // sticker scans, with the fix at the time they are sent
+    const spots: { code: string; client_ts: string }[] = (() => { try { return JSON.parse(store.get('vera-walk-spots') || '[]') } catch { return [] } })()
+    while (spots.length) {
+      const sp = spots[0]
+      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-vera-walk': token }, body: JSON.stringify({ action: 'spot', ...sp, gps: fixRef.current }) }).catch(() => null)
+      if (!r || r.status >= 500 || r.status === 401) break
+      const j = await r.json().catch(() => ({}))
+      if (!j.ok) setSpotMsg(j.message || (j.details || []).join('; ') || 'This sticker was not accepted.')
+      spots.shift()
+      store.set('vera-walk-spots', JSON.stringify(spots))
     }
     if (trail.current.length) {
       const points = trail.current.splice(0)
@@ -216,6 +259,7 @@ export function Walk() {
     const ph = photo ? await shrink(photo) : null
     const c: Capture = {
       capture_id: crypto.randomUUID(), line: line.code, status, remark, gps: best, client_ts: new Date().toISOString(),
+      ...(freshSpot(line.area) ? { spot: freshSpot(line.area)!.code } : {}),
       ...(ph ? { photo_b64: ph.b64, photo_mime: ph.mime } : {}),
       ...(audio ? { audio_b64: await blobB64(audio), audio_mime: audio.type || 'audio/webm' } : {}),
       state: demo ? 'sent' : 'queued', geo: place(best, list?.zones || [], line.area),
@@ -223,6 +267,27 @@ export function Walk() {
     await putCapture(c)
     setCaptures(await allCaptures().then((x) => (x.length ? x : [...captures, c])))
     flush()
+  }
+
+  // the engineer marks an area on the map; saved at once (needs signal), drawn locally
+  async function saveZone(shape: Shape): Promise<string | null> {
+    const name = areas.find((a) => a.code === area)?.name || area
+    const local = (l: Checklist): Checklist => {
+      const { accuracy_m, ...rest } = ('circle' in shape ? shape.circle : shape) as { accuracy_m: number } & Record<string, unknown>
+      void accuracy_m
+      const z: Zone = 'circle' in shape ? { area, name, circle: rest as Zone['circle'] } : { area, name, polygon: (rest as { polygon: number[][] }).polygon }
+      return { ...l, zones: [...(l.zones || []).filter((x) => x.area !== area), z] }
+    }
+    if (!demo) {
+      if (!navigator.onLine) return 'No signal: marking an area needs signal. Try again at the gate.'
+      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-vera-walk': token }, body: JSON.stringify({ action: 'zone', area, name, shape }) }).catch(() => null)
+      if (!r) return 'Could not reach Vera. Try again.'
+      const j = await r.json().catch(() => ({}))
+      if (r.status === 400) return 'Not saved: ' + (j.details || []).join('; ')
+      if (!r.ok || !j.ok) return 'Not saved (' + r.status + '). Try again.'
+    }
+    setList((l) => { if (!l) return l; const n = local(l); store.set('walk-list-' + token.split('.')[0], JSON.stringify(n)); return n })
+    return null
   }
 
   async function finish() {
@@ -248,6 +313,11 @@ export function Walk() {
           <span className="tabular-nums text-ink-2">{checked}/{walkLines.length} lines checked</span>
           <span className={online ? 'text-ink-3' : 'text-rust'}>{online ? (queued ? queued + ' waiting to send' : 'All sent') : 'No signal: saving on phone'}</span>
         </div>
+        <div className="mt-2 flex gap-4 text-sm">
+          <button onClick={() => setMapOpen(true)} className="text-ink-2 underline underline-offset-2">Site map · mark areas</button>
+          <Link href="/walk/stickers" className="text-ink-2 underline underline-offset-2">Print QR stickers</Link>
+        </div>
+        {spotMsg && <p className="mt-2 rounded-md bg-sage-2 px-3 py-2 text-xs text-ink-2" role="status">{spotMsg}</p>}
         {demo && <p className="mt-2 rounded-md bg-ochre-2 px-3 py-2 text-xs text-ink-2">Demo with a sample site. Nothing leaves this phone. The real link comes on WhatsApp.</p>}
         {loadError && <p className="mt-2 rounded-md bg-rust/10 px-3 py-2 text-xs text-rust">{loadError}</p>}
         <nav className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1" aria-label="Areas">
@@ -289,6 +359,7 @@ export function Walk() {
         </div>
       </div>
 
+      {mapOpen && <SiteMap zones={list?.zones || []} fix={fix} trail={seen} area={area} areaName={areas.find((a) => a.code === area)?.name || area} getFix={() => fixRef.current} onSave={saveZone} onClose={() => setMapOpen(false)} />}
       {open && <LineSheet line={open} fix={fix} zones={list?.zones || []} onClose={() => setOpen(null)} onSave={async (st, remark, photo, audio) => { await save(open, st, remark, photo, audio); setOpen(null) }} />}
     </main>
   )

@@ -248,13 +248,13 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "contact_id": "={{ $json.engineer_contact_id }}",
-            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "contact_id": "={{ $('Build gap list').item.json.engineer_contact_id }}",
+            "mobilisation_id": "={{ $('Build gap list').item.json.mobilisation_id }}",
             "kind": "gap_list",
             "area": "",
             "line_code": "",
             "ref": "",
-            "request": "={{ { body: { type: 'text', text: { body: $json.gap.engineer_line } }, template: { name: 'vera_mob_engineer_brief', language: 'en', params: [$json.gap.engineer_line] } } }}"
+            "request": "={{ { body: { type: 'text', text: { body: $('Build gap list').item.json.gap.engineer_line } }, template: { name: 'vera_mob_engineer_brief', language: 'en', params: [$('Build gap list').item.json.gap.engineer_line] } } }}"
           },
           "matchingColumns": [],
           "schema": [

@@ -52,7 +52,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "update messages set state = 'processing', state_at = now() where id = $1 and state in ('new', 'needs_human')\nreturning id as message_id, contact_id, mobilisation_id, body as message,\n  (select role from contacts where id = messages.contact_id) as contact_role,\n  (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'evidence', evidence, 'when', \"when\",\n          'severity', severity, 'docType', doc_type, 'rules', rules, 'hint', hint, 'status', status) order by code)\n     from lines where mobilisation_id = messages.mobilisation_id) as lines,\n  (select json_agg(json_build_object('wamid', wamid, 'kind', kind, 'area', area, 'line', line_code))\n     from outbound where contact_id = messages.contact_id and sent_at > now() - interval '30 days') as prompts,\n  (select json_build_object('line', line_code, 'at', extract(epoch from at) * 1000) from pending_picks where contact_id = messages.contact_id) as \"pendingPick\",\n  (select json_agg(json_build_object('sha256', sha256, 'line_code', line_code)) from evidence where mobilisation_id = messages.mobilisation_id) as known_hashes,\n  (select row_to_json(mo) from mobilisations mo where mo.id = messages.mobilisation_id) as mob;",
+        "query": "update messages set state = 'processing', state_at = now() where id = $1 and state in ('new', 'needs_human')\nreturning id as message_id, contact_id, mobilisation_id, body as message,\n  (select role from contacts where id = messages.contact_id) as contact_role,\n  (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'evidence', evidence, 'when', \"when\",\n          'severity', severity, 'docType', doc_type, 'rules', rules, 'hint', hint, 'status', status) order by code)\n     from lines where mobilisation_id = messages.mobilisation_id) as lines,\n  (select json_agg(json_build_object('wamid', wamid, 'kind', kind, 'area', area, 'line', line_code, 'ref', ref))\n     from outbound where contact_id = messages.contact_id and sent_at > now() - interval '30 days') as prompts,\n  (select json_build_object('line', line_code, 'at', extract(epoch from at) * 1000) from pending_picks where contact_id = messages.contact_id) as \"pendingPick\",\n  (select json_agg(json_build_object('sha256', sha256, 'line_code', line_code)) from evidence where mobilisation_id = messages.mobilisation_id) as known_hashes,\n  (select row_to_json(mo) from mobilisations mo where mo.id = messages.mobilisation_id) as mob,\n  (select id from contacts where mobilisation_id = messages.mobilisation_id and role = 'engineer' limit 1) as engineer_contact_id;",
         "options": {
           "queryReplacement": "={{ [($json.message_id) ?? null] }}"
         }
@@ -91,7 +91,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "leftValue": "={{ [\"interactive\",\"button\"].includes($json.message.type) ? \"interactive\" : $json.contact_role === \"reviewer\" ? \"text\" : [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
                     "rightValue": "media",
                     "operator": {
                       "type": "string",
@@ -114,7 +114,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "leftValue": "={{ [\"interactive\",\"button\"].includes($json.message.type) ? \"interactive\" : $json.contact_role === \"reviewer\" ? \"text\" : [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
                     "rightValue": "text",
                     "operator": {
                       "type": "string",
@@ -137,7 +137,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "leftValue": "={{ [\"interactive\",\"button\"].includes($json.message.type) ? \"interactive\" : $json.contact_role === \"reviewer\" ? \"text\" : [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
                     "rightValue": "interactive",
                     "operator": {
                       "type": "string",
@@ -160,7 +160,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
+                    "leftValue": "={{ [\"interactive\",\"button\"].includes($json.message.type) ? \"interactive\" : $json.contact_role === \"reviewer\" ? \"text\" : [\"image\",\"document\",\"audio\",\"video\"].includes($json.message.type) ? \"media\" : $json.message.type }}",
                     "rightValue": "location",
                     "operator": {
                       "type": "string",
@@ -591,7 +591,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Bind to checklist line: generated from n8n/mobilise/logic.mjs bindLine. Edit there, then rebuild.\nconst __fn = function bindLine(input) {\n  const m = input.message || {}\n  const lines = Array.isArray(input.lines) ? input.lines : []\n  const prompts = Array.isArray(input.prompts) ? input.prompts : []\n  const now = Number(input.now || Date.now())\n  const byCode = {}\n  for (const l of lines) byCode[l.code] = l\n  const areas = [...new Set(lines.map((l) => l.area))]\n  const isMedia = ['image', 'document', 'audio', 'video'].includes(m.type)\n  const done = (o) => ({ ...o, area: o.line ? byCode[o.line].area : o.area || '', needsAi: !!o.needsAi })\n\n  const prompt = m.context_wamid ? prompts.find((p) => p.wamid === m.context_wamid) : null\n  if (prompt && (prompt.kind === 'line' || prompt.kind === 'open_item' || prompt.kind === 'confirm') && byCode[prompt.line]) {\n    return done({ line: prompt.line, method: prompt.kind === 'open_item' ? 'reply-to-open-item' : 'reply-to-line', confidence: 1, candidates: [] })\n  }\n\n  const text = [m.caption, m.text, m.filename].filter(Boolean).join(' ')\n  const codeRe = new RegExp('(?<![A-Za-z0-9])(' + areas.join('|') + ')[\\\\s_\\\\-\\\\.]*0*(\\\\d{1,2})(?!\\\\d)', 'gi')\n  const found = new Set()\n  let hit\n  while (areas.length && (hit = codeRe.exec(text))) {\n    const code = hit[1].toUpperCase() + '-' + String(Number(hit[2])).padStart(2, '0')\n    if (byCode[code]) found.add(code)\n  }\n  if (found.size === 1) return done({ line: [...found][0], method: 'caption-code', confidence: 1, candidates: [] })\n  if (found.size > 1) return done({ line: '', method: 'ambiguous-caption', confidence: 0, candidates: [...found], needsAi: false, ask: true })\n\n  const promptArea = prompt && prompt.kind === 'area' ? prompt.area : ''\n  if (promptArea) {\n    const n = (m.caption || m.text || '').trim().match(/^#?\\s*(\\d{1,2})\\b/)\n    const code = n ? promptArea + '-' + String(Number(n[1])).padStart(2, '0') : ''\n    if (code && byCode[code]) return done({ line: code, method: 'area-reply-number', confidence: 1, candidates: [] })\n  }\n\n  const pick = input.pendingPick\n  if (pick && pick.line && byCode[pick.line] && now - Number(pick.at) <= 10 * 60 * 1000 && isMedia) {\n    return done({ line: pick.line, method: 'picked-from-list', confidence: 1, candidates: [] })\n  }\n\n  if (!isMedia) return done({ line: '', method: 'not-evidence', confidence: 0, candidates: [], needsAi: false })\n\n  // Candidates for AI: open lines only, of the known area if any, that take this kind of evidence.\n  const area = promptArea || input.gpsArea || ''\n  const wants = (l) => (m.type === 'audio' ? true : m.type === 'document' ? l.evidence !== 'photo' : true)\n  const open = (l) => !['accepted', 'ok', 'na'].includes(l.status)\n  let candidates = lines.filter((l) => open(l) && wants(l) && (!area || l.area === area)).map((l) => l.code)\n  if (!candidates.length) candidates = lines.filter((l) => open(l) && wants(l)).map((l) => l.code)\n  return done({ line: '', area, method: 'ai', confidence: 0, candidates, needsAi: candidates.length > 0 })\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = { ...input, binding: __fn(input) };\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Bind to checklist line: generated from n8n/mobilise/logic.mjs bindLine. Edit there, then rebuild.\nconst __fn = function bindLine(input) {\n  const m = input.message || {}\n  const lines = Array.isArray(input.lines) ? input.lines : []\n  const prompts = Array.isArray(input.prompts) ? input.prompts : []\n  const now = Number(input.now || Date.now())\n  const byCode = {}\n  for (const l of lines) byCode[l.code] = l\n  const areas = [...new Set(lines.map((l) => l.area))]\n  const isMedia = ['image', 'document', 'audio', 'video'].includes(m.type)\n  const done = (o) => ({ ...o, area: o.line ? byCode[o.line].area : o.area || '', needsAi: !!o.needsAi })\n\n  const prompt = m.context_wamid ? prompts.find((p) => p.wamid === m.context_wamid) : null\n  if (prompt && (prompt.kind === 'line' || prompt.kind === 'open_item' || prompt.kind === 'confirm') && byCode[prompt.line]) {\n    return done({ line: prompt.line, method: prompt.kind === 'open_item' ? 'reply-to-open-item' : 'reply-to-line', confidence: 1, candidates: [], open_item: prompt.kind === 'open_item' ? String(prompt.ref || '') : '' })\n  }\n\n  const text = [m.caption, m.text, m.filename].filter(Boolean).join(' ')\n  const codeRe = new RegExp('(?<![A-Za-z0-9])(' + areas.join('|') + ')[\\\\s_\\\\-\\\\.]*0*(\\\\d{1,2})(?!\\\\d)', 'gi')\n  const found = new Set()\n  let hit\n  while (areas.length && (hit = codeRe.exec(text))) {\n    const code = hit[1].toUpperCase() + '-' + String(Number(hit[2])).padStart(2, '0')\n    if (byCode[code]) found.add(code)\n  }\n  if (found.size === 1) return done({ line: [...found][0], method: 'caption-code', confidence: 1, candidates: [] })\n  if (found.size > 1) return done({ line: '', method: 'ambiguous-caption', confidence: 0, candidates: [...found], needsAi: false, ask: true })\n\n  const promptArea = prompt && prompt.kind === 'area' ? prompt.area : ''\n  if (promptArea) {\n    const n = (m.caption || m.text || '').trim().match(/^#?\\s*(\\d{1,2})\\b/)\n    const code = n ? promptArea + '-' + String(Number(n[1])).padStart(2, '0') : ''\n    if (code && byCode[code]) return done({ line: code, method: 'area-reply-number', confidence: 1, candidates: [] })\n  }\n\n  const pick = input.pendingPick\n  if (pick && pick.line && byCode[pick.line] && now - Number(pick.at) <= 10 * 60 * 1000 && isMedia) {\n    return done({ line: pick.line, method: 'picked-from-list', confidence: 1, candidates: [] })\n  }\n\n  if (!isMedia) return done({ line: '', method: 'not-evidence', confidence: 0, candidates: [], needsAi: false })\n\n  // Candidates for AI: open lines only, of the known area if any, that take this kind of evidence.\n  const area = promptArea || input.gpsArea || ''\n  const wants = (l) => (m.type === 'audio' ? true : m.type === 'document' ? l.evidence !== 'photo' : true)\n  const open = (l) => !['accepted', 'ok', 'na'].includes(l.status)\n  let candidates = lines.filter((l) => open(l) && wants(l) && (!area || l.area === area)).map((l) => l.code)\n  if (!candidates.length) candidates = lines.filter((l) => open(l) && wants(l)).map((l) => l.code)\n  return done({ line: '', area, method: 'ai', confidence: 0, candidates, needsAi: candidates.length > 0 })\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = { ...input, binding: __fn(input) };\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "Reply-to-line, code in caption, reply-to-area + number, picked from list. Only if none: AI.\nGuardrails: schema",
       "notesInFlow": false
@@ -765,9 +765,9 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Confidence gate: generated from n8n/mobilise/logic.mjs gateMatch. Edit there, then rebuild.\nconst __fn = function gateMatch(input) {\n  const t = Object.assign({ auto: 0.9, margin: 0.3, ask: 0.45 }, input.thresholds || {})\n  const res = input.ai || {}\n  const candidates = (input.binding && input.binding.candidates) || []\n  const fail = (why) => ({ ...input, decision: 'human', reason: why, options: [] })\n  if (res.stop_reason === 'refusal') return fail('AI declined to read this item')\n  if (res.stop_reason === 'max_tokens') return fail('AI answer was cut off')\n  const textBlock = (res.content || []).find((b) => b.type === 'text')\n  let a\n  try { a = JSON.parse(textBlock ? textBlock.text : '') } catch (e) { return fail('AI answer was not valid JSON') }\n  const ok = (c) => c === 'NONE' || candidates.includes(c)\n  const conf = (x) => (typeof x === 'number' && x >= 0 && x <= 1 ? x : -1)\n  if (!a || !ok(a.line_code) || conf(a.confidence) < 0 || !Array.isArray(a.alternatives)) return fail('AI answer did not match the schema')\n  const ranked = [{ line_code: a.line_code, confidence: a.confidence }]\n    .concat(a.alternatives.filter((x) => ok(x.line_code) && conf(x.confidence) >= 0))\n    .filter((x) => x.line_code !== 'NONE')\n    .sort((p, q) => q.confidence - p.confidence)\n    .filter((x, i, arr) => arr.findIndex((y) => y.line_code === x.line_code) === i)\n  const top = ranked[0]\n  const second = ranked[1] ? ranked[1].confidence : 0\n  const base = { ...input, ai_answer: a }\n  if (!a.readable) return { ...base, decision: 'human', reason: 'Not readable: ask for a clearer photo', options: [] }\n  if (a.suspicious) return { ...base, decision: 'human', reason: 'Looks reused or from another project: ' + a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  if (!top) return { ...base, decision: 'confirm', reason: 'AI could not place it', options: [] }\n  if (a.line_code !== 'NONE' && top.line_code === a.line_code && top.confidence >= t.auto && top.confidence - second >= t.margin) {\n    return { ...base, decision: 'auto', line: top.line_code, confidence: top.confidence, reason: a.reason, options: [] }\n  }\n  if (top.confidence >= t.ask) return { ...base, decision: 'confirm', line: '', confidence: top.confidence, reason: a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  return { ...base, decision: 'confirm', reason: 'Low confidence', options: [] }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...$('Build classify request').item.json, request: undefined, ai: $input.item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Confidence gate: generated from n8n/mobilise/logic.mjs gateMatch. Edit there, then rebuild.\nconst __fn = function gateMatch(input) {\n  const t = Object.assign({ auto: 0.9, margin: 0.3, ask: 0.45 }, input.thresholds || {})\n  const res = input.ai || {}\n  const candidates = (input.binding && input.binding.candidates) || []\n  const fail = (why) => ({ ...input, decision: 'human', reason: why, options: [] })\n  if (res.stop_reason === 'refusal') return fail('AI declined to read this item')\n  if (res.stop_reason === 'max_tokens') return fail('AI answer was cut off')\n  const textBlock = (res.content || []).find((b) => b.type === 'text')\n  let a\n  try { a = JSON.parse(textBlock ? textBlock.text : '') } catch (e) { return fail('AI answer was not valid JSON') }\n  const ok = (c) => c === 'NONE' || candidates.includes(c)\n  const conf = (x) => (typeof x === 'number' && x >= 0 && x <= 1 ? x : -1)\n  if (!a || !ok(a.line_code) || conf(a.confidence) < 0 || !Array.isArray(a.alternatives)) return fail('AI answer did not match the schema')\n  const ranked = [{ line_code: a.line_code, confidence: a.confidence }]\n    .concat(a.alternatives.filter((x) => ok(x.line_code) && conf(x.confidence) >= 0))\n    .filter((x) => x.line_code !== 'NONE')\n    .sort((p, q) => q.confidence - p.confidence)\n    .filter((x, i, arr) => arr.findIndex((y) => y.line_code === x.line_code) === i)\n  const top = ranked[0]\n  const second = ranked[1] ? ranked[1].confidence : 0\n  const base = { ...input, ai_answer: a }\n  if (!a.readable) return { ...base, decision: 'human', reason: 'Not readable: ask for a clearer photo', options: [] }\n  if (a.suspicious) return { ...base, decision: 'human', reason: 'Looks reused or from another project: ' + a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  if (!top) return { ...base, decision: 'confirm', reason: 'AI could not place it', options: [] }\n  if (a.line_code !== 'NONE' && top.line_code === a.line_code && top.confidence >= t.auto && top.confidence - second >= t.margin) {\n    return { ...base, decision: 'auto', line: top.line_code, confidence: top.confidence, reason: a.reason, options: [] }\n  }\n  if (top.confidence >= t.ask) return { ...base, decision: 'confirm', line: '', confidence: top.confidence, reason: a.reason, options: ranked.slice(0, 3).map((x) => x.line_code) }\n  return { ...base, decision: 'confirm', reason: 'Low confidence', options: [] }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput = { ...$('Build classify request').item.json, request: undefined, ai: $input.item.json }; if (input.mob && input.mob.flags && input.mob.flags.shadow) input.thresholds = { auto: 2 };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
-      "notes": "≥ 0.90 with a 0.30 lead: file it. 0.45–0.90: ask the sender. Unreadable, suspicious, refused or malformed: a person.\nGuardrails: human, schema",
+      "notes": "≥ 0.90 with a 0.30 lead: file it. 0.45–0.90: ask the sender. Unreadable, suspicious, refused or malformed: a person. Shadow mode (first sites): never files on its own.\nGuardrails: human, schema",
       "notesInFlow": false
     },
     {
@@ -1213,7 +1213,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Make reply fragment: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => {\n        const p = input.paper || {}\n        const line = (input.binding && input.binding.line) || input.line\n        const kind = p.status === 'accepted' ? 'accepted' : p.status === 'rejected' ? 'rejected' : p.status === 'review' ? 'review' : 'filed'\n        const reason = (p.checks || []).filter((c) => c.result !== 'pass').map((c) => c.note).join('; ')\n        return { ...input, saved_line: line, fragment: { kind, line, reason, photo: input.message.type === 'image' } }\n      };\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Make reply fragment: generated from n8n/mobilise/logic.mjs makeFragment. Edit there, then rebuild.\nconst __fn = function makeFragment(input) {\n  const p = input.paper || {}\n  const line = (input.binding && input.binding.line) || (typeof input.line === 'string' ? input.line : (input.line || {}).code)\n  const kind = p.status === 'accepted' ? 'accepted' : p.status === 'rejected' ? 'rejected' : p.status === 'review' ? 'review' : 'filed'\n  const reason = (p.checks || []).filter((c) => c.result !== 'pass').map((c) => c.note).join('; ')\n  return { ...input, saved_line: line, fragment: { kind, line, reason, photo: (input.message || {}).type === 'image' } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "One line for the reply: accepted / sent back (with why) / filed.",
       "notesInFlow": false
@@ -1229,7 +1229,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "with e as (\n  insert into evidence (mobilisation_id, line_code, message_id, kind, s3_key, sha256, mime, bytes, bind_method, bind_confidence, ai, fields, checks, created_by, transcript, transcript_lang)\n  values ($1, nullif($2, ''), $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, nullif($18, ''), nullif($19, '')) returning id\n), l as (\n  update lines set status = case\n      when $15 = 'accepted' then 'accepted' when $15 = 'rejected' then 'rejected' when $15 = 'review' then 'review'\n      when status in ('open', 'rejected') then 'filed' else status end,\n    reason = nullif($16, ''), expires_on = nullif($17, '')::date, status_at = now()\n  where mobilisation_id = $1 and code = $2 and status not in ('ok', 'not_ok', 'na')  -- never overwrite the engineer's decision\n  returning code\n), a as (\n  insert into audit_log (actor, action, entity, entity_id, detail)\n  select case when $9 like 'ai%' then 'ai' else 'contact:' || $14 end, 'file_evidence', 'line', $2, json_build_object('evidence', (select id from e), 'method', $9, 'paper', $15)\n)\nselect (select id from e) as evidence_id, (select code from l) as line_updated;",
+        "query": "with e as (\n  insert into evidence (mobilisation_id, line_code, message_id, kind, s3_key, sha256, mime, bytes, bind_method, bind_confidence, ai, fields, checks, created_by, transcript, transcript_lang)\n  values ($1, nullif($2, ''), $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb, $14, nullif($18, ''), nullif($19, '')) returning id\n), l as (\n  update lines set status = case\n      when $15 = 'accepted' then 'accepted' when $15 = 'rejected' then 'rejected' when $15 = 'review' then 'review'\n      when status in ('open', 'rejected') then 'filed' else status end,\n    reason = nullif($16, ''), expires_on = nullif($17, '')::date, status_at = now()\n  where mobilisation_id = $1 and code = $2 and status not in ('ok', 'not_ok', 'na')  -- never overwrite the engineer's decision\n  returning code\n), a as (\n  insert into audit_log (actor, action, entity, entity_id, detail)\n  select case when $9 like 'ai%' then 'ai' else 'contact:' || $14 end, 'file_evidence', 'line', $2, json_build_object('evidence', (select id from e), 'method', $9, 'paper', $15)\n), q as (\n  -- a paper whose checks need something that was not printed or not read: a person decides\n  insert into review_queue (mobilisation_id, message_id, evidence_id, reason)\n  select $1, $3, (select id from e), 'Paper needs a person: ' || coalesce(nullif($16, ''), 'check it') where $15 = 'review'\n)\nselect (select id from e) as evidence_id, (select code from l) as line_updated;",
         "options": {
           "queryReplacement": "={{ [($json.mobilisation_id) ?? null, ($json.saved_line) ?? null, ($json.message_id) ?? null, ($json.message.type === 'document' ? 'document' : $json.message.type === 'audio' ? 'audio' : 'photo') ?? null, ($json.s3_key) ?? null, ($json.file.sha256) ?? null, ($json.file.mime) ?? null, ($json.file.bytes) ?? null, ($json.binding.line ? $json.binding.method : 'ai-auto') ?? null, ($json.binding.line ? 1 : $json.confidence) ?? null, (JSON.stringify($json.ai_answer || null)) ?? null, (JSON.stringify($json.fields || null)) ?? null, (JSON.stringify(($json.paper || {}).checks || null)) ?? null, ($json.contact_id) ?? null, (($json.paper || {}).status || 'filed') ?? null, ($json.fragment.reason) ?? null, (($json.paper || {}).expires_on || '') ?? null, ($json.transcript || '') ?? null, ($json.transcript_lang || '') ?? null] }}"
         }
@@ -1280,7 +1280,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        7280,
+        7840,
         -40
       ],
       "parameters": {
@@ -1303,6 +1303,220 @@
       "waitBetweenTries": 5000
     },
     {
+      "id": "6ec0c4e3-d0ed-4e84-8143-675705599cc1",
+      "name": "Closes an open item?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7280,
+        -40
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!($('Make reply fragment').item.json.binding || {}).open_item }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Sent as a reply to an open-item reminder.",
+      "notesInFlow": false
+    },
+    {
+      "id": "cd4392fb-92e0-42ab-84e6-d688c4f946f7",
+      "name": "Propose closure",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        7560,
+        -240
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with o as (\n  update open_items set status = 'proposed_closed', closed_evidence_id = $2 where id = $1::bigint and status = 'open' and mobilisation_id = $3\n  returning id, mobilisation_id, line_code, text, finding\n) select o.id as open_item_id, o.mobilisation_id, o.line_code, o.text, o.finding, $2::bigint as evidence_id,\n  (select id from contacts where mobilisation_id = o.mobilisation_id and role = 'engineer' limit 1) as contact_id,\n  (select project from mobilisations where id = o.mobilisation_id) as project from o;",
+        "options": {
+          "queryReplacement": "={{ [($('Make reply fragment').item.json.binding.open_item) ?? null, ($('Save evidence and line').item.json.evidence_id) ?? null, ($('Make reply fragment').item.json.mobilisation_id) ?? null] }}"
+        }
+      },
+      "notes": "Item marked \"proposed closed\" with this photo. Only items of the sender's own site.\nGuardrails: audit, idempotent",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "6ee02b52-2e52-426c-8fc7-31bc2a148b83",
+      "name": "Waiting for the engineer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7840,
+        -240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$json.open_item_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Already proposed or closed: nothing more to ask.",
+      "notesInFlow": false
+    },
+    {
+      "id": "fcbeafb5-d93b-48cf-8fbd-7f3aae57e89c",
+      "name": "Build closure ask",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8120,
+        -320
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build closure ask: generated from n8n/mobilise/logic.mjs buildClosureAsk. Edit there, then rebuild.\nconst __fn = function buildClosureAsk(input) {\n  const id = input.open_item_id\n  return {\n    ...input,\n    msg: {\n      summary: 'a fixed item to approve',\n      text: (input.project ? input.project + ': ' : '') + 'the contractor says ' + input.line_code + ' is fixed.\\n' + input.text +\n        (input.finding ? '\\nAt the visit: ' + input.finding : '') + '\\nAccept the photo to close it.',\n      buttons: [{ id: 'close:' + id + ':accept', title: 'Accept, close it' }, { id: 'close:' + id + ':reject', title: 'Not fixed' }],\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Photo + \"Accept, close it\" / \"Not fixed\".",
+      "notesInFlow": false
+    },
+    {
+      "id": "08ed7298-f658-4901-8086-12fc99867c88",
+      "name": "Ask engineer to close",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        8400,
+        -320
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob11ShowEvd",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 11 Show a file with buttons",
+          "cachedResultUrl": "/workflow/veraMob11ShowEvd"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "close",
+            "ref": "={{ String($json.open_item_id) }}",
+            "evidence_id": "={{ $json.evidence_id }}",
+            "msg": "={{ $json.msg }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "evidence_id",
+              "displayName": "evidence_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "msg",
+              "displayName": "msg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "WF-11 sends the photo with the buttons. His tap closes the item and the line.\nGuardrails: human",
+      "notesInFlow": false
+    },
+    {
       "id": "e6d8b150-537e-4538-8f5a-3ea2bb018c79",
       "name": "Read typed text",
       "type": "n8n-nodes-base.code",
@@ -1313,7 +1527,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Read typed text: generated from n8n/mobilise/logic.mjs readTextCommand. Edit there, then rebuild.\nconst __fn = function readTextCommand(input) {\n  const t = String((input.message && input.message.text) || '').trim()\n  const low = t.toLowerCase()\n  const words = (list) => list.some((w) => low === w || low.startsWith(w + ' ') || low.includes(' ' + w))\n  if (!t) return { ...input, command: 'empty' }\n  if (words(['status', 'pending', 'baki', 'baaki', 'बाकी', 'kya bacha', 'kitna bacha', 'missing', 'list'])) return { ...input, command: 'gap_list' }\n  if (words(['help', 'madad', 'मदद', 'kaise'])) return { ...input, command: 'help' }\n  const na = t.match(/\\b([A-Z]{2,3})[\\s\\-]*0*(\\d{1,2})\\b\\s*(?:[-:]\\s*)?(?:na|n\\/a|not applicable|lagu nahi|लागू नहीं)\\b(.*)$/i)\n  if (na) return { ...input, command: 'request_na', line: na[1].toUpperCase() + '-' + String(Number(na[2])).padStart(2, '0'), reason: na[3].trim() }\n  return { ...input, command: 'remark' }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Read typed text: generated from n8n/mobilise/logic.mjs readTextCommand. Edit there, then rebuild.\nconst __fn = function readTextCommand(input) {\n  const t = String((input.message && input.message.text) || '').trim()\n  const low = t.toLowerCase()\n  const words = (list) => list.some((w) => low === w || low.startsWith(w + ' ') || low.includes(' ' + w))\n  if (input.contact_role === 'reviewer') return { ...input, command: 'help', help: 'reviewer' }\n  if (!t) return { ...input, command: 'empty' }\n  if (words(['status', 'pending', 'baki', 'baaki', 'बाकी', 'kya bacha', 'kitna bacha', 'missing', 'list'])) return { ...input, command: 'gap_list' }\n  if (words(['help', 'madad', 'मदद', 'kaise'])) return { ...input, command: 'help' }\n  const na = t.match(/\\b([A-Z]{2,3})[\\s\\-]*0*(\\d{1,2})\\b\\s*(?:[-:]\\s*)?(?:na|n\\/a|not applicable|lagu nahi|लागू नहीं)\\b(.*)$/i)\n  if (na) {\n    const line = na[1].toUpperCase() + '-' + String(Number(na[2])).padStart(2, '0')\n    const known = (input.lines || []).some((l) => l.code === line)\n    if (!known) return { ...input, command: 'help', help: 'unknown_line', line }\n    return { ...input, command: 'request_na', line, reason: na[3].trim() }\n  }\n  return { ...input, command: 'remark' }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "\"status\", \"baki kya hai\", \"LC-10 NA creche not needed\", or a remark.",
       "notesInFlow": false
@@ -1488,9 +1702,9 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Build help text: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'text', text: { body: 'Send photos or PDFs as a *reply* to the area message, with the line number in the caption (e.g. 3). Send *status* to see what is still needed. Voice notes are fine.' } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Build help text: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({\n        ...input,\n        request: { body: { type: 'text', text: { body: input.help === 'reviewer'\n          ? 'Review items come here as messages with buttons. Answer with the buttons; typed messages are not filed.'\n          : input.help === 'unknown_line'\n            ? input.line + ' is not on this site\\'s checklist. Send *status* to see the line codes.'\n            : 'Send photos or PDFs as a *reply* to the area message, with the line number in the caption (e.g. 3). Send *status* to see what is still needed. Voice notes are fine.' } } },\n      });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
-      "notes": "Two lines of help.",
+      "notes": "Two lines of help (reviewers and unknown line codes get their own line).",
       "notesInFlow": false
     },
     {
@@ -1609,7 +1823,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Build N/A request: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { body: { type: 'interactive', interactive: { type: 'button', body: { text: 'Contractor asks to mark ' + input.line + ' as not applicable: \"' + (input.reason || 'no reason given') + '\". Approve?' }, action: { buttons: [{ type: 'reply', reply: { id: 'na:' + input.line + ':approve', title: 'Approve N/A' } }, { type: 'reply', reply: { id: 'na:' + input.line + ':reject', title: 'Reject' } }] } } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Build N/A request: generated from n8n/mobilise/workflows.mjs. Edit there, then rebuild.\nconst __fn = (input) => ({ ...input, request: { summary: 'a not-applicable request', body: { type: 'interactive', interactive: { type: 'button', body: { text: 'Contractor asks to mark ' + input.line + ' as not applicable: \"' + (input.reason || 'no reason given') + '\". Approve?' }, action: { buttons: [{ type: 'reply', reply: { id: 'na:' + input.line + ':approve', title: 'Approve N/A' } }, { type: 'reply', reply: { id: 'na:' + input.line + ':reject', title: 'Reject' } }] } } } } });\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "Only the engineer can mark a line N/A.\nGuardrails: human",
       "notesInFlow": false
@@ -1634,11 +1848,11 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "contact_id": "={{ $json.mob.engineer_contact_id }}",
+            "contact_id": "={{ $json.engineer_contact_id }}",
             "mobilisation_id": "={{ $json.mobilisation_id }}",
             "kind": "confirm",
             "area": "",
-            "line_code": "",
+            "line_code": "={{ $json.line }}",
             "ref": "",
             "request": "={{ $json.request }}"
           },
@@ -1716,7 +1930,7 @@
           "waitForSubWorkflow": true
         }
       },
-      "notes": "Engineer decides with one tap.",
+      "notes": "Engineer decides with one tap. The contractor hears the answer.\nGuardrails: human",
       "notesInFlow": false
     },
     {
@@ -1758,7 +1972,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Read button answer: generated from n8n/mobilise/logic.mjs parseAnswer. Edit there, then rebuild.\nconst __fn = function parseAnswer(input) {\n  const i = (input.message && input.message.interactive) || {}\n  const [verb, ref, value] = String(i.id || '').split(':')\n  const allowed = { bind: ['contractor', 'engineer', 'reviewer'], pick: ['contractor', 'engineer'], na: ['engineer'], close: ['engineer'], sign: ['engineer'], review: ['reviewer'] }\n  const role = input.contact_role || ''\n  if (!allowed[verb]) return { ...input, answer: { ok: false, why: 'Unknown button' } }\n  if (!allowed[verb].includes(role)) return { ...input, answer: { ok: false, why: 'Only ' + allowed[verb].join(' / ') + ' can do this' } }\n  if (verb === 'sign' && !['approve', 'conditions', 'hold'].includes(value)) return { ...input, answer: { ok: false, why: 'Unknown sign-off choice' } }\n  return { ...input, answer: { ok: true, verb, ref, value, by: input.contact_id, at: new Date(Number(input.now || Date.now())).toISOString() } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Read button answer: generated from n8n/mobilise/logic.mjs parseAnswer. Edit there, then rebuild.\nconst __fn = function parseAnswer(input) {\n  const i = (input.message && input.message.interactive) || {}\n  const [verb, ref, value] = String(i.id || '').split(':')\n  const allowed = {\n    bind: ['contractor', 'engineer', 'reviewer'], pick: ['contractor', 'engineer'], na: ['engineer'], close: ['engineer'], sign: ['engineer'],\n    review: ['reviewer'], show: ['contractor', 'engineer', 'reviewer', 'project_head', 'design', 'ehs'],\n  }\n  const values = { na: ['approve', 'reject'], close: ['accept', 'reject'], sign: ['approve', 'conditions', 'hold'] }\n  const role = input.contact_role || ''\n  if (!allowed[verb]) return { ...input, answer: { ok: false, why: 'Unknown button' } }\n  if (!allowed[verb].includes(role)) return { ...input, answer: { ok: false, why: 'Only ' + allowed[verb].join(' / ') + ' can do this' } }\n  if (values[verb] && !values[verb].includes(value)) return { ...input, answer: { ok: false, why: 'Unknown choice' } }\n  if (verb !== 'show' && !ref) return { ...input, answer: { ok: false, why: 'Button has no reference' } }\n  return { ...input, answer: { ok: true, verb, ref, value: value || '', by: input.contact_id, at: new Date(Number(input.now || Date.now())).toISOString() } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "The button id says what it is: bind / pick / na / close / sign. Role checked: only the engineer can sign.\nGuardrails: auth",
       "notesInFlow": false
@@ -1801,13 +2015,221 @@
       "notesInFlow": false
     },
     {
+      "id": "b00e7ad1-ad98-4842-8c74-7a00daf7571f",
+      "name": "\"Show me\" tapped?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.answer.verb === 'show' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "The generic template's button: send what was held while their 24-hour window was closed.\nGuardrails: window",
+      "notesInFlow": false
+    },
+    {
+      "id": "070c1ea3-0e0d-4255-85be-1fd021952bb9",
+      "name": "Release held messages",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1680,
+        1360
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update outbound set released_at = now()\nwhere contact_id = $1 and held_body is not null and released_at is null and sent_at > now() - interval '7 days'\nreturning contact_id, mobilisation_id, kind, coalesce(area, '') as area, coalesce(line_code, '') as line_code, coalesce(ref, '') as ref, held_body as request;",
+        "options": {
+          "queryReplacement": "={{ [($json.contact_id) ?? null] }}"
+        }
+      },
+      "notes": "Everything held for this person in the last 7 days, once.\nGuardrails: idempotent, window",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "0f7b30f5-2256-4aec-8bb0-7d093b4a8710",
+      "name": "Anything held?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1960,
+        1360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$json.request }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Nothing held: nothing to send.",
+      "notesInFlow": false
+    },
+    {
+      "id": "80bb9f22-923e-4f30-8cd4-69ae948b5729",
+      "name": "Send held message",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        1320
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "={{ $json.kind }}",
+            "area": "={{ $json.area }}",
+            "line_code": "={{ $json.line_code }}",
+            "ref": "={{ $json.ref }}",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Now inside the window, so the real message (buttons, photo, PDF) goes out.",
+      "notesInFlow": false
+    },
+    {
       "id": "a3fb7f4f-b886-43a5-8874-2ebf7907fa0d",
       "name": "Apply answer",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1400,
-        1480
+        1680,
+        1600
       ],
       "parameters": {
         "operation": "executeQuery",
@@ -1816,7 +2238,7 @@
           "queryReplacement": "={{ [(JSON.stringify({ ...$json.answer, wamid: $json.message.wamid })) ?? null] }}"
         }
       },
-      "notes": "One database transaction, with an audit entry.\nGuardrails: audit, idempotent",
+      "notes": "One database transaction, with an audit entry. Checks the person belongs to the site the button is about.\nGuardrails: audit, idempotent, auth",
       "notesInFlow": false,
       "credentials": {
         "postgres": {
@@ -1827,6 +2249,88 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
+    },
+    {
+      "id": "4d80be86-8662-4f31-8f09-a60ba32e9292",
+      "name": "Paper to re-read?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1960,
+        1600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!($json.result && $json.result.reread) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "A paper filed by a button has not been read yet.",
+      "notesInFlow": false
+    },
+    {
+      "id": "c6c7a7f7-dcd8-444e-8e2a-d61f07182d76",
+      "name": "Re-read the paper",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        1560
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob10ReadPpr",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 10 Read and check a paper",
+          "cachedResultUrl": "/workflow/veraMob10ReadPpr"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "evidence_id": "={{ $json.result.evidence_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "evidence_id",
+              "displayName": "evidence_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "WF-10 reads it and runs the paper checks, as if it had been bound at once.",
+      "notesInFlow": false
     },
     {
       "id": "99dace82-ec5e-4182-8e97-c1453796bdf6",
@@ -2435,6 +2939,75 @@
       "main": [
         [
           {
+            "node": "Closes an open item?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Closes an open item?": {
+      "main": [
+        [
+          {
+            "node": "Propose closure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Propose closure": {
+      "main": [
+        [
+          {
+            "node": "Waiting for the engineer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Waiting for the engineer?": {
+      "main": [
+        [
+          {
+            "node": "Build closure ask",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build closure ask": {
+      "main": [
+        [
+          {
+            "node": "Ask engineer to close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask engineer to close": {
+      "main": [
+        [
+          {
             "node": "Mark done",
             "type": "main",
             "index": 0
@@ -2591,17 +3164,6 @@
         ]
       ]
     },
-    "Apply answer": {
-      "main": [
-        [
-          {
-            "node": "Mark done",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Save location pin": {
       "main": [
         [
@@ -2639,7 +3201,7 @@
       "main": [
         [
           {
-            "node": "Apply answer",
+            "node": "\"Show me\" tapped?",
             "type": "main",
             "index": 0
           }
@@ -2647,6 +3209,104 @@
         [
           {
             "node": "Build \"what we accept\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\"Show me\" tapped?": {
+      "main": [
+        [
+          {
+            "node": "Release held messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apply answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Release held messages": {
+      "main": [
+        [
+          {
+            "node": "Anything held?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anything held?": {
+      "main": [
+        [
+          {
+            "node": "Send held message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send held message": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply answer": {
+      "main": [
+        [
+          {
+            "node": "Paper to re-read?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paper to re-read?": {
+      "main": [
+        [
+          {
+            "node": "Re-read the paper",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-read the paper": {
+      "main": [
+        [
+          {
+            "node": "Mark done",
             "type": "main",
             "index": 0
           }

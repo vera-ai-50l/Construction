@@ -156,6 +156,21 @@
               "fieldLabel": "Engineer phone (WhatsApp)",
               "fieldType": "text",
               "requiredField": true
+            },
+            {
+              "fieldLabel": "Shadow mode: a person confirms every AI filing",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "yes"
+                  },
+                  {
+                    "option": "no"
+                  }
+                ]
+              }
             }
           ]
         },
@@ -176,7 +191,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Why Code: maps the form's labels to field names (one node instead of a long Set).\nconst f = $input.item.json;\nconst k = { 'Project': 'project', 'Package': 'package', 'Contractor (legal name)': 'contractor_name', 'Other spellings of the contractor name': 'contractor_aliases',\n  'Site address': 'site_address', 'Address words that must appear on papers': 'site_keywords', 'Work start date': 'start_date', 'Engineer visit date': 'visit_date',\n  'Contract end date': 'contract_end', 'Contract value (₹)': 'contract_value_inr', 'Planned peak labour': 'peak_workers', 'Concrete': 'concrete',\n  'Tower crane / hoist at site': 'lifting', 'Creche needed': 'creche', 'Excavation at start': 'excavation',\n  'Contractor phone (WhatsApp)': 'contractor_phone', 'Engineer phone (WhatsApp)': 'engineer_phone' };\nconst out = {};\nfor (const [label, key] of Object.entries(k)) out[key] = f[label] == null ? '' : f[label];\nreturn { json: out };"
+        "jsCode": "// Why Code: maps the form's labels to field names (one node instead of a long Set).\nconst f = $input.item.json;\nconst k = { 'Project': 'project', 'Package': 'package', 'Contractor (legal name)': 'contractor_name', 'Other spellings of the contractor name': 'contractor_aliases',\n  'Site address': 'site_address', 'Address words that must appear on papers': 'site_keywords', 'Work start date': 'start_date', 'Engineer visit date': 'visit_date',\n  'Contract end date': 'contract_end', 'Contract value (₹)': 'contract_value_inr', 'Planned peak labour': 'peak_workers', 'Concrete': 'concrete',\n  'Tower crane / hoist at site': 'lifting', 'Creche needed': 'creche', 'Excavation at start': 'excavation',\n  'Contractor phone (WhatsApp)': 'contractor_phone', 'Engineer phone (WhatsApp)': 'engineer_phone', 'Shadow mode: a person confirms every AI filing': 'shadow' };\nconst out = {};\nfor (const [label, key] of Object.entries(k)) out[key] = f[label] == null ? '' : f[label];\nreturn { json: out };"
       },
       "notes": "Labels → field names.",
       "notesInFlow": false
@@ -192,7 +207,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Check the form: generated from n8n/mobilise/logic.mjs validateSetup. Edit there, then rebuild.\nconst __fn = function validateSetup(input) {\n  const f = input\n  const errors = []\n  const day = (s) => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || ''))\n  const phone = (s) => /^\\d{10,15}$/.test(String(s || '').replace(/\\D/g, ''))\n  if (!f.project) errors.push('Project name is needed')\n  if (!f.contractor_name) errors.push('Contractor name is needed')\n  if (!day(f.start_date) || !day(f.visit_date) || !day(f.contract_end)) errors.push('Dates must be YYYY-MM-DD')\n  if (day(f.visit_date) && day(f.start_date) && f.visit_date > f.start_date) errors.push('Visit must be on or before the start date')\n  if (!(Number(f.contract_value_inr) > 0)) errors.push('Contract value must be a number in rupees')\n  if (!(Number(f.peak_workers) > 0)) errors.push('Planned peak labour must be a number')\n  if (!phone(f.contractor_phone)) errors.push('Contractor phone must have country code, e.g. 9198xxxxxxxx')\n  if (!phone(f.engineer_phone)) errors.push('Engineer phone must have country code')\n  if (!['plant', 'rmc'].includes(f.concrete)) errors.push('Concrete must be \"plant\" or \"rmc\"')\n  const list = (s) => String(s || '').split(/[,;\\n]/).map((x) => x.trim()).filter(Boolean)\n  return {\n    ...input, valid: errors.length === 0, errors,\n    clean: {\n      project: String(f.project || '').trim(), package: String(f.package || '').trim(),\n      contractor_name: String(f.contractor_name || '').trim(), contractor_aliases: list(f.contractor_aliases),\n      site_address: String(f.site_address || '').trim(), site_keywords: list(f.site_keywords),\n      start_date: f.start_date, visit_date: f.visit_date, contract_end: f.contract_end,\n      contract_value_inr: Number(f.contract_value_inr), peak_workers: Number(f.peak_workers),\n      flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)) },\n      contractor_phone: String(f.contractor_phone || '').replace(/\\D/g, ''), engineer_phone: String(f.engineer_phone || '').replace(/\\D/g, ''),\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Check the form: generated from n8n/mobilise/logic.mjs validateSetup. Edit there, then rebuild.\nconst __fn = function validateSetup(input) {\n  const f = input\n  const errors = []\n  const day = (s) => /^\\d{4}-\\d{2}-\\d{2}$/.test(String(s || ''))\n  const phone = (s) => /^\\d{10,15}$/.test(String(s || '').replace(/\\D/g, ''))\n  if (!f.project) errors.push('Project name is needed')\n  if (!f.contractor_name) errors.push('Contractor name is needed')\n  if (!day(f.start_date) || !day(f.visit_date) || !day(f.contract_end)) errors.push('Dates must be YYYY-MM-DD')\n  if (day(f.visit_date) && day(f.start_date) && f.visit_date > f.start_date) errors.push('Visit must be on or before the start date')\n  if (!(Number(f.contract_value_inr) > 0)) errors.push('Contract value must be a number in rupees')\n  if (!(Number(f.peak_workers) > 0)) errors.push('Planned peak labour must be a number')\n  if (!phone(f.contractor_phone)) errors.push('Contractor phone must have country code, e.g. 9198xxxxxxxx')\n  if (!phone(f.engineer_phone)) errors.push('Engineer phone must have country code')\n  if (!['plant', 'rmc'].includes(f.concrete)) errors.push('Concrete must be \"plant\" or \"rmc\"')\n  const list = (s) => String(s || '').split(/[,;\\n]/).map((x) => x.trim()).filter(Boolean)\n  return {\n    ...input, valid: errors.length === 0, errors,\n    clean: {\n      project: String(f.project || '').trim(), package: String(f.package || '').trim(),\n      contractor_name: String(f.contractor_name || '').trim(), contractor_aliases: list(f.contractor_aliases),\n      site_address: String(f.site_address || '').trim(), site_keywords: list(f.site_keywords),\n      start_date: f.start_date, visit_date: f.visit_date, contract_end: f.contract_end,\n      contract_value_inr: Number(f.contract_value_inr), peak_workers: Number(f.peak_workers),\n      flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)), shadow: !/^(no|false|0)$/i.test(String(f.shadow == null ? 'yes' : f.shadow).trim()) },\n      contractor_phone: String(f.contractor_phone || '').replace(/\\D/g, ''), engineer_phone: String(f.engineer_phone || '').replace(/\\D/g, ''),\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "Dates in order, numbers are numbers, phones have country code.\nGuardrails: schema",
       "notesInFlow": false

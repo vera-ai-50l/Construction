@@ -261,7 +261,7 @@
           "mappingMode": "defineBelow",
           "value": {
             "contact_id": "={{ $('Reminder or escalate?').item.json.head_contact_id }}",
-            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "mobilisation_id": "={{ $('Reminder or escalate?').item.json.mobilisation_id }}",
             "kind": "open_item",
             "area": "",
             "line_code": "",

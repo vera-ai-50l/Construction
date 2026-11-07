@@ -1,0 +1,431 @@
+{
+  "id": "veraMob11ShowEvd",
+  "name": "Vera 05 · 11 Show a file with buttons",
+  "nodes": [
+    {
+      "id": "abf5473a-1204-43fb-8075-8a812d16ebf6",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 11 Show a file with buttons\nSends a stored photo or paper to one person with answer buttons: the engineer approving a fixed item, a Vera reviewer filing an item. The file is uploaded to WhatsApp as media, so no public link to evidence ever exists.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "1d138340-e437-4144-8cf9-0b52e671d3f0",
+      "name": "Asked to show",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "contact_id",
+              "type": "number"
+            },
+            {
+              "name": "mobilisation_id",
+              "type": "number"
+            },
+            {
+              "name": "kind",
+              "type": "string"
+            },
+            {
+              "name": "ref",
+              "type": "string"
+            },
+            {
+              "name": "evidence_id",
+              "type": "number"
+            },
+            {
+              "name": "msg",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "notes": "Who, which file, what text and which buttons.",
+      "notesInFlow": false
+    },
+    {
+      "id": "39c0c02b-d9e7-4347-8c95-e0aaee282936",
+      "name": "Has a file?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ Number($json.evidence_id) > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Some review items have no file (a failed download).",
+      "notesInFlow": false
+    },
+    {
+      "id": "c85770f6-16e5-4068-85f2-f98e28441602",
+      "name": "Find the file",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        560,
+        -120
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select id, s3_key, coalesce(mime, '') as mime, kind from evidence where id = $1;",
+        "options": {
+          "queryReplacement": "={{ [($json.evidence_id) ?? null] }}"
+        }
+      },
+      "notes": "Where it is stored.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "9e81b56b-c968-4780-87e1-32f93723ff3b",
+      "name": "Get the file",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 2,
+      "position": [
+        840,
+        -120
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "bucketName": "={{ $env.VERA_S3_BUCKET }}",
+        "fileKey": "={{ $json.s3_key }}",
+        "binaryPropertyName": "data"
+      },
+      "notes": "From the evidence bucket.\nGuardrails: retry, error-out",
+      "notesInFlow": false,
+      "credentials": {
+        "aws": {
+          "id": "veraS3Evidence",
+          "name": "Vera evidence bucket (ap-south-1)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "9a36fc71-2e87-4d1a-82fb-fcdf5d2fec1e",
+      "name": "Upload to WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/{{ $env.VERA_WA_PHONE_NUMBER_ID }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "type",
+              "value": "={{ $('Find the file').item.json.mime || 'image/jpeg' }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "notes": "Media id, valid 30 days. Nothing public.\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraWaToken001",
+          "name": "WhatsApp Cloud API token (Authorization: Bearer …)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "fe16cb2e-f02d-429c-8720-4a1c62764f95",
+      "name": "Build the message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build the message: generated from n8n/mobilise/logic.mjs buildEvidenceMessage. Edit there, then rebuild.\nconst __fn = function buildEvidenceMessage(input) {\n  const m = input.msg || {}\n  const short = (s, n) => (String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s))\n  const buttons = (m.buttons || []).slice(0, 10)\n  const text = short(m.text || '', 1000) || 'Please choose.'\n  const isPdf = /pdf/.test(String(input.media_mime || '')) || input.media_kind === 'document'\n  const media = input.media_id ? (isPdf ? { type: 'document', document: { id: input.media_id, filename: m.filename || 'evidence.pdf' } } : { type: 'image', image: { id: input.media_id } }) : null\n  const base = { contact_id: input.contact_id, mobilisation_id: input.mobilisation_id, kind: input.kind, ref: input.ref }\n  const wrap = (body) => ({ ...base, request: { body, summary: m.summary || 'a message' } })\n  if (!buttons.length) {\n    if (!media) return [wrap({ type: 'text', text: { preview_url: false, body: text } })]\n    return [wrap(media.type === 'image' ? { type: 'image', image: { ...media.image, caption: text } } : { type: 'document', document: { ...media.document, caption: text } })]\n  }\n  if (buttons.length <= 3) {\n    return [wrap({ type: 'interactive', interactive: { type: 'button', ...(media ? { header: media } : {}), body: { text }, action: { buttons: buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: short(b.title, 20) } })) } } })]\n  }\n  const out = []\n  if (media) out.push(wrap(media.type === 'image' ? { type: 'image', image: { ...media.image, caption: text } } : { type: 'document', document: { ...media.document, caption: text } }))\n  out.push(wrap({\n    type: 'interactive',\n    interactive: {\n      type: 'list', body: { text: media ? 'Choose for the file above.' : text },\n      action: { button: 'Choose', sections: [{ title: short(m.list_title || 'Choose one', 24), rows: buttons.map((b) => ({ id: b.id, title: short(b.title, 24), description: short(b.description || '', 72) })) }] },\n    },\n  }))\n  return out\n};\nconst out = [];\nconst all = $input.all();\nfor (let i = 0; i < all.length; i++) {\n  const item = all[i];\n  let input = { ...item.json };\n  const t = $('Asked to show').first().json; const f = $('Find the file').isExecuted ? $('Find the file').first().json : {}; input = { ...t, media_id: typeof input.id === 'string' && $('Upload to WhatsApp').isExecuted ? input.id : '', media_mime: f.mime || '', media_kind: f.kind || '' };\n  for (const j of [].concat(__fn(input))) out.push({ json: j });\n}\nreturn out;"
+      },
+      "notes": "Picture + up to 3 buttons, or the picture then a list. If the file could not be fetched, the text and buttons still go.",
+      "notesInFlow": false
+    },
+    {
+      "id": "4f4772aa-f542-4039-88b1-3c6a5fef6b18",
+      "name": "Send it",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob09SendWa1",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 09 Send on WhatsApp",
+          "cachedResultUrl": "/workflow/veraMob09SendWa1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "={{ $json.kind }}",
+            "area": "",
+            "line_code": "",
+            "ref": "={{ $json.ref }}",
+            "request": "={{ $json.request }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "area",
+              "displayName": "area",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "line_code",
+              "displayName": "line_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "request",
+              "displayName": "request",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "notes": "Through WF-09: outside the 24-hour window it is held behind a \"Show me\" template.\nGuardrails: window",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "Asked to show": {
+      "main": [
+        [
+          {
+            "node": "Has a file?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a file?": {
+      "main": [
+        [
+          {
+            "node": "Find the file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find the file": {
+      "main": [
+        [
+          {
+            "node": "Get the file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the file": {
+      "main": [
+        [
+          {
+            "node": "Upload to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Build the message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the message": {
+      "main": [
+        [
+          {
+            "node": "Send it",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

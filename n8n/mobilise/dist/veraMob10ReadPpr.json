@@ -1,0 +1,502 @@
+{
+  "id": "veraMob10ReadPpr",
+  "name": "Vera 05 · 10 Read and check a paper",
+  "nodes": [
+    {
+      "id": "8f5ec55b-be54-4bfb-81f8-b3ee13601d85",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 10 Read and check a paper\nA paper filed by a button tap (sender or reviewer) has not been read yet. This reads it from the bucket and runs the same paper checks as WF-02, so no paper is accepted without them.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "05c803b1-416c-43b5-8f2d-0bc76685d2b2",
+      "name": "Paper filed by a button",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "evidence_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "notes": "From WF-02 after a confirm or review answer.",
+      "notesInFlow": false
+    },
+    {
+      "id": "82199839-31bc-4882-8cd0-f5cd725f71d2",
+      "name": "Load the paper",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select e.id as evidence_id, e.mobilisation_id, e.s3_key, e.mime, e.created_by as contact_id, e.message_id, row_to_json(mo) as mob,\n  json_build_object('code', l.code, 'text', l.text, 'docType', l.doc_type, 'rules', l.rules, 'evidence', l.evidence) as line,\n  json_build_object('line', l.code, 'method', e.bind_method) as binding,\n  json_build_object('type', case when e.kind = 'document' then 'document' else 'image' end) as message\nfrom evidence e join mobilisations mo on mo.id = e.mobilisation_id join lines l on l.mobilisation_id = e.mobilisation_id and l.code = e.line_code\nwhere e.id = $1 and e.s3_key is not null;",
+        "options": {
+          "queryReplacement": "={{ [($json.evidence_id) ?? null] }}"
+        }
+      },
+      "notes": "The file, its line and the site facts.\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "24e54c2a-5a21-4611-80be-eaf8d46b7e52",
+      "name": "Get it from the bucket",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "bucketName": "={{ $env.VERA_S3_BUCKET }}",
+        "fileKey": "={{ $json.s3_key }}",
+        "binaryPropertyName": "data"
+      },
+      "notes": "The stored copy, by its hash key.\nGuardrails: retry, error-out",
+      "notesInFlow": false,
+      "credentials": {
+        "aws": {
+          "id": "veraS3Evidence",
+          "name": "Vera evidence bucket (ap-south-1)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "b8700ead-5125-4c8c-8419-c4e084bd59bd",
+      "name": "File with its details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: the S3 node returns the file; this puts the line and site facts back with it.\nconst item = $input.item;\nreturn { json: $('Load the paper').item.json, binary: item.binary };"
+      },
+      "notes": "One item: file + line + site.",
+      "notesInFlow": false
+    },
+    {
+      "id": "48b011f9-9f14-4dc9-8c37-cacfece96219",
+      "name": "Build extract request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build extract request: generated from n8n/mobilise/logic.mjs buildExtractRequest. Edit there, then rebuild.\nconst __fn = function buildExtractRequest(input) {\n  const media = input.__media || {}\n  const block = media.mime === 'application/pdf'\n    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: media.b64 } }\n    : { type: 'image', source: { type: 'base64', media_type: media.mime || 'image/jpeg', data: media.b64 } }\n  const str = { type: ['string', 'null'] }\n  const num = { type: ['number', 'null'] }\n  const schema = {\n    type: 'object', additionalProperties: false,\n    required: ['doc_type', 'holder_name', 'site_address', 'document_number', 'issuer', 'issue_date', 'valid_from', 'valid_to', 'next_due_date',\n      'workers_covered', 'sum_insured_inr', 'principal_named', 'officers_count', 'serial_number', 'contains_unmasked_id', 'readable'],\n    properties: {\n      doc_type: { type: 'string' }, holder_name: str, site_address: str, document_number: str, issuer: str,\n      issue_date: str, valid_from: str, valid_to: str, next_due_date: str,\n      workers_covered: num, sum_insured_inr: num, principal_named: { type: ['boolean', 'null'] }, officers_count: num,\n      serial_number: str, contains_unmasked_id: { type: 'boolean' }, readable: { type: 'boolean' },\n    },\n  }\n  return {\n    ...input,\n    __media: undefined,\n    request: {\n      model: input.model || 'claude-opus-5-5',\n      max_tokens: 2048,\n      fallbacks: 'default',\n      output_config: { effort: 'low', format: { type: 'json_schema', schema } },\n      system: [\n        'You read Indian construction compliance papers: registrations, labour licences, insurance policies, calibration and test certificates, consent orders.',\n        'Copy fields exactly as printed. Dates as YYYY-MM-DD. Amounts in rupees as plain numbers (1.5 crore = 15000000).',\n        'If a field is not printed or you cannot read it, return null. Never guess or infer a value.',\n        'principal_named: true only if the developer / principal / employer is named as an insured party.',\n        'contains_unmasked_id: true if a full 12-digit Aadhaar number is visible.',\n      ].join('\\n'),\n      messages: [{ role: 'user', content: [block, { type: 'text', text: 'Paper expected for line ' + input.line.code + ': ' + input.line.text + '. Expected type: ' + input.line.docType + '.' }] }],\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nif (item.binary && item.binary.data && !(input.message && input.message.type === 'audio')) {\n  const buf = await this.helpers.getBinaryDataBuffer($itemIndex, 'data');\n  input.__media = { b64: buf.toString('base64'), mime: String(item.binary.data.mimeType || '').split(';')[0] };\n}\n\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Same request as WF-02: copy the fields exactly, null when not printed.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "abf56c1f-359b-4964-84c3-fc3833d042ca",
+      "name": "Claude: read the paper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "notes": "Name, address, dates, workers covered, sum insured…\nGuardrails: retry, error-out, timeout",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraAnthropic01",
+          "name": "Anthropic API key (x-api-key)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4ac7e681-f736-4810-890c-60a02f55f34b",
+      "name": "Parse the fields",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: read the structured answer, and refuse anything that is not one.\nconst item = $input.item;\nconst res = item.json;\nconst ctx = $('Build extract request').item.json;\nconst tb = (res.content || []).find((b) => b.type === 'text');\nlet fields = null;\ntry { fields = res.stop_reason === 'end_turn' ? JSON.parse(tb.text) : null; } catch (e) { fields = null; }\nreturn { json: { ...ctx, request: undefined, fields: fields || { readable: false }, fields_ok: !!fields } };"
+      },
+      "notes": "Anything that is not a clean answer counts as unread.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "dd99daaf-a19e-4f3d-84a4-9fd9d7c91d85",
+      "name": "Check paper rules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check paper rules: generated from n8n/mobilise/logic.mjs checkPaper. Edit there, then rebuild.\nconst __fn = function checkPaper(input) {\n  const line = input.line || {}\n  const f = input.fields || {}\n  const mob = input.mob || {}\n  const P = Object.assign({ calibrationMaxAgeDays: 180, coverBeyondStartDays: 90, workersPerSafetyOfficer: 500 }, input.params || {})\n  const day = (s) => (typeof s === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? Date.parse(s + 'T00:00:00Z') : NaN)\n  const has = (v) => v !== null && v !== undefined && v !== '' && !(typeof v === 'number' && !Number.isFinite(v))\n  const addDays = (t, n) => t + n * 86400000\n  const iso = (t) => new Date(t).toISOString().slice(0, 10)\n  const norm = (s) => String(s || '').toLowerCase().replace(/\\b(private|pvt|limited|ltd|llp|co|company|and|&|m\\/s|the)\\b/g, ' ').replace(/[^a-z0-9ऀ-ॿ]+/g, ' ').trim()\n  const nameOk = (name) => {\n    const want = [mob.contractor_name].concat(mob.contractor_aliases || []).map(norm).filter(Boolean)\n    const got = norm(name)\n    return want.some((w) => {\n      if (!w || !got) return false\n      if (got.includes(w) || w.includes(got)) return true\n      const a = new Set(w.split(' ')), b = got.split(' ')\n      return b.filter((x) => a.has(x)).length / Math.max(a.size, 1) >= 0.6\n    })\n  }\n  const start = day(mob.start_date)\n  const visit = day(mob.visit_date || mob.start_date)\n  const checks = []\n  const need = (rule, v, label) => (has(v) ? true : (checks.push({ rule, result: 'missing', note: label + ' not printed or not read' }), false))\n  const pass = (rule, ok, note) => checks.push({ rule, result: ok ? 'pass' : 'fail', note })\n\n  if (f.readable === false) checks.push({ rule: 'readable', result: 'missing', note: 'Paper could not be read' })\n  if (f.contains_unmasked_id) pass('idMasked', false, 'A full Aadhaar number is visible. Ask for a masked copy and delete this one.')\n  if (line.docType && f.doc_type && f.doc_type !== line.docType) checks.push({ rule: 'docType', result: 'missing', note: 'Looks like ' + f.doc_type + ', expected ' + line.docType })\n\n  for (const rule of line.rules || []) {\n    if (rule === 'nameMatchesContractor') {\n      if (need(rule, f.holder_name, 'Name')) pass(rule, nameOk(f.holder_name), 'Name on paper: \"' + f.holder_name + '\"')\n    } else if (rule === 'siteMatches') {\n      if (need(rule, f.site_address, 'Site address')) {\n        const a = norm(f.site_address)\n        const keys = (mob.site_keywords || []).map(norm).filter(Boolean)\n        pass(rule, keys.some((k) => a.includes(k)), 'Address on paper: \"' + f.site_address + '\"')\n      }\n    } else if (rule === 'validOnStart') {\n      if (need(rule, f.valid_to, 'Valid-to date')) {\n        const from = has(f.valid_from) ? day(f.valid_from) : -Infinity\n        pass(rule, from <= start && day(f.valid_to) >= start, 'Valid ' + (f.valid_from || '?') + ' to ' + f.valid_to + '; start ' + mob.start_date)\n      }\n    } else if (rule === 'validBeyondStart') {\n      if (need(rule, f.valid_to, 'Valid-to date')) {\n        const until = addDays(start, P.coverBeyondStartDays)\n        pass(rule, day(f.valid_to) >= until, 'Valid to ' + f.valid_to + '; must cover at least ' + iso(until))\n      }\n    } else if (rule === 'coversPeakWorkers') {\n      if (need(rule, f.workers_covered, 'Number of workers')) pass(rule, Number(f.workers_covered) >= Number(mob.peak_workers), f.workers_covered + ' workers covered; planned peak ' + mob.peak_workers)\n    } else if (rule === 'sumInsuredCoversContract') {\n      if (need(rule, f.sum_insured_inr, 'Sum insured')) pass(rule, Number(f.sum_insured_inr) >= Number(mob.contract_value_inr), 'Sum insured ₹' + Number(f.sum_insured_inr).toLocaleString('en-IN') + '; contract ₹' + Number(mob.contract_value_inr).toLocaleString('en-IN'))\n    } else if (rule === 'principalNamed') {\n      if (need(rule, f.principal_named, 'Insured parties')) pass(rule, f.principal_named === true, f.principal_named ? 'Developer named as principal' : 'Developer not named as an insured party')\n    } else if (rule === 'calibrationCurrent') {\n      if (has(f.next_due_date)) pass(rule, day(f.next_due_date) >= visit, 'Next calibration due ' + f.next_due_date)\n      else if (need(rule, f.issue_date, 'Calibration date')) pass(rule, day(f.issue_date) >= addDays(visit, -P.calibrationMaxAgeDays), 'Calibrated ' + f.issue_date + '; limit ' + P.calibrationMaxAgeDays + ' days')\n    } else if (rule === 'safetyOfficersEnough') {\n      const needN = Math.max(1, Math.ceil(Number(mob.peak_workers || 0) / P.workersPerSafetyOfficer))\n      if (need(rule, f.officers_count, 'Number of safety officers')) pass(rule, Number(f.officers_count) >= needN, f.officers_count + ' named; ' + needN + ' needed for ' + mob.peak_workers + ' workers')\n    }\n  }\n  const failed = checks.filter((c) => c.result === 'fail')\n  const missing = checks.filter((c) => c.result === 'missing')\n  const status = failed.length ? 'rejected' : missing.length ? 'review' : 'accepted'\n  return { ...input, paper: { status, checks, expires_on: has(f.valid_to) ? f.valid_to : has(f.next_due_date) ? f.next_due_date : null } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.params = {\"calibrationMaxAgeDays\":180,\"coverBeyondStartDays\":90,\"workersPerToilet\":25,\"workersPerSafetyOfficer\":500,\"cementStackMaxBags\":10,\"geofence\":{\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10}};\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Plain code, same rules as WF-02. Each check says why.\nGuardrails: audit",
+      "notesInFlow": false
+    },
+    {
+      "id": "e106b81f-b0f1-4bd1-8351-2a0863582066",
+      "name": "Make reply fragment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Make reply fragment: generated from n8n/mobilise/logic.mjs makeFragment. Edit there, then rebuild.\nconst __fn = function makeFragment(input) {\n  const p = input.paper || {}\n  const line = (input.binding && input.binding.line) || (typeof input.line === 'string' ? input.line : (input.line || {}).code)\n  const kind = p.status === 'accepted' ? 'accepted' : p.status === 'rejected' ? 'rejected' : p.status === 'review' ? 'review' : 'filed'\n  const reason = (p.checks || []).filter((c) => c.result !== 'pass').map((c) => c.note).join('; ')\n  return { ...input, saved_line: line, fragment: { kind, line, reason, photo: (input.message || {}).type === 'image' } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Accepted / sent back (with why) / being checked.",
+      "notesInFlow": false
+    },
+    {
+      "id": "5702e63c-b794-4583-88b9-44c2e1ab9166",
+      "name": "Save the checks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with e as (\n  update evidence set fields = $2::jsonb, checks = $3::jsonb where id = $1 returning mobilisation_id, line_code, message_id\n), l as (\n  update lines set status = $4, reason = nullif($5, ''), expires_on = nullif($6, '')::date, status_at = now()\n  from e where lines.mobilisation_id = e.mobilisation_id and lines.code = e.line_code and lines.status not in ('ok', 'not_ok', 'na', 'accepted') returning lines.code\n), q as (\n  insert into review_queue (mobilisation_id, message_id, evidence_id, reason)\n  select e.mobilisation_id, e.message_id, $1, 'Paper needs a person: ' || coalesce(nullif($5, ''), 'check it') from e where $4 = 'review'\n), a as (\n  insert into audit_log (actor, action, entity, entity_id, detail) select 'ai', 'check_paper', 'evidence', $1::text, json_build_object('status', $4) from e\n) select (select code from l) as line_updated;",
+        "options": {
+          "queryReplacement": "={{ [($json.evidence_id) ?? null, (JSON.stringify($json.fields || null)) ?? null, (JSON.stringify(($json.paper || {}).checks || null)) ?? null, (($json.paper || {}).status || 'review') ?? null, ($json.fragment.reason) ?? null, (($json.paper || {}).expires_on || '') ?? null] }}"
+        }
+      },
+      "notes": "Checks on the evidence, status on the line, a review item if a person must look. Never overwrites the engineer's decision.\nGuardrails: audit, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "b953f8bf-d0de-493e-89ec-64680bd1ec00",
+      "name": "Sender known?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3080,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ !!$('Make reply fragment').item.json.contact_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Files sent by a contractor get a reply; nothing to reply to otherwise.",
+      "notesInFlow": false
+    },
+    {
+      "id": "5c5c39f2-3928-4fa6-8929-a986349afbac",
+      "name": "Queue the reply",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3360,
+        -100
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into reply_queue (mobilisation_id, contact_id, fragment) values ($1, $2, $3::jsonb) returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Make reply fragment').item.json.mobilisation_id) ?? null, ($('Make reply fragment').item.json.contact_id) ?? null, (JSON.stringify($('Make reply fragment').item.json.fragment)) ?? null] }}"
+        }
+      },
+      "notes": "Goes out with the next burst reply (WF-05).\nGuardrails: retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "0e680fb5-c26f-4c67-8b1a-2456a6b765cd",
+      "name": "Send to review queue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1960,
+        280
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into review_queue (mobilisation_id, evidence_id, reason) select mobilisation_id, id, 'Could not re-read the paper: ' || $2 from evidence where id = $1 returning id;",
+        "options": {
+          "queryReplacement": "={{ [($('Paper filed by a button').item.json.evidence_id) ?? null, (($json.error && $json.error.message) || 'step failed') ?? null] }}"
+        }
+      },
+      "notes": "Bucket or AI failed: a person checks the paper. It stays filed on its line.\nGuardrails: human",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Paper filed by a button": {
+      "main": [
+        [
+          {
+            "node": "Load the paper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load the paper": {
+      "main": [
+        [
+          {
+            "node": "Get it from the bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get it from the bucket": {
+      "main": [
+        [
+          {
+            "node": "File with its details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File with its details": {
+      "main": [
+        [
+          {
+            "node": "Build extract request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build extract request": {
+      "main": [
+        [
+          {
+            "node": "Claude: read the paper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: read the paper": {
+      "main": [
+        [
+          {
+            "node": "Parse the fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to review queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse the fields": {
+      "main": [
+        [
+          {
+            "node": "Check paper rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check paper rules": {
+      "main": [
+        [
+          {
+            "node": "Make reply fragment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make reply fragment": {
+      "main": [
+        [
+          {
+            "node": "Save the checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the checks": {
+      "main": [
+        [
+          {
+            "node": "Sender known?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender known?": {
+      "main": [
+        [
+          {
+            "node": "Queue the reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

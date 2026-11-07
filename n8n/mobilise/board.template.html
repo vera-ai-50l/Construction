@@ -262,7 +262,7 @@ const STORY = [
         <div class="step vera"><b>7 PM daily (WF-04)</b>Gap list to contractor; "ready to travel?" line to engineer</div>
         <div class="step vera"><b>Visit day (WF-03)</b>Tap line → photo → status → voice. GPS on each photo. Works offline.</div>
         <div class="step vera"><b>Evening (WF-06)</b>Report drafted, PDF on WhatsApp, Approve / With conditions / Hold</div>
-        <div class="step vera"><b>After (WF-07)</b>Open items with due dates; closed on photos; overdue criticals escalated</div>
+        <div class="step vera"><b>After (WF-07, 11)</b>Open items with due dates. Contractor replies with a photo; engineer taps Accept to close it. Overdue criticals escalated</div>
       </div>
     </div>` },
 
@@ -317,10 +317,10 @@ const STORY = [
         <h3>How it works</h3>
         <div class="scroll"><table class="t">
           <tr><td><b>Tool</b></td><td>The walk page uses the phone browser's location service (high-accuracy mode). It keeps reading for up to 20 s until the error is under 15 m, then stores latitude, longitude, the phone's own error radius in metres (95%), and the time.</td></tr>
-          <tr><td><b>Areas</b></td><td>Drawn once on a satellite map, or the contractor sends a location pin as a reply to each area message at T−3 (Vera makes a 30 m circle). The engineer corrects them on the day.</td></tr>
+          <tr><td><b>Areas</b></td><td>At T−3 the contractor sends a location pin as a reply to each area message (Vera makes a 30 m circle). On the day the engineer replaces it from the walk page: stand in the area (10 s of fixes averaged into a circle) or walk its corners. Fixes weaker than ±30 m are refused.</td></tr>
           <tr><td><b>Each photo</b></td><td><span class="pill ok">in</span> <span class="pill info">edge</span> <span class="pill warn">out</span> <span class="pill bad">unknown</span>. Edge means inside once the phone's own error is allowed for. A weak fix gives unknown, never out. The photo is saved whatever the result.</td></tr>
           <tr><td><b>Walked or not</b></td><td>The page sends a point every 20 s while open. An area counts as walked only with fixes inside it. An area with no record makes the report "not ready" until the engineer explains.</td></tr>
-          <tr><td><b>Limits</b></td><td>A web page cannot detect fake-GPS apps. Cross-checks: the photo itself, server time vs phone time, a continuous trail. For a room or floor (site lab, basement store), an optional QR sticker at the door, scanned by the same page.</td></tr>
+          <tr><td><b>Limits</b></td><td>A web page cannot detect fake-GPS apps. Cross-checks: the photo itself, server time vs phone time, a continuous trail. For a room or floor (site lab, basement store, upper slab): a signed QR sticker at the door. Scanning it with the phone camera opens the walk page and records the scan; photos in the next 15 minutes count as in that area. A sticker from another site, or an edited code, is refused. A photo of a sticker could still be scanned elsewhere, so the scan's GPS and time are kept.</td></tr>
         </table></div>
       </div>
     </div>` },
@@ -340,8 +340,10 @@ const STORY = [
         <div class="sticky o"><h4>How the AI step stays safe</h4><ul>
           <li>AI files; it never says a line is OK. Site photos are judged by the engineer on the day.</li>
           <li>Papers: AI copies the fields, code checks them, every check says why.</li>
-          <li>First two sites in shadow mode: every AI filing confirmed by a person. The threshold is then set so that auto-filed items are at least 98% right.</li>
+          <li>Shadow mode is on by default for a new site (a field on the set-up form): AI never files on its own, every choice goes to the sender as buttons. The <code>ai_accuracy</code> view shows how often AI was right, by confidence band; the auto-file threshold is set from it so auto-filed items are at least 98% right.</li>
           <li>Each photo shows how it was filed. The engineer moves a wrong one with one tap; the move is logged and feeds the next accuracy check.</li>
+          <li>Anything AI cannot place goes to a Vera reviewer on WhatsApp, with the photo and one-tap line choices.</li>
+          <li>A paper filed by a button tap is still read and checked (WF-10). No paper is accepted without its checks.</li>
           <li>The same file sent for two lines is stopped by its fingerprint (SHA-256).</li>
           <li>Optional for T−3 photos: a paper slip with today's date and site code in the frame.</li>
         </ul></div>
@@ -370,6 +372,12 @@ const TAIL = [
         ['Full Aadhaar number visible', 'Paper sent back for a masked copy', 'WF-02'],
         ['Contractor upload after the engineer decided', 'Engineer’s decision is never overwritten', 'WF-02'],
         ['More than 24 h since the person last wrote', 'Approved template instead; no template = not sent, logged', 'WF-09'],
+        ['Buttons, a photo or the NOC to send, but their 24 h window is closed', 'One generic template with a "Show me" button; the real message is held and sent when they tap', 'WF-09, 02'],
+        ['A paper is filed by a button tap, not read at once', 'Read and checked from the bucket like any other paper', 'WF-10'],
+        ['An item needs a person', 'Sent to a Vera reviewer on WhatsApp with the file and one-tap answers', 'WF-12, 11'],
+        ['A button is forwarded to someone on another site', 'Refused: every answer checks the person belongs to that site', 'WF-02'],
+        ['A send to the reviewer fails', 'Logged only, so it cannot create another review item (no loop)', 'WF-01'],
+        ['QR sticker code edited, or from another site', 'Refused; nothing recorded', 'WF-03'],
         ['WhatsApp rate limit', 'Wait 30 s, retry up to 3 times, then a person', 'WF-09'],
         ['Number cannot receive WhatsApp', 'Review queue with the error code', 'WF-01, 09'],
         ['No signal on the visit day', 'Captures queue on the phone and resend; a repeated capture is saved once', 'WF-03'],
@@ -377,7 +385,7 @@ const TAIL = [
         ['Forwarded or expired walk link', 'Refused; engineer asks for a new link', 'WF-03'],
         ['Engineer forgets to press Finish', '9 PM safety net drafts the report', 'WF-06'],
         ['AI wording names a line that does not exist, or states a verdict', 'Engineer’s own transcribed words used instead, with a note', 'WF-06'],
-        ['PDF service down', 'Vera ops alerted; report sent by hand', 'WF-06'],
+        ['PDF service down, or the upload to WhatsApp fails', 'Review queue with the reason; report sent by hand', 'WF-06'],
         ['Someone other than the engineer taps Approve', 'Refused: only the engineer’s number can sign', 'WF-02'],
         ['Any workflow crashes', 'Error logged, ops emailed; stuck message to review in 10 min', 'WF-00'],
       ].map(([a, b, c]) => `<tr><td>${a}</td><td>${b}</td><td class="mono">${c}</td></tr>`).join('')}
@@ -388,12 +396,12 @@ const TAIL = [
     <div class="row" style="margin-top:10px">
       <div class="sticky col"><h4>Checklist</h4><ul><li>Your current mobilisation checklist, so the template matches it line for line</li><li>QA / EHS values: calibration age, policy cover after start, toilets per worker, cement stack height</li><li>Which lines are critical for your NOC</li></ul></div>
       <div class="sticky p col tilt-r"><h4>Design</h4><ul><li>Export of the drawing register, to compare with the site register (DR-01)</li><li>Who approves formwork schemes and mix designs, so their approval is a named check</li></ul></div>
-      <div class="sticky g col"><h4>WhatsApp and data</h4><ul><li>Vera's number or yours</li><li>Where evidence is kept: Vera's Mumbai bucket, or your own storage</li><li>How long to keep it; who may see worker lists</li></ul></div>
-      <div class="sticky b col tilt-l"><h4>Pilot</h4><ul><li>One site with a visit 5 or more days away</li><li>Engineer and contractor phone numbers</li><li>First two sites in shadow mode (every AI filing checked)</li></ul></div>
+      <div class="sticky g col"><h4>WhatsApp and data</h4><ul><li>Vera's number or yours</li><li>Who at Vera reviews items (their WhatsApp numbers)</li><li>Where evidence is kept: Vera's Mumbai bucket, or your own storage</li><li>How long to keep it; who may see worker lists</li></ul></div>
+      <div class="sticky b col tilt-l"><h4>Pilot</h4><ul><li>One site with a visit 5 or more days away</li><li>Engineer and contractor phone numbers</li><li>First two sites in shadow mode (every AI filing checked)</li><li>Rooms and floors that need a QR sticker</li></ul></div>
     </div>` },
 ];
 
-// overview of the 10 workflows (positions in board px)
+// overview of the 13 workflows (positions in board px)
 const OV = [
   { a: 'Engineer / planning', d: 'fills the site form', x: 0, y: 0 },
   { w: 'veraMob08SetupMb', id: 'WF-08', x: 250, y: 0 },
@@ -401,15 +409,18 @@ const OV = [
   { a: 'Contractor on WhatsApp', d: 'papers, photos, voice, buttons', x: 750, y: 0 },
   { w: 'veraMob01Inbound', id: 'WF-01', x: 1000, y: 0 },
   { w: 'veraMob02Process', id: 'WF-02', x: 1250, y: 0 },
-  { w: 'veraMob05Replies', id: 'WF-05', x: 1250, y: 170 },
+  { w: 'veraMob05Replies', id: 'WF-05', x: 1250, y: 140 },
   { w: 'veraMob04GapList', id: 'WF-04', x: 750, y: 220 },
   { a: 'Engineer on the visit day', d: 'walk page on his phone', x: 0, y: 330 },
   { w: 'veraMob03WalkApi', id: 'WF-03', x: 250, y: 330 },
   { w: 'veraMob06NocRprt', id: 'WF-06', x: 500, y: 330 },
   { w: 'veraMob07Closure', id: 'WF-07', x: 750, y: 400 },
-  { w: 'veraMob00Errors1', id: 'WF-00', x: 1250, y: 400 },
+  { w: 'veraMob00Errors1', id: 'WF-00', x: 1250, y: 560 },
+  { w: 'veraMob10ReadPpr', id: 'WF-10', x: 1250, y: 290 },
+  { w: 'veraMob12Reviews', id: 'WF-12', x: 1000, y: 470 },
+  { w: 'veraMob11ShowEvd', id: 'WF-11', x: 750, y: 560 },
 ];
-const OVL = [['Engineer / planning', 'veraMob08SetupMb'], ['veraMob08SetupMb', 'veraMob09SendWa1'], ['veraMob09SendWa1', 'Contractor on WhatsApp'], ['Contractor on WhatsApp', 'veraMob01Inbound'], ['veraMob01Inbound', 'veraMob02Process'], ['veraMob02Process', 'veraMob05Replies'], ['veraMob05Replies', 'veraMob09SendWa1'], ['veraMob04GapList', 'veraMob09SendWa1'], ['Engineer on the visit day', 'veraMob03WalkApi'], ['veraMob03WalkApi', 'veraMob06NocRprt'], ['veraMob06NocRprt', 'veraMob09SendWa1'], ['veraMob06NocRprt', 'veraMob07Closure'], ['veraMob07Closure', 'veraMob09SendWa1']];
+const OVL = [['Engineer / planning', 'veraMob08SetupMb'], ['veraMob08SetupMb', 'veraMob09SendWa1'], ['veraMob09SendWa1', 'Contractor on WhatsApp'], ['Contractor on WhatsApp', 'veraMob01Inbound'], ['veraMob01Inbound', 'veraMob02Process'], ['veraMob02Process', 'veraMob05Replies'], ['veraMob05Replies', 'veraMob09SendWa1'], ['veraMob04GapList', 'veraMob09SendWa1'], ['Engineer on the visit day', 'veraMob03WalkApi'], ['veraMob03WalkApi', 'veraMob06NocRprt'], ['veraMob06NocRprt', 'veraMob09SendWa1'], ['veraMob06NocRprt', 'veraMob07Closure'], ['veraMob07Closure', 'veraMob09SendWa1'], ['veraMob02Process', 'veraMob10ReadPpr'], ['veraMob12Reviews', 'veraMob11ShowEvd'], ['veraMob02Process', 'veraMob11ShowEvd'], ['veraMob11ShowEvd', 'veraMob09SendWa1']];
 
 // ------------------------------------------------------------------ build frames
 const world = document.getElementById('world');
@@ -433,9 +444,9 @@ STORY.forEach(addFrame);
 
 // Workflow overview frame
 {
-  const el = addFrame({ id: 'overview', tag: '7 · The workflows', w: 1520, html: () => `<h2>Ten n8n workflows, one door in, one door out</h2>
+  const el = addFrame({ id: 'overview', tag: '7 · The workflows', w: 1520, html: () => `<h2>Thirteen n8n workflows, one door in, one door out</h2>
     <p>Everything from WhatsApp enters through WF-01. Everything sent goes out through WF-09, which logs each message id so a reply binds to its line. WF-00 watches all of them. Click a box to jump to its node map.</p>
-    <div class="ov" style="height:520px;margin-top:14px"><svg class="edges" id="ovsvg" width="1460" height="520"></svg></div>` })
+    <div class="ov" style="height:680px;margin-top:14px"><svg class="edges" id="ovsvg" width="1460" height="680"></svg></div>` })
   const ov = el.querySelector('.ov');
   const pos = {};
   for (const b of OV) {
@@ -551,8 +562,8 @@ function layoutFrames() {
   y += place(['channel', 'gps', 'tagging'], 0, y) + G + 30;
   y += place(['overview', 'guardrails'], 0, y) + G + 30;
   // node maps: WF-01 and WF-02 full width rows, the rest two per row
-  const order = ['veraMob01Inbound', 'veraMob09SendWa1', 'veraMob02Process', 'veraMob03WalkApi', 'veraMob06NocRprt', 'veraMob04GapList', 'veraMob05Replies', 'veraMob07Closure', 'veraMob08SetupMb', 'veraMob00Errors1'].map((x) => 'wf-' + x);
-  const rows = [[order[0], order[1]], [order[2]], [order[3], order[4]], [order[5], order[6], order[7]], [order[8], order[9], 'next']];
+  const order = ['veraMob01Inbound', 'veraMob09SendWa1', 'veraMob02Process', 'veraMob03WalkApi', 'veraMob06NocRprt', 'veraMob04GapList', 'veraMob05Replies', 'veraMob07Closure', 'veraMob08SetupMb', 'veraMob00Errors1', 'veraMob10ReadPpr', 'veraMob11ShowEvd', 'veraMob12Reviews'].map((x) => 'wf-' + x);
+  const rows = [[order[0], order[1]], [order[2]], [order[3]], [order[4], order[10]], [order[5], order[6], order[7]], [order[11], order[12], order[9]], [order[8], 'next']];
   for (const r of rows) y += place(r, 0, y) + G + 30;
 }
 

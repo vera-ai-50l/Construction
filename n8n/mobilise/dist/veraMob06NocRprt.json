@@ -100,7 +100,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "select mo.id as mobilisation_id, row_to_json(mo) as mob, mo.visit_date::text as visit_date,\n  (select json_agg(json_build_object('code', l.code, 'area', l.area, 'text', l.text, 'severity', l.severity, 'when', l.\"when\", 'status', l.status, 'reason', l.reason, 'remark', l.remark,\n      'photos', (select count(*) from evidence e where e.mobilisation_id = mo.id and e.line_code = l.code)) order by l.code) from lines l where l.mobilisation_id = mo.id) as lines,\n  (select json_agg(json_build_object('line', e.line_code, 'text', e.transcript, 'lang', e.transcript_lang)) from evidence e where e.mobilisation_id = mo.id and e.transcript is not null) as remarks,\n  (select json_agg(json_build_object('lat', t.lat, 'lng', t.lng, 'accuracy', t.accuracy, 'ts', t.ts)) from trail t join walks w on w.id = t.walk_id where w.mobilisation_id = mo.id) as trail,\n  (select json_agg(json_build_object('gps', e.gps)) from evidence e where e.mobilisation_id = mo.id and e.gps is not null) as captures,\n  (select jsonb_agg(jsonb_build_object('area', z.area, 'name', z.name) || z.shape) from zones z where z.mobilisation_id = mo.id) as zones,\n  (select json_agg(distinct l.area) from lines l where l.mobilisation_id = mo.id and l.\"when\" = 'walk') as walk_areas,\n  (select id from contacts where mobilisation_id = mo.id and role = 'engineer' limit 1) as contact_id,\n  (select coalesce(max(version), 0) + 1 from noc_reports where mobilisation_id = mo.id) as version\nfrom mobilisations mo where mo.id = $1;",
+        "query": "select mo.id as mobilisation_id, row_to_json(mo) as mob, mo.visit_date::text as visit_date,\n  (select json_agg(json_build_object('code', l.code, 'area', l.area, 'text', l.text, 'severity', l.severity, 'when', l.\"when\", 'status', l.status, 'reason', l.reason, 'remark', l.remark,\n      'photos', (select count(*) from evidence e where e.mobilisation_id = mo.id and e.line_code = l.code)) order by l.code) from lines l where l.mobilisation_id = mo.id) as lines,\n  (select json_agg(json_build_object('line', e.line_code, 'text', e.transcript, 'lang', e.transcript_lang)) from evidence e where e.mobilisation_id = mo.id and e.transcript is not null) as remarks,\n  (select json_agg(json_build_object('lat', t.lat, 'lng', t.lng, 'accuracy', t.accuracy, 'ts', t.ts)) from trail t join walks w on w.id = t.walk_id where w.mobilisation_id = mo.id) as trail,\n  (select json_agg(json_build_object('gps', e.gps)) from evidence e where e.mobilisation_id = mo.id and e.gps is not null) as captures,\n  (select json_agg(json_build_object('area', s.area, 'ts', s.ts)) from spot_checks s join walks w on w.id = s.walk_id where w.mobilisation_id = mo.id) as spots,\n  (select jsonb_agg(jsonb_build_object('area', z.area, 'name', z.name) || z.shape) from zones z where z.mobilisation_id = mo.id) as zones,\n  (select json_agg(distinct l.area) from lines l where l.mobilisation_id = mo.id and l.\"when\" = 'walk') as walk_areas,\n  (select id from contacts where mobilisation_id = mo.id and role = 'engineer' limit 1) as contact_id,\n  (select coalesce(max(version), 0) + 1 from noc_reports where mobilisation_id = mo.id) as version\nfrom mobilisations mo where mo.id = $1;",
         "options": {
           "queryReplacement": "={{ [($json.mobilisation_id) ?? null] }}"
         }
@@ -128,9 +128,9 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Which areas were walked: generated from n8n/mobilise/logic.mjs walkCoverage. Edit there, then rebuild.\nconst __fn = function walkCoverage(input) {\n  const P = Object.assign({ goodFixM: 15, weakFixM: 40, edgeBufferM: 10 }, input.params || {})\n  const pts = (input.trail || []).concat((input.captures || []).filter((c) => c.gps).map((c) => ({ ...c.gps, photo: true })))\n  const zones = input.zones || []\n  const R = 6371000\n  const near = (p, z) => {\n    const lat0 = p.lat * Math.PI / 180\n    const xy = (lat, lng) => [((lng - p.lng) * Math.PI / 180) * R * Math.cos(lat0), ((lat - p.lat) * Math.PI / 180) * R]\n    if (z.circle) { const c = xy(z.circle.lat, z.circle.lng); return Math.hypot(c[0], c[1]) - z.circle.radius_m <= p.accuracy + P.edgeBufferM }\n    const pts2 = z.polygon.map((q) => xy(q[0], q[1]))\n    let inside = false\n    for (let i = 0, j = pts2.length - 1; i < pts2.length; j = i++) {\n      const [xi, yi] = pts2[i], [xj, yj] = pts2[j]\n      if ((yi > 0) !== (yj > 0) && 0 < ((xj - xi) * (0 - yi)) / (yj - yi) + xi) inside = !inside\n    }\n    if (inside) return true\n    let edge = Infinity\n    for (let i = 0, j = pts2.length - 1; i < pts2.length; j = i++) {\n      const a = pts2[j], b = pts2[i], dx = b[0] - a[0], dy = b[1] - a[1]\n      const t = Math.max(0, Math.min(1, (-a[0] * dx - a[1] * dy) / (dx * dx + dy * dy || 1)))\n      edge = Math.min(edge, Math.hypot(a[0] + t * dx, a[1] + t * dy))\n    }\n    return edge <= p.accuracy + P.edgeBufferM\n  }\n  const areas = (input.walk_areas || [...new Set(zones.map((z) => z.area))]).map((area) => {\n    const zs = zones.filter((z) => z.area === area)\n    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))\n    const mins = hits.length > 1 ? Math.round((Date.parse(hits[hits.length - 1].ts) - Date.parse(hits[0].ts)) / 60000) : 0\n    return {\n      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.length, photo_fixes: hits.filter((h) => h.photo).length,\n      first: hits.length ? hits[0].ts : '', last: hits.length ? hits[hits.length - 1].ts : '', minutes: mins,\n    }\n  })\n  return { ...input, coverage: { areas, visited: areas.filter((a) => a.visited).length, total: areas.length } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.params = {\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10};\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Which areas were walked: generated from n8n/mobilise/logic.mjs walkCoverage. Edit there, then rebuild.\nconst __fn = function walkCoverage(input) {\n  const P = Object.assign({ goodFixM: 15, weakFixM: 40, edgeBufferM: 10 }, input.params || {})\n  const pts = (input.trail || []).concat((input.captures || []).filter((c) => c.gps).map((c) => ({ ...c.gps, photo: true })))\n  const zones = input.zones || []\n  const R = 6371000\n  const near = (p, z) => {\n    const lat0 = p.lat * Math.PI / 180\n    const xy = (lat, lng) => [((lng - p.lng) * Math.PI / 180) * R * Math.cos(lat0), ((lat - p.lat) * Math.PI / 180) * R]\n    if (z.circle) { const c = xy(z.circle.lat, z.circle.lng); return Math.hypot(c[0], c[1]) - z.circle.radius_m <= p.accuracy + P.edgeBufferM }\n    const pts2 = z.polygon.map((q) => xy(q[0], q[1]))\n    let inside = false\n    for (let i = 0, j = pts2.length - 1; i < pts2.length; j = i++) {\n      const [xi, yi] = pts2[i], [xj, yj] = pts2[j]\n      if ((yi > 0) !== (yj > 0) && 0 < ((xj - xi) * (0 - yi)) / (yj - yi) + xi) inside = !inside\n    }\n    if (inside) return true\n    let edge = Infinity\n    for (let i = 0, j = pts2.length - 1; i < pts2.length; j = i++) {\n      const a = pts2[j], b = pts2[i], dx = b[0] - a[0], dy = b[1] - a[1]\n      const t = Math.max(0, Math.min(1, (-a[0] * dx - a[1] * dy) / (dx * dx + dy * dy || 1)))\n      edge = Math.min(edge, Math.hypot(a[0] + t * dx, a[1] + t * dy))\n    }\n    return edge <= p.accuracy + P.edgeBufferM\n  }\n  const areas = (input.walk_areas || [...new Set(zones.map((z) => z.area))]).map((area) => {\n    const zs = zones.filter((z) => z.area === area)\n    const stickers = (input.spots || []).filter((s) => s.area === area)\n    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).concat(stickers.map((s) => ({ ts: s.ts, sticker: true })))\n      .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))\n    const mins = hits.length > 1 ? Math.round((Date.parse(hits[hits.length - 1].ts) - Date.parse(hits[0].ts)) / 60000) : 0\n    return {\n      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.filter((h) => !h.sticker).length, photo_fixes: hits.filter((h) => h.photo).length, stickers: stickers.length,\n      first: hits.length ? hits[0].ts : '', last: hits.length ? hits[hits.length - 1].ts : '', minutes: mins,\n    }\n  })\n  return { ...input, coverage: { areas, visited: areas.filter((a) => a.visited).length, total: areas.length } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.params = {\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10};\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
-      "notes": "An area counts as walked only with GPS fixes inside it (allowing for each fix's own error).",
+      "notes": "An area counts as walked only with GPS fixes inside it (allowing for each fix's own error), or a sticker scanned there.",
       "notesInFlow": false
     },
     {
@@ -243,7 +243,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Build report page: generated from n8n/mobilise/logic.mjs renderReport. Edit there, then rebuild.\nconst __fn = function renderReport(input) {\n  const s = input.score\n  const esc = (v) => String(v == null ? '' : v).replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' })[c])\n  const verdict = { ready: 'Ready to start', conditional: 'Ready to start with conditions', not_ready: 'Not ready' }[s.recommendation]\n  const rows = s.open_items.map((o) => '<tr><td>' + esc(o.line) + '</td><td>' + esc(o.severity) + '</td><td>' + esc(o.text) + '<br><small>' + esc(o.finding) + '</small></td><td>' + esc(o.due_on) + '</td></tr>').join('')\n  const areas = (input.narrative.areas || []).map((a) => '<h3>' + esc(a.area) + '</h3><p>' + esc(a.observation) + ' <small>(' + esc((a.lines || []).join(', ')) + ')</small></p>').join('')\n  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' : '<b>no GPS record</b>') + '</li>').join('')\n  const html = '<!doctype html><html><head><meta charset=\"utf-8\"><title>NOC draft ' + esc(input.mob.project) + '</title>' +\n    '<style>body{font:12px/1.5 Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}.v{font-size:16px;font-weight:bold}.ai{color:#555;font-size:11px}</style></head><body>' +\n    '<h1>Mobilisation report (draft for signature): ' + esc(input.mob.project) + '</h1>' +\n    '<p>' + esc(input.mob.contractor_name) + ' · visit ' + esc(input.visit_date) + ' · checklist ' + esc(input.mob.template_version) + '</p>' +\n    '<p class=\"v\">Recommendation from the checklist: ' + esc(verdict) + '</p>' +\n    '<p>' + s.done + ' of ' + s.total + ' lines closed. Open: ' + s.critical_open + ' critical, ' + s.major_open + ' major, ' + s.minor_open + ' minor.' + (s.areas_missed.length ? ' Areas with no GPS record: ' + esc(s.areas_missed.join(', ')) + '.' : '') + '</p>' +\n    '<h2>Areas walked</h2><ul>' + cov + '</ul>' +\n    '<h2>Open items</h2><table><tr><th>Line</th><th>Severity</th><th>Item</th><th>Due</th></tr>' + rows + '</table>' +\n    '<h2>Observations</h2>' + areas +\n    '<p class=\"ai\">' + (input.narrative_ok ? 'Observations worded by AI from the engineer\\'s voice remarks; checked against the checklist.' : 'AI wording failed its check; the engineer\\'s transcribed remarks are shown as recorded.') + ' Recommendation, counts and dates are computed from the checklist, not by AI. Every line links to its photo or paper in Vera.</p>' +\n    '<p>Signed: ______________________ (engineer) Date: __________</p></body></html>'\n  return { ...input, html }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Build report page: generated from n8n/mobilise/logic.mjs renderReport. Edit there, then rebuild.\nconst __fn = function renderReport(input) {\n  const s = input.score\n  const esc = (v) => String(v == null ? '' : v).replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' })[c])\n  const verdict = { ready: 'Ready to start', conditional: 'Ready to start with conditions', not_ready: 'Not ready' }[s.recommendation]\n  const rows = s.open_items.map((o) => '<tr><td>' + esc(o.line) + '</td><td>' + esc(o.severity) + '</td><td>' + esc(o.text) + '<br><small>' + esc(o.finding) + '</small></td><td>' + esc(o.due_on) + '</td></tr>').join('')\n  const areas = (input.narrative.areas || []).map((a) => '<h3>' + esc(a.area) + '</h3><p>' + esc(a.observation) + ' <small>(' + esc((a.lines || []).join(', ')) + ')</small></p>').join('')\n  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' + (a.stickers ? ', ' + a.stickers + ' sticker scan' + (a.stickers > 1 ? 's' : '') : '') : '<b>no GPS or sticker record</b>') + '</li>').join('')\n  const html = '<!doctype html><html><head><meta charset=\"utf-8\"><title>NOC draft ' + esc(input.mob.project) + '</title>' +\n    '<style>body{font:12px/1.5 Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}.v{font-size:16px;font-weight:bold}.ai{color:#555;font-size:11px}</style></head><body>' +\n    '<h1>Mobilisation report (draft for signature): ' + esc(input.mob.project) + '</h1>' +\n    '<p>' + esc(input.mob.contractor_name) + ' · visit ' + esc(input.visit_date) + ' · checklist ' + esc(input.mob.template_version) + '</p>' +\n    '<p class=\"v\">Recommendation from the checklist: ' + esc(verdict) + '</p>' +\n    '<p>' + s.done + ' of ' + s.total + ' lines closed. Open: ' + s.critical_open + ' critical, ' + s.major_open + ' major, ' + s.minor_open + ' minor.' + (s.areas_missed.length ? ' Areas with no GPS record: ' + esc(s.areas_missed.join(', ')) + '.' : '') + '</p>' +\n    '<h2>Areas walked</h2><ul>' + cov + '</ul>' +\n    '<h2>Open items</h2><table><tr><th>Line</th><th>Severity</th><th>Item</th><th>Due</th></tr>' + rows + '</table>' +\n    '<h2>Observations</h2>' + areas +\n    '<p class=\"ai\">' + (input.narrative_ok ? 'Observations worded by AI from the engineer\\'s voice remarks; checked against the checklist.' : 'AI wording failed its check; the engineer\\'s transcribed remarks are shown as recorded.') + ' Recommendation, counts and dates are computed from the checklist, not by AI. Every line links to its photo or paper in Vera.</p>' +\n    '<p>Signed: ______________________ (engineer) Date: __________</p></body></html>'\n  return { ...input, html }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
       "notes": "Recommendation, open items with due dates, areas walked, observations. Says which parts AI wrote.",
       "notesInFlow": false
@@ -304,6 +304,74 @@
       "onError": "continueErrorOutput"
     },
     {
+      "id": "327108c7-0685-468e-8818-7d049bcdf948",
+      "name": "Upload PDF to WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3080,
+        -80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/{{ $env.VERA_WA_PHONE_NUMBER_ID }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "type",
+              "value": "application/pdf"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "notes": "The PDF goes to WhatsApp as a media file: there is never a public link to the report.\nGuardrails: retry, error-out",
+      "notesInFlow": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "veraWaToken001",
+          "name": "WhatsApp Cloud API token (Authorization: Bearer …)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "24e7f0a7-19fb-47fb-8dea-a217461faa46",
+      "name": "Both done",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        20
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranchMode": "waitForAll",
+        "output": "specifiedInput",
+        "useDataOfInput": 2
+      },
+      "notes": "Waits for the bucket copy and the WhatsApp upload; carries the media id on.",
+      "notesInFlow": false
+    },
+    {
       "id": "281cd287-42d5-4398-8b82-cc6694d8baf2",
       "name": "Store report PDF",
       "type": "n8n-nodes-base.awsS3",
@@ -339,7 +407,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        3360,
+        3640,
         120
       ],
       "parameters": {
@@ -367,7 +435,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        3640,
+        3920,
         120
       ],
       "parameters": {
@@ -396,12 +464,12 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3920,
+        4200,
         120
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const v = $('Load the visit').item.json;\nconst s = $('Check the wording').item.json.score;\nconst noc = $('Save NOC draft').item.json.noc_id;\nconst label = { ready: 'Ready to start', conditional: 'Ready with conditions', not_ready: 'Not ready' }[s.recommendation];\nreturn { json: { contact_id: v.contact_id, mobilisation_id: v.mobilisation_id, ref: String(noc), request: { body: { type: 'interactive', interactive: {\n  type: 'button', header: { type: 'document', document: { link: $env.VERA_FILES_URL + '/noc/' + noc, filename: 'NOC-draft-' + v.mob.project + '.pdf' } },\n  body: { text: v.mob.project + ': ' + label + '. ' + s.done + '/' + s.total + ' lines closed; ' + s.critical_open + ' critical, ' + s.major_open + ' major open. Please read and sign.' },\n  action: { buttons: [ { type: 'reply', reply: { id: 'sign:' + noc + ':approve', title: 'Approve' } }, { type: 'reply', reply: { id: 'sign:' + noc + ':conditions', title: 'With conditions' } }, { type: 'reply', reply: { id: 'sign:' + noc + ':hold', title: 'Hold' } } ] } } } } } };"
+        "jsCode": "const v = $('Load the visit').item.json;\nconst s = $('Check the wording').item.json.score;\nconst noc = $('Save NOC draft').item.json.noc_id;\nconst label = { ready: 'Ready to start', conditional: 'Ready with conditions', not_ready: 'Not ready' }[s.recommendation];\nreturn { json: { contact_id: v.contact_id, mobilisation_id: v.mobilisation_id, ref: String(noc), request: { summary: 'the NOC report to sign', body: { type: 'interactive', interactive: {\n  type: 'button', header: { type: 'document', document: { id: $('Upload PDF to WhatsApp').item.json.id, filename: 'NOC-draft-' + v.mob.project + '.pdf' } },\n  body: { text: v.mob.project + ': ' + label + '. ' + s.done + '/' + s.total + ' lines closed; ' + s.critical_open + ' critical, ' + s.major_open + ' major open. Please read and sign.' },\n  action: { buttons: [ { type: 'reply', reply: { id: 'sign:' + noc + ':approve', title: 'Approve' } }, { type: 'reply', reply: { id: 'sign:' + noc + ':conditions', title: 'With conditions' } }, { type: 'reply', reply: { id: 'sign:' + noc + ':hold', title: 'Hold' } } ] } } } } } };"
       },
       "notes": "PDF + Approve / With conditions / Hold buttons.",
       "notesInFlow": false
@@ -412,7 +480,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        4200,
+        4480,
         120
       ],
       "parameters": {
@@ -522,9 +590,9 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "insert into review_queue (mobilisation_id, reason) values ($1, 'NOC PDF could not be made: ' || $2) returning id;",
+        "query": "insert into review_queue (mobilisation_id, reason) values ($1, 'NOC PDF could not be made or uploaded: ' || $2) returning id;",
         "options": {
-          "queryReplacement": "={{ [($('Load the visit').item.json.mobilisation_id) ?? null, (($json.error && $json.error.message) || 'unknown') ?? null] }}"
+          "queryReplacement": "={{ [($('Load the visit').item.json.mobilisation_id) ?? null, (($json.error && ($json.error.message || JSON.stringify($json.error)).slice(0, 300)) || $json.message || 'see the n8n execution ' + $execution.id) ?? null] }}"
         }
       },
       "notes": "Vera ops sends it by hand; the engineer is not left waiting.\nGuardrails: human",
@@ -676,6 +744,11 @@
             "node": "Store report PDF",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Upload PDF to WhatsApp",
+            "type": "main",
+            "index": 0
           }
         ],
         [
@@ -688,6 +761,35 @@
       ]
     },
     "Store report PDF": {
+      "main": [
+        [
+          {
+            "node": "Both done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload PDF to WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Both done",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Alert: report failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Both done": {
       "main": [
         [
           {

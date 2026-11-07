@@ -1,0 +1,227 @@
+{
+  "id": "veraMob12Reviews",
+  "name": "Vera 05 · 12 Review queue on WhatsApp",
+  "nodes": [
+    {
+      "id": "5c52edf0-5a5f-4dcf-84f7-19b947d8fd4b",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -620
+      ],
+      "parameters": {
+        "content": "## Vera 05 · 12 Review queue on WhatsApp\nEvery 5 minutes, new review items go to a Vera reviewer on WhatsApp with the file and one-tap answers: which line, accept / send back a paper, ask to send again, or handled. Answers come back through WF-02.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "width": 720,
+        "height": 220,
+        "color": 4
+      }
+    },
+    {
+      "id": "426695dd-10f9-40da-85f7-4858a592e9b1",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "notes": "Small query.",
+      "notesInFlow": false
+    },
+    {
+      "id": "e4e8a22d-5784-4b83-829d-78e089ade472",
+      "name": "Hand out new items",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with r as (\n  select id, row_number() over (order by id) - 1 as k, count(*) over () as n from contacts where role = 'reviewer' and mobilisation_id is null\n), q as (\n  select id from review_queue where resolved_at is null and sent_at is null and exists (select 1 from r) order by id limit 20 for update skip locked\n), u as (\n  update review_queue rq set sent_at = now(), reviewer_id = (select r.id from r where r.k = rq.id % r.n) from q where rq.id = q.id\n  returning rq.id, rq.reviewer_id, rq.mobilisation_id, rq.reason, rq.options, rq.evidence_id, rq.message_id\n)\nselect u.id as review_id, u.reviewer_id, u.mobilisation_id, u.reason, u.options, coalesce(u.evidence_id, 0) as evidence_id, u.message_id,\n  mo.project, e.line_code, l.text as line_text, l.evidence as line_evidence, m.body as message,\n  (select json_agg(json_build_object('code', x.code, 'text', x.text) order by x.code) from lines x where x.mobilisation_id = u.mobilisation_id and x.status not in ('accepted', 'ok', 'na')) as open_lines\nfrom u left join mobilisations mo on mo.id = u.mobilisation_id left join evidence e on e.id = u.evidence_id\n  left join lines l on l.mobilisation_id = u.mobilisation_id and l.code = e.line_code left join messages m on m.id = u.message_id\norder by u.id;",
+        "options": {}
+      },
+      "notes": "Each item to one reviewer (round robin), claimed once. No reviewer on file: items wait.\nGuardrails: idempotent, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "7c4c6d41-0475-4d2f-8cdc-dde439ba46a7",
+      "name": "Build review message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build review message: generated from n8n/mobilise/logic.mjs buildReviewMessage. Edit there, then rebuild.\nconst __fn = function buildReviewMessage(input) {\n  const rid = input.review_id\n  const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)\n  const open = Array.isArray(input.open_lines) ? input.open_lines : []\n  const byCode = {}\n  for (const l of open) byCode[l.code] = l\n  const msg = input.message || {}\n  const said = [msg.caption, msg.text, msg.filename].filter(Boolean).join(' | ')\n  const head = ['Review #' + rid + (input.project ? ' · ' + input.project : ''), String(input.reason || '')]\n  if (input.line_code) head.push('Filed on ' + input.line_code + (input.line_text ? ': ' + input.line_text : ''))\n  if (said) head.push('Sender wrote: ' + short(said, 300))\n  const B = (value, title, description) => ({ id: 'review:' + rid + ':' + value, title, description: description || '' })\n  let buttons\n  let type\n  if (input.evidence_id && !input.line_code) {\n    type = 'file'\n    const suggested = (Array.isArray(input.options) ? input.options : []).filter((c) => byCode[c])\n    const rest = open.map((l) => l.code).filter((c) => !suggested.includes(c))\n    const codes = suggested.concat(rest).slice(0, 8)\n    buttons = codes.map((c) => B(c, c, byCode[c].text)).concat([B('resend', 'Ask to send again', 'Unreadable or wrong file'), B('done', 'Handled in Vera', 'Nothing to send')])\n    head.push(codes.length ? 'Which line is it for?' : 'No open lines left on this site.')\n  } else if (input.evidence_id && ['document', 'both'].includes(input.line_evidence)) {\n    type = 'paper'\n    buttons = [B('accept', 'Accept paper'), B('reject', 'Send back'), B('done', 'Handled in Vera')]\n    head.push('Check the paper against the site facts in Vera, then choose.')\n  } else {\n    type = 'other'\n    buttons = (input.message_id || input.evidence_id ? [B('resend', 'Ask to send again')] : []).concat([B('done', 'Handled')])\n  }\n  return {\n    ...input, review_type: type,\n    contact_id: input.reviewer_id, kind: 'review', ref: String(rid),\n    msg: { summary: 'an item to review', text: head.filter(Boolean).join('\\n'), buttons, list_title: 'Choose' },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Unfiled file: pick the line. Paper to check: accept / send back. No file: ask to resend / handled.\nGuardrails: human",
+      "notesInFlow": false
+    },
+    {
+      "id": "e3eb039c-8f59-42e1-8cd9-fd0027a094ea",
+      "name": "Show it to the reviewer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "veraMob11ShowEvd",
+          "mode": "id",
+          "cachedResultName": "Vera 05 · 11 Show a file with buttons",
+          "cachedResultUrl": "/workflow/veraMob11ShowEvd"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "contact_id": "={{ $json.contact_id }}",
+            "mobilisation_id": "={{ $json.mobilisation_id }}",
+            "kind": "review",
+            "ref": "={{ $json.ref }}",
+            "evidence_id": "={{ $json.evidence_id }}",
+            "msg": "={{ $json.msg }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "mobilisation_id",
+              "displayName": "mobilisation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ref",
+              "displayName": "ref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "evidence_id",
+              "displayName": "evidence_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "msg",
+              "displayName": "msg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "notes": "WF-11 sends the file with the answers.",
+      "notesInFlow": false
+    }
+  ],
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Hand out new items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hand out new items": {
+      "main": [
+        [
+          {
+            "node": "Build review message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build review message": {
+      "main": [
+        [
+          {
+            "node": "Show it to the reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "veraMob00Errors1"
+  },
+  "pinData": {},
+  "active": false,
+  "tags": []
+}

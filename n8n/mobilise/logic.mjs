@@ -88,7 +88,7 @@ export function bindLine(input) {
 
   const prompt = m.context_wamid ? prompts.find((p) => p.wamid === m.context_wamid) : null
   if (prompt && (prompt.kind === 'line' || prompt.kind === 'open_item' || prompt.kind === 'confirm') && byCode[prompt.line]) {
-    return done({ line: prompt.line, method: prompt.kind === 'open_item' ? 'reply-to-open-item' : 'reply-to-line', confidence: 1, candidates: [] })
+    return done({ line: prompt.line, method: prompt.kind === 'open_item' ? 'reply-to-open-item' : 'reply-to-line', confidence: 1, candidates: [], open_item: prompt.kind === 'open_item' ? String(prompt.ref || '') : '' })
   }
 
   const text = [m.caption, m.text, m.filename].filter(Boolean).join(' ')
@@ -339,11 +339,17 @@ export function readTextCommand(input) {
   const t = String((input.message && input.message.text) || '').trim()
   const low = t.toLowerCase()
   const words = (list) => list.some((w) => low === w || low.startsWith(w + ' ') || low.includes(' ' + w))
+  if (input.contact_role === 'reviewer') return { ...input, command: 'help', help: 'reviewer' }
   if (!t) return { ...input, command: 'empty' }
   if (words(['status', 'pending', 'baki', 'baaki', 'बाकी', 'kya bacha', 'kitna bacha', 'missing', 'list'])) return { ...input, command: 'gap_list' }
   if (words(['help', 'madad', 'मदद', 'kaise'])) return { ...input, command: 'help' }
   const na = t.match(/\b([A-Z]{2,3})[\s\-]*0*(\d{1,2})\b\s*(?:[-:]\s*)?(?:na|n\/a|not applicable|lagu nahi|लागू नहीं)\b(.*)$/i)
-  if (na) return { ...input, command: 'request_na', line: na[1].toUpperCase() + '-' + String(Number(na[2])).padStart(2, '0'), reason: na[3].trim() }
+  if (na) {
+    const line = na[1].toUpperCase() + '-' + String(Number(na[2])).padStart(2, '0')
+    const known = (input.lines || []).some((l) => l.code === line)
+    if (!known) return { ...input, command: 'help', help: 'unknown_line', line }
+    return { ...input, command: 'request_na', line, reason: na[3].trim() }
+  }
   return { ...input, command: 'remark' }
 }
 
@@ -377,7 +383,13 @@ export function geofence(input) {
   const P = Object.assign({ goodFixM: 15, weakFixM: 40, edgeBufferM: 10 }, input.params || {})
   const fix = input.gps
   const zones = Array.isArray(input.zones) ? input.zones : []
-  if (!fix || !(fix.accuracy > 0)) return { ...input, geo: { quality: 'none', result: 'unknown', zone: '', distance_m: null, note: 'No GPS fix with this photo' } }
+  // A QR sticker scanned in the last few minutes (verified by the walk API) places the photo
+  // in that area even indoors, where GPS cannot. GPS is still recorded and reported.
+  const spot = String(input.spot_area || '')
+  const spotHit = !!spot && spot === String(input.line_area || '')
+  if (!fix || !(fix.accuracy > 0)) {
+    return { ...input, geo: { quality: 'none', result: spotHit ? 'in' : 'unknown', zone: spotHit ? spot : '', distance_m: null, spot, note: spotHit ? 'Sticker for ' + spot + ' scanned; no GPS fix' : 'No GPS fix with this photo' } }
+  }
   const quality = fix.accuracy <= P.goodFixM ? 'good' : fix.accuracy <= P.weakFixM ? 'weak' : 'poor'
   const R = 6371000
   const toXY = (lat, lng) => [((lng - fix.lng) * Math.PI / 180) * R * Math.cos(fix.lat * Math.PI / 180), ((lat - fix.lat) * Math.PI / 180) * R]
@@ -416,18 +428,19 @@ export function geofence(input) {
     else result = quality === 'poor' ? 'unknown' : 'out'
   }
   const nearest = scored[0]
-  return {
-    ...input,
-    geo: {
-      quality, accuracy_m: Math.round(fix.accuracy), result,
-      zone: target ? target.area : '', distance_m: target ? Math.round(target.dist) : null,
-      nearest: nearest ? nearest.area : '',
-      note: !zones.length ? 'No areas drawn for this site yet'
+  const gpsNote = !zones.length ? 'No areas drawn for this site yet'
         : !target ? 'No area drawn for ' + want
         : result === 'in' ? 'Inside ' + target.name
         : result === 'edge' ? 'At the edge of ' + target.name + ' (GPS ±' + Math.round(fix.accuracy) + ' m)'
         : result === 'out' ? Math.round(target.dist) + ' m outside ' + target.name + (nearest && nearest.area !== want ? '; nearest is ' + nearest.name : '')
-        : 'GPS too weak (±' + Math.round(fix.accuracy) + ' m) to place it',
+        : 'GPS too weak (±' + Math.round(fix.accuracy) + ' m) to place it'
+  return {
+    ...input,
+    geo: {
+      quality, accuracy_m: Math.round(fix.accuracy), result: spotHit ? 'in' : result, gps_result: result, spot,
+      zone: target ? target.area : spotHit ? spot : '', distance_m: target ? Math.round(target.dist) : null,
+      nearest: nearest ? nearest.area : '',
+      note: spotHit ? 'Sticker for ' + spot + ' scanned · GPS: ' + gpsNote : spot ? gpsNote + ' · last sticker scanned: ' + spot : gpsNote,
     },
   }
 }
@@ -460,14 +473,53 @@ export function walkCoverage(input) {
   }
   const areas = (input.walk_areas || [...new Set(zones.map((z) => z.area))]).map((area) => {
     const zs = zones.filter((z) => z.area === area)
-    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
+    const stickers = (input.spots || []).filter((s) => s.area === area)
+    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).concat(stickers.map((s) => ({ ts: s.ts, sticker: true })))
+      .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
     const mins = hits.length > 1 ? Math.round((Date.parse(hits[hits.length - 1].ts) - Date.parse(hits[0].ts)) / 60000) : 0
     return {
-      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.length, photo_fixes: hits.filter((h) => h.photo).length,
+      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.filter((h) => !h.sticker).length, photo_fixes: hits.filter((h) => h.photo).length, stickers: stickers.length,
       first: hits.length ? hits[0].ts : '', last: hits.length ? hits[hits.length - 1].ts : '', minutes: mins,
     }
   })
   return { ...input, coverage: { areas, visited: areas.filter((a) => a.visited).length, total: areas.length } }
+}
+
+// The engineer marks an area on the walk page: standing in it (a circle from averaged
+// fixes) or walking its corners (a polygon). Checked before it replaces what was there.
+export function validateZone(input) {
+  const b = input.body || {}
+  const errors = []
+  const areas = Array.isArray(input.areas) ? input.areas : []
+  const sh = b.shape || {}
+  const okPt = (p) => Array.isArray(p) && p.length === 2 && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180
+  if (!/^[A-Z]{2,3}$/.test(String(b.area || ''))) errors.push('area must be an area code like LC')
+  else if (areas.length && !areas.includes(b.area)) errors.push('area ' + b.area + ' is not on this site\'s checklist')
+  let shape = null
+  if (sh.circle) {
+    const c = sh.circle
+    if (!(Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180)) errors.push('circle centre is not a valid point')
+    if (!(c.radius_m >= 5 && c.radius_m <= 150)) errors.push('radius must be 5 to 150 m')
+    if (!(c.accuracy_m > 0 && c.accuracy_m <= 30)) errors.push('GPS was too weak to mark the area (need ±30 m or better)')
+    shape = { circle: { lat: Number(c.lat), lng: Number(c.lng), radius_m: Math.round(c.radius_m) } }
+  } else if (Array.isArray(sh.polygon)) {
+    const p = sh.polygon
+    if (p.length < 3 || p.length > 30 || !p.every(okPt)) errors.push('outline needs 3 to 30 valid corners')
+    else {
+      const R = 6371000
+      const lat0 = p[0][0] * Math.PI / 180
+      const xy = p.map((q) => [q[1] * Math.PI / 180 * R * Math.cos(lat0), q[0] * Math.PI / 180 * R])
+      let a = 0
+      for (let i = 0, j = xy.length - 1; i < xy.length; j = i++) a += xy[j][0] * xy[i][1] - xy[i][0] * xy[j][1]
+      const area = Math.abs(a / 2)
+      if (area < 20) errors.push('outline is too small (under 20 m²): walk the real corners')
+      if (area > 200000) errors.push('outline is larger than 20 hectares')
+    }
+    if (!(sh.accuracy_m > 0 && sh.accuracy_m <= 30)) errors.push('GPS was too weak at one of the corners (need ±30 m or better)')
+    shape = { polygon: p.map((q) => [Number(q[0]), Number(q[1])]) }
+  } else errors.push('shape must be a circle or a polygon')
+  const name = String(b.name || '').trim().slice(0, 60) || String(b.area || '')
+  return { ...input, valid: errors.length === 0, errors, zone: { area: b.area, name, shape } }
 }
 
 // ---------------------------------------------------------------------------
@@ -524,11 +576,17 @@ export function composeReply(input) {
   const rejected = frags.filter((f) => f.kind === 'rejected')
   const review = frags.filter((f) => f.kind === 'review')
   const asks = frags.filter((f) => f.kind === 'unclear')
+  const of = (k) => frags.filter((f) => f.kind === k)
   const out = []
   if (accepted.length) out.push('✅ Accepted: ' + accepted.map((f) => f.line).join(', '))
   if (filed.length) out.push('📎 Filed: ' + filed.map((f) => f.line).join(', ') + (filed.some((f) => f.photo) ? ' (site photos are checked by the engineer on the visit day)' : ''))
   for (const f of rejected) out.push('↩️ ' + f.line + ' sent back: ' + f.reason)
   if (review.length) out.push('🔎 Being checked by our team: ' + review.map((f) => f.line || 'item').join(', '))
+  if (of('na').length) out.push('➖ Marked not applicable by the engineer: ' + of('na').map((f) => f.line).join(', '))
+  for (const f of of('na_refused')) out.push('↩️ ' + f.line + ' is needed: the engineer did not agree to N/A')
+  if (of('closed').length) out.push('✅ Closed by the engineer: ' + of('closed').map((f) => f.line).join(', '))
+  for (const f of of('reopened')) out.push('↩️ ' + f.line + ' still open: the engineer did not accept the photo. Fix it and reply to the reminder with a new photo.')
+  for (const f of of('resend')) out.push('🔁 Please send again' + (f.line ? ' for ' + f.line : '') + ': ' + (f.reason || 'we could not use the last file'))
   if (asks.length) out.push('❓ ' + asks.length + ' item' + (asks.length > 1 ? 's' : '') + ' could not be placed. Please reply to it with the line code.')
   if (input.open_count != null) out.push('Still open: ' + input.open_count + ' line' + (input.open_count === 1 ? '' : 's') + '. Send *status* for the list.')
   return { ...input, reply: out.join('\n'), count: frags.length }
@@ -637,7 +695,7 @@ export function renderReport(input) {
   const verdict = { ready: 'Ready to start', conditional: 'Ready to start with conditions', not_ready: 'Not ready' }[s.recommendation]
   const rows = s.open_items.map((o) => '<tr><td>' + esc(o.line) + '</td><td>' + esc(o.severity) + '</td><td>' + esc(o.text) + '<br><small>' + esc(o.finding) + '</small></td><td>' + esc(o.due_on) + '</td></tr>').join('')
   const areas = (input.narrative.areas || []).map((a) => '<h3>' + esc(a.area) + '</h3><p>' + esc(a.observation) + ' <small>(' + esc((a.lines || []).join(', ')) + ')</small></p>').join('')
-  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' : '<b>no GPS record</b>') + '</li>').join('')
+  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' + (a.stickers ? ', ' + a.stickers + ' sticker scan' + (a.stickers > 1 ? 's' : '') : '') : '<b>no GPS or sticker record</b>') + '</li>').join('')
   const html = '<!doctype html><html><head><meta charset="utf-8"><title>NOC draft ' + esc(input.mob.project) + '</title>' +
     '<style>body{font:12px/1.5 Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}.v{font-size:16px;font-weight:bold}.ai{color:#555;font-size:11px}</style></head><body>' +
     '<h1>Mobilisation report (draft for signature): ' + esc(input.mob.project) + '</h1>' +
@@ -667,18 +725,26 @@ export function chooseSendMode(input) {
   const req = input.request || {}
   const to = String(input.phone || '').replace(/\D/g, '')
   const attempt = Number(input.attempt || 0)
+  const template = (t) => {
+    const components = []
+    if (t.header) components.push({ type: 'header', parameters: [t.header] })
+    components.push({ type: 'body', parameters: (t.params || []).map((p) => ({ type: 'text', text: String(p) })) })
+    ;(t.buttons || []).forEach((payload, i) => components.push({ type: 'button', sub_type: 'quick_reply', index: String(i), parameters: [{ type: 'payload', payload: String(payload) }] }))
+    return { messaging_product: 'whatsapp', to, type: 'template', template: { name: t.name, language: { code: t.language || 'en' }, components } }
+  }
   if (!/^\d{10,15}$/.test(to)) return { ...input, can_send: false, why: 'No valid phone number for this contact' }
   if (open && req.body) return { ...input, can_send: true, mode: 'session', attempt, payload: { messaging_product: 'whatsapp', recipient_type: 'individual', to, ...req.body } }
-  if (req.template) {
+  if (req.template) return { ...input, can_send: true, mode: 'template', attempt, payload: template(req.template) }
+  // Outside the window with no template of its own (buttons, a photo to approve, the NOC to sign):
+  // send the one generic template with a "Show me" button and keep the real message. The tap
+  // opens the window and WF-02 releases everything held for this person.
+  if (req.body) {
     return {
-      ...input, can_send: true, mode: 'template', attempt,
-      payload: {
-        messaging_product: 'whatsapp', to, type: 'template',
-        template: { name: req.template.name, language: { code: req.template.language || 'en' }, components: [{ type: 'body', parameters: (req.template.params || []).map((p) => ({ type: 'text', text: String(p) })) }] },
-      },
+      ...input, can_send: true, mode: 'hold', attempt, held_body: req,
+      payload: template({ name: 'vera_mob_action_needed', language: 'en', params: [String(req.summary || 'a message')], buttons: ['show:latest'] }),
     }
   }
-  return { ...input, can_send: false, why: 'Outside the 24-hour window and no template for this message' }
+  return { ...input, can_send: false, why: 'Nothing to send' }
 }
 
 // What to do when Meta refuses a send. Codes from the Cloud API error reference.
@@ -725,12 +791,101 @@ export function buildConfirm(input) {
 export function parseAnswer(input) {
   const i = (input.message && input.message.interactive) || {}
   const [verb, ref, value] = String(i.id || '').split(':')
-  const allowed = { bind: ['contractor', 'engineer', 'reviewer'], pick: ['contractor', 'engineer'], na: ['engineer'], close: ['engineer'], sign: ['engineer'], review: ['reviewer'] }
+  const allowed = {
+    bind: ['contractor', 'engineer', 'reviewer'], pick: ['contractor', 'engineer'], na: ['engineer'], close: ['engineer'], sign: ['engineer'],
+    review: ['reviewer'], show: ['contractor', 'engineer', 'reviewer', 'project_head', 'design', 'ehs'],
+  }
+  const values = { na: ['approve', 'reject'], close: ['accept', 'reject'], sign: ['approve', 'conditions', 'hold'] }
   const role = input.contact_role || ''
   if (!allowed[verb]) return { ...input, answer: { ok: false, why: 'Unknown button' } }
   if (!allowed[verb].includes(role)) return { ...input, answer: { ok: false, why: 'Only ' + allowed[verb].join(' / ') + ' can do this' } }
-  if (verb === 'sign' && !['approve', 'conditions', 'hold'].includes(value)) return { ...input, answer: { ok: false, why: 'Unknown sign-off choice' } }
-  return { ...input, answer: { ok: true, verb, ref, value, by: input.contact_id, at: new Date(Number(input.now || Date.now())).toISOString() } }
+  if (values[verb] && !values[verb].includes(value)) return { ...input, answer: { ok: false, why: 'Unknown choice' } }
+  if (verb !== 'show' && !ref) return { ...input, answer: { ok: false, why: 'Button has no reference' } }
+  return { ...input, answer: { ok: true, verb, ref, value: value || '', by: input.contact_id, at: new Date(Number(input.now || Date.now())).toISOString() } }
+}
+
+// The engineer approves a fixed item from the contractor's photo, not from another visit.
+export function buildClosureAsk(input) {
+  const id = input.open_item_id
+  return {
+    ...input,
+    msg: {
+      summary: 'a fixed item to approve',
+      text: (input.project ? input.project + ': ' : '') + 'the contractor says ' + input.line_code + ' is fixed.\n' + input.text +
+        (input.finding ? '\nAt the visit: ' + input.finding : '') + '\nAccept the photo to close it.',
+      buttons: [{ id: 'close:' + id + ':accept', title: 'Accept, close it' }, { id: 'close:' + id + ':reject', title: 'Not fixed' }],
+    },
+  }
+}
+
+// One review-queue item as a WhatsApp message for a Vera reviewer. What the reviewer can
+// do depends on what the item is: an unfiled file (pick the line), a paper a person must
+// check (accept / send back), or a failure with no file (ask to resend / handled).
+export function buildReviewMessage(input) {
+  const rid = input.review_id
+  const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
+  const open = Array.isArray(input.open_lines) ? input.open_lines : []
+  const byCode = {}
+  for (const l of open) byCode[l.code] = l
+  const msg = input.message || {}
+  const said = [msg.caption, msg.text, msg.filename].filter(Boolean).join(' | ')
+  const head = ['Review #' + rid + (input.project ? ' · ' + input.project : ''), String(input.reason || '')]
+  if (input.line_code) head.push('Filed on ' + input.line_code + (input.line_text ? ': ' + input.line_text : ''))
+  if (said) head.push('Sender wrote: ' + short(said, 300))
+  const B = (value, title, description) => ({ id: 'review:' + rid + ':' + value, title, description: description || '' })
+  let buttons
+  let type
+  if (input.evidence_id && !input.line_code) {
+    type = 'file'
+    const suggested = (Array.isArray(input.options) ? input.options : []).filter((c) => byCode[c])
+    const rest = open.map((l) => l.code).filter((c) => !suggested.includes(c))
+    const codes = suggested.concat(rest).slice(0, 8)
+    buttons = codes.map((c) => B(c, c, byCode[c].text)).concat([B('resend', 'Ask to send again', 'Unreadable or wrong file'), B('done', 'Handled in Vera', 'Nothing to send')])
+    head.push(codes.length ? 'Which line is it for?' : 'No open lines left on this site.')
+  } else if (input.evidence_id && ['document', 'both'].includes(input.line_evidence)) {
+    type = 'paper'
+    buttons = [B('accept', 'Accept paper'), B('reject', 'Send back'), B('done', 'Handled in Vera')]
+    head.push('Check the paper against the site facts in Vera, then choose.')
+  } else {
+    type = 'other'
+    buttons = (input.message_id || input.evidence_id ? [B('resend', 'Ask to send again')] : []).concat([B('done', 'Handled')])
+  }
+  return {
+    ...input, review_type: type,
+    contact_id: input.reviewer_id, kind: 'review', ref: String(rid),
+    msg: { summary: 'an item to review', text: head.filter(Boolean).join('\n'), buttons, list_title: 'Choose' },
+  }
+}
+
+// A message that shows a stored photo or paper with answer buttons. The file goes as a
+// WhatsApp media id (uploaded just before), so no public link to the evidence ever exists.
+// Up to 3 choices: one button message with the picture on top. More: the picture, then a list.
+export function buildEvidenceMessage(input) {
+  const m = input.msg || {}
+  const short = (s, n) => (String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s))
+  const buttons = (m.buttons || []).slice(0, 10)
+  const text = short(m.text || '', 1000) || 'Please choose.'
+  const isPdf = /pdf/.test(String(input.media_mime || '')) || input.media_kind === 'document'
+  const media = input.media_id ? (isPdf ? { type: 'document', document: { id: input.media_id, filename: m.filename || 'evidence.pdf' } } : { type: 'image', image: { id: input.media_id } }) : null
+  const base = { contact_id: input.contact_id, mobilisation_id: input.mobilisation_id, kind: input.kind, ref: input.ref }
+  const wrap = (body) => ({ ...base, request: { body, summary: m.summary || 'a message' } })
+  if (!buttons.length) {
+    if (!media) return [wrap({ type: 'text', text: { preview_url: false, body: text } })]
+    return [wrap(media.type === 'image' ? { type: 'image', image: { ...media.image, caption: text } } : { type: 'document', document: { ...media.document, caption: text } })]
+  }
+  if (buttons.length <= 3) {
+    return [wrap({ type: 'interactive', interactive: { type: 'button', ...(media ? { header: media } : {}), body: { text }, action: { buttons: buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: short(b.title, 20) } })) } } })]
+  }
+  const out = []
+  if (media) out.push(wrap(media.type === 'image' ? { type: 'image', image: { ...media.image, caption: text } } : { type: 'document', document: { ...media.document, caption: text } }))
+  out.push(wrap({
+    type: 'interactive',
+    interactive: {
+      type: 'list', body: { text: media ? 'Choose for the file above.' : text },
+      action: { button: 'Choose', sections: [{ title: short(m.list_title || 'Choose one', 24), rows: buttons.map((b) => ({ id: b.id, title: short(b.title, 24), description: short(b.description || '', 72) })) }] },
+    },
+  }))
+  return out
 }
 
 // ---------------------------------------------------------------------------
@@ -760,7 +915,7 @@ export function validateSetup(input) {
       site_address: String(f.site_address || '').trim(), site_keywords: list(f.site_keywords),
       start_date: f.start_date, visit_date: f.visit_date, contract_end: f.contract_end,
       contract_value_inr: Number(f.contract_value_inr), peak_workers: Number(f.peak_workers),
-      flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)) },
+      flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)), shadow: !/^(no|false|0)$/i.test(String(f.shadow == null ? 'yes' : f.shadow).trim()) },
       contractor_phone: String(f.contractor_phone || '').replace(/\D/g, ''), engineer_phone: String(f.engineer_phone || '').replace(/\D/g, ''),
     },
   }

@@ -116,7 +116,9 @@ create table if not exists outbound (
   payload          jsonb,
   status           text not null default 'sent',    -- sent | delivered | read | failed | not_sent
   error            jsonb,
-  sent_at          timestamptz not null default now()
+  sent_at          timestamptz not null default now(),
+  held_body        jsonb,                           -- outside the 24 h window: the real message, sent when they tap "Show me"
+  released_at      timestamptz
 );
 
 create table if not exists pending_picks (
@@ -162,6 +164,16 @@ create table if not exists trail (
   primary key (walk_id, ts)
 );
 
+-- QR stickers fixed in rooms and areas. A scan opens the walk page and is recorded here.
+create table if not exists spot_checks (
+  walk_id   bigint not null references walks(id),
+  area      text not null,
+  sticker   int not null,
+  ts        timestamptz not null,
+  gps       jsonb,
+  primary key (walk_id, area, sticker, ts)
+);
+
 create table if not exists noc_reports (
   id               bigserial primary key,
   mobilisation_id  bigint not null references mobilisations(id),
@@ -200,7 +212,9 @@ create table if not exists review_queue (
   options          jsonb not null default '[]',
   created_at       timestamptz not null default now(),
   resolved_at      timestamptz,
-  resolution       jsonb
+  resolution       jsonb,
+  sent_at          timestamptz,                     -- handed to a reviewer on WhatsApp (WF-12)
+  reviewer_id      bigint references contacts(id)
 );
 
 create table if not exists audit_log (
@@ -223,48 +237,145 @@ create table if not exists errors (
   url           text
 );
 
--- A person's button answer, applied in one transaction. Called by WF-02.
--- a = {verb, ref, value, by, at, wamid}
-create or replace function apply_answer(a jsonb) returns jsonb language plpgsql as $$
+-- Upgrades for databases created from the first version of this file.
+alter table outbound add column if not exists held_body jsonb;
+alter table outbound add column if not exists released_at timestamptz;
+alter table review_queue add column if not exists sent_at timestamptz;
+alter table review_queue add column if not exists reviewer_id bigint references contacts(id);
+create index if not exists outbound_held on outbound (contact_id) where held_body is not null and released_at is null;
+
+-- How often AI's line choice matched the line a person settled on (shadow mode measures this).
+-- Rows: every file AI was asked about and that has since been filed by a person.
+create or replace view ai_accuracy as
+select mobilisation_id,
+  case when (ai->>'confidence')::numeric >= 0.9 then '0.90+' when (ai->>'confidence')::numeric >= 0.7 then '0.70-0.89'
+       when (ai->>'confidence')::numeric >= 0.45 then '0.45-0.69' else 'under 0.45' end as confidence_band,
+  count(*) as items,
+  count(*) filter (where ai->>'line_code' = line_code) as ai_right,
+  round(100.0 * count(*) filter (where ai->>'line_code' = line_code) / nullif(count(*), 0), 1) as pct_right
+from evidence
+where ai is not null and ai ? 'line_code' and line_code is not null and bind_method in ('ai-confirmed', 'confirmed', 'reviewer')
+group by 1, 2;
+
+-- File one stored evidence row on a line. Used by button answers (sender or reviewer).
+-- A paper is not accepted here: it is marked for re-reading (WF-10 runs the paper checks).
+create or replace function file_evidence(ev_id bigint, p_code text, p_method text, p_actor text) returns jsonb language plpgsql as $$
 declare
   ev evidence%rowtype;
-  r  jsonb;
+  ln lines%rowtype;
+  paper boolean;
 begin
+  select * into ev from evidence where id = ev_id for update;
+  if not found then return jsonb_build_object('ok', false, 'why', 'evidence not found'); end if;
+  select * into ln from lines where mobilisation_id = ev.mobilisation_id and lines.code = p_code;
+  if not found then return jsonb_build_object('ok', false, 'why', 'line ' || p_code || ' is not on this site'); end if;
+  paper := ln.evidence in ('document', 'both') and ev.kind in ('document', 'photo');
+  update evidence set line_code = ln.code, bind_method = p_method where id = ev.id;
+  update lines set status = 'filed', status_at = now() where id = ln.id and status in ('open', 'rejected');
+  if not paper and ev.created_by is not null then
+    insert into reply_queue (mobilisation_id, contact_id, fragment)
+      values (ev.mobilisation_id, ev.created_by, jsonb_build_object('kind', 'filed', 'line', ln.code, 'photo', ev.kind = 'photo'));
+  end if;
+  insert into audit_log (actor, action, entity, entity_id, detail)
+    values (p_actor, 'file_evidence', 'line', ln.code, jsonb_build_object('evidence', ev.id, 'method', p_method));
+  return jsonb_build_object('ok', true, 'line', ln.code, 'reread', paper, 'evidence_id', ev.id);
+end $$;
+
+-- A person's button answer, applied in one transaction. Called by WF-02.
+-- a = {verb, ref, value, by, at, wamid}. Every verb checks the person belongs to the site
+-- the button is about, so a forwarded button cannot act on someone else's site.
+create or replace function apply_answer(a jsonb) returns jsonb language plpgsql as $$
+declare
+  me  contacts%rowtype;
+  ev  evidence%rowtype;
+  oi  open_items%rowtype;
+  rq  review_queue%rowtype;
+  ln  lines%rowtype;
+  v   text := coalesce(a->>'value', '');
+  who bigint;
+  r   jsonb := jsonb_build_object('ok', true);
+begin
+  select * into me from contacts where id = (a->>'by')::bigint;
+  if not found then return jsonb_build_object('ok', false, 'why', 'unknown sender'); end if;
+
   if a->>'verb' = 'bind' then
-    select * into ev from evidence where id = (a->>'ref')::bigint for update;
-    if not found then return jsonb_build_object('ok', false, 'why', 'evidence not found'); end if;
-    if a->>'value' = 'OTHER' then
-      insert into review_queue (mobilisation_id, evidence_id, reason) values (ev.mobilisation_id, ev.id, 'Sender chose "something else"');
-      return jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', 'review', 'line', ''));
+    select * into ev from evidence where id = (a->>'ref')::bigint;
+    if not found or ev.mobilisation_id is distinct from me.mobilisation_id then return jsonb_build_object('ok', false, 'why', 'not on your site'); end if;
+    if ev.line_code is not null then return jsonb_build_object('ok', true, 'why', 'already filed on ' || ev.line_code); end if;
+    if v = 'OTHER' then
+      insert into review_queue (mobilisation_id, evidence_id, message_id, reason) values (ev.mobilisation_id, ev.id, ev.message_id, 'Sender chose "something else"');
+      insert into reply_queue (mobilisation_id, contact_id, fragment) values (ev.mobilisation_id, me.id, jsonb_build_object('kind', 'review', 'line', ''));
+    else
+      r := file_evidence(ev.id, v, case when ev.bind_method = 'ai' then 'ai-confirmed' else 'confirmed' end, 'contact:' || me.id);
     end if;
-    update evidence set line_code = a->>'value', bind_method = case when bind_method = 'ai' then 'ai-confirmed' else 'confirmed' end where id = ev.id;
-    -- A paper confirmed by button has not been through the paper checks yet: a person runs them (v1).
-    update lines set status = case when evidence in ('document', 'both') and ev.kind = 'document' then 'review' when status in ('open', 'rejected') then 'filed' else status end
-      where mobilisation_id = ev.mobilisation_id and code = a->>'value';
-    if exists (select 1 from lines where mobilisation_id = ev.mobilisation_id and code = a->>'value' and status = 'review') then
-      insert into review_queue (mobilisation_id, evidence_id, reason) values (ev.mobilisation_id, ev.id, 'Paper filed by button: run the paper checks');
-    end if;
-    r := jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', case when ev.kind = 'document' then 'review' else 'filed' end, 'line', a->>'value', 'photo', ev.kind = 'photo'));
+
   elsif a->>'verb' = 'pick' then
-    insert into pending_picks (contact_id, line_code, at) values ((a->>'by')::bigint, a->>'value', now())
+    insert into pending_picks (contact_id, line_code, at) values (me.id, v, now())
       on conflict (contact_id) do update set line_code = excluded.line_code, at = now();
-    r := jsonb_build_object('ok', true, 'fragment', jsonb_build_object('kind', 'picked', 'line', a->>'value'));
+
   elsif a->>'verb' = 'na' then
-    update lines set status = case when a->>'value' = 'approve' then 'na' else status end, status_by = (a->>'by')::bigint, status_at = now()
-      where id = (a->>'ref')::bigint;
-    r := jsonb_build_object('ok', true);
+    update lines set status = case when v = 'approve' then 'na' else status end, status_by = me.id, status_at = now(),
+      reason = case when v = 'approve' then 'N/A approved by the engineer' else reason end
+      where mobilisation_id = me.mobilisation_id and code = a->>'ref' and me.role = 'engineer' returning * into ln;
+    if not found then return jsonb_build_object('ok', false, 'why', 'line not on your site'); end if;
+    insert into reply_queue (mobilisation_id, contact_id, fragment)
+      select me.mobilisation_id, c.id, jsonb_build_object('kind', case when v = 'approve' then 'na' else 'na_refused' end, 'line', ln.code)
+      from contacts c where c.mobilisation_id = me.mobilisation_id and c.role = 'contractor';
+
   elsif a->>'verb' = 'close' then
-    update open_items set status = case when a->>'value' = 'accept' then 'closed' else 'open' end, closed_at = case when a->>'value' = 'accept' then now() end
-      where id = (a->>'ref')::bigint;
-    r := jsonb_build_object('ok', true);
+    select * into oi from open_items where id = (a->>'ref')::bigint for update;
+    if not found or oi.mobilisation_id is distinct from me.mobilisation_id or me.role <> 'engineer' then return jsonb_build_object('ok', false, 'why', 'item not on your site'); end if;
+    if oi.status <> 'proposed_closed' then return jsonb_build_object('ok', true, 'why', 'item is ' || oi.status); end if;
+    select created_by into who from evidence where id = oi.closed_evidence_id;
+    if v = 'accept' then
+      update open_items set status = 'closed', closed_at = now() where id = oi.id;
+      update lines set status = 'ok', status_by = me.id, status_at = now() where mobilisation_id = oi.mobilisation_id and code = oi.line_code;
+    else
+      update open_items set status = 'open', closed_evidence_id = null where id = oi.id;
+    end if;
+    if who is not null then
+      insert into reply_queue (mobilisation_id, contact_id, fragment) values (oi.mobilisation_id, who, jsonb_build_object('kind', case when v = 'accept' then 'closed' else 'reopened' end, 'line', oi.line_code));
+    end if;
+
   elsif a->>'verb' = 'sign' then
-    update noc_reports set status = case a->>'value' when 'approve' then 'approved' when 'conditions' then 'conditional' else 'held' end,
-      signed_by = (a->>'by')::bigint, signed_at = now(), sign_wamid = a->>'wamid'
-      where id = (a->>'ref')::bigint and status = 'draft';
+    update noc_reports set status = case v when 'approve' then 'approved' when 'conditions' then 'conditional' else 'held' end,
+      signed_by = me.id, signed_at = now(), sign_wamid = a->>'wamid'
+      where id = (a->>'ref')::bigint and status = 'draft' and mobilisation_id = me.mobilisation_id and me.role = 'engineer';
     r := jsonb_build_object('ok', found);
+
+  elsif a->>'verb' = 'review' then
+    if me.role <> 'reviewer' then return jsonb_build_object('ok', false, 'why', 'reviewers only'); end if;
+    select * into rq from review_queue where id = (a->>'ref')::bigint for update;
+    if not found then return jsonb_build_object('ok', false, 'why', 'review item not found'); end if;
+    if rq.resolved_at is not null then return jsonb_build_object('ok', true, 'why', 'already resolved'); end if;
+    if rq.evidence_id is not null then select * into ev from evidence where id = rq.evidence_id; end if;
+    who := coalesce(ev.created_by, (select contact_id from messages where id = rq.message_id));
+    if v ~ '^[A-Z]{2,3}-[0-9]{2}$' then
+      if rq.evidence_id is null then return jsonb_build_object('ok', false, 'why', 'no stored file to file'); end if;
+      r := file_evidence(rq.evidence_id, v, 'reviewer', 'reviewer:' || me.id);
+      if not (r->>'ok')::boolean then return r; end if;
+    elsif v in ('accept', 'reject') then
+      if ev.line_code is null then return jsonb_build_object('ok', false, 'why', 'file has no line yet'); end if;
+      update lines set status = case when v = 'accept' then 'accepted' else 'rejected' end,
+        reason = case when v = 'accept' then 'Checked by Vera team' else 'Checked by Vera team: please send a correct, clear copy' end, status_at = now()
+        where mobilisation_id = ev.mobilisation_id and code = ev.line_code and status not in ('ok', 'not_ok', 'na');
+      if who is not null then
+        insert into reply_queue (mobilisation_id, contact_id, fragment) values (ev.mobilisation_id, who,
+          jsonb_build_object('kind', case when v = 'accept' then 'accepted' else 'rejected' end, 'line', ev.line_code, 'reason', 'checked by our team: please send a correct, clear copy'));
+      end if;
+    elsif v = 'resend' then
+      if who is not null then
+        insert into reply_queue (mobilisation_id, contact_id, fragment) values (rq.mobilisation_id, who, jsonb_build_object('kind', 'resend', 'line', coalesce(ev.line_code, ''), 'reason', rq.reason));
+      end if;
+    elsif v <> 'done' then
+      return jsonb_build_object('ok', false, 'why', 'unknown review choice');
+    end if;
+    update review_queue set resolved_at = now(), resolution = a where id = rq.id;
+    update messages set state = 'done', state_at = now() where id = rq.message_id and state = 'needs_human';
+
   else
     return jsonb_build_object('ok', false, 'why', 'unknown verb');
   end if;
-  insert into audit_log (actor, action, entity, entity_id, detail) values ('contact:' || (a->>'by'), a->>'verb', 'answer', coalesce(a->>'ref', ''), a);
+  insert into audit_log (actor, action, entity, entity_id, detail) values ('contact:' || me.id, a->>'verb', 'answer', coalesce(a->>'ref', ''), a);
   return r;
 end $$;

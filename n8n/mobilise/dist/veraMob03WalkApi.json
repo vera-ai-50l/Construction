@@ -12,7 +12,7 @@
         -620
       ],
       "parameters": {
-        "content": "## Vera 05 · 03 Walk page API\nBack end for the engineer's phone page on the visit day: load the checklist, take each capture (photo + GPS + status + voice), record the GPS trail, finish the walk.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
+        "content": "## Vera 05 · 03 Walk page API\nBack end for the engineer's phone page on the visit day: load the checklist, take each capture (photo + GPS + status + voice), record the GPS trail, mark areas, record QR sticker scans, print stickers, finish the walk.\n\nGenerated from `n8n/mobilise/workflows.mjs`. Edit there and rebuild; edits made here are overwritten on the next import.\nEach node's note says what it does and which guardrails it carries.",
         "width": 720,
         "height": 220,
         "color": 4
@@ -177,7 +177,7 @@
           "allowedOrigins": "*"
         }
       },
-      "notes": "capture / trail / finish (body.action). The page retries until it gets an answer.\nGuardrails: auth",
+      "notes": "capture / trail / finish / zone / spot / stickers (body.action). The page retries until it gets an answer.\nGuardrails: auth",
       "notesInFlow": false,
       "webhookId": "bd2ecf3e-cefe-4cc9-833a-5e3f2c3a2521"
     },
@@ -334,6 +334,75 @@
               },
               "renameOutput": true,
               "outputKey": "finish"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "zone",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "zone"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "spot",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "spot"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "stickers",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stickers"
             }
           ]
         },
@@ -342,7 +411,7 @@
           "renameFallbackOutput": "Other"
         }
       },
-      "notes": "Three kinds of post.",
+      "notes": "Six kinds of post.",
       "notesInFlow": false
     },
     {
@@ -514,9 +583,9 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Place on site map: generated from n8n/mobilise/logic.mjs geofence. Edit there, then rebuild.\nconst __fn = function geofence(input) {\n  const P = Object.assign({ goodFixM: 15, weakFixM: 40, edgeBufferM: 10 }, input.params || {})\n  const fix = input.gps\n  const zones = Array.isArray(input.zones) ? input.zones : []\n  if (!fix || !(fix.accuracy > 0)) return { ...input, geo: { quality: 'none', result: 'unknown', zone: '', distance_m: null, note: 'No GPS fix with this photo' } }\n  const quality = fix.accuracy <= P.goodFixM ? 'good' : fix.accuracy <= P.weakFixM ? 'weak' : 'poor'\n  const R = 6371000\n  const toXY = (lat, lng) => [((lng - fix.lng) * Math.PI / 180) * R * Math.cos(fix.lat * Math.PI / 180), ((lat - fix.lat) * Math.PI / 180) * R]\n  const segDist = (p, a, b) => {\n    const dx = b[0] - a[0], dy = b[1] - a[1]\n    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)))\n    return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)\n  }\n  const measure = (z) => {\n    if (z.circle) {\n      const c = toXY(z.circle.lat, z.circle.lng)\n      const d = Math.hypot(c[0], c[1]) - z.circle.radius_m\n      return { inside: d <= 0, edge: Math.abs(d) }\n    }\n    const pts = (z.polygon || []).map((p) => toXY(p[0], p[1]))\n    let inside = false\n    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {\n      const [xi, yi] = pts[i], [xj, yj] = pts[j]\n      if ((yi > 0) !== (yj > 0) && 0 < ((xj - xi) * (0 - yi)) / (yj - yi) + xi) inside = !inside\n    }\n    let edge = Infinity\n    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) edge = Math.min(edge, segDist([0, 0], pts[j], pts[i]))\n    return { inside, edge }\n  }\n  const scored = zones.map((z) => {\n    const m = measure(z)\n    return { area: z.area, name: z.name, inside: m.inside, dist: m.inside ? 0 : m.edge, edge: m.edge }\n  }).sort((a, b) => a.dist - b.dist)\n  const want = input.line_area || ''\n  const target = scored.find((s) => s.area === want)\n  const slack = fix.accuracy + P.edgeBufferM\n  let result = 'unknown'\n  if (target) {\n    if (target.inside && (target.edge >= fix.accuracy || quality === 'good')) result = 'in'\n    else if (target.inside || target.dist <= slack) result = 'edge'\n    else result = quality === 'poor' ? 'unknown' : 'out'\n  }\n  const nearest = scored[0]\n  return {\n    ...input,\n    geo: {\n      quality, accuracy_m: Math.round(fix.accuracy), result,\n      zone: target ? target.area : '', distance_m: target ? Math.round(target.dist) : null,\n      nearest: nearest ? nearest.area : '',\n      note: !zones.length ? 'No areas drawn for this site yet'\n        : !target ? 'No area drawn for ' + want\n        : result === 'in' ? 'Inside ' + target.name\n        : result === 'edge' ? 'At the edge of ' + target.name + ' (GPS ±' + Math.round(fix.accuracy) + ' m)'\n        : result === 'out' ? Math.round(target.dist) + ' m outside ' + target.name + (nearest && nearest.area !== want ? '; nearest is ' + nearest.name : '')\n        : 'GPS too weak (±' + Math.round(fix.accuracy) + ' m) to place it',\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.gps = input.body.gps; input.line_area = String(input.body.line || '').split('-')[0]; input.params = {\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10};\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+        "jsCode": "// Place on site map: generated from n8n/mobilise/logic.mjs geofence. Edit there, then rebuild.\nconst __fn = function geofence(input) {\n  const P = Object.assign({ goodFixM: 15, weakFixM: 40, edgeBufferM: 10 }, input.params || {})\n  const fix = input.gps\n  const zones = Array.isArray(input.zones) ? input.zones : []\n  // A QR sticker scanned in the last few minutes (verified by the walk API) places the photo\n  // in that area even indoors, where GPS cannot. GPS is still recorded and reported.\n  const spot = String(input.spot_area || '')\n  const spotHit = !!spot && spot === String(input.line_area || '')\n  if (!fix || !(fix.accuracy > 0)) {\n    return { ...input, geo: { quality: 'none', result: spotHit ? 'in' : 'unknown', zone: spotHit ? spot : '', distance_m: null, spot, note: spotHit ? 'Sticker for ' + spot + ' scanned; no GPS fix' : 'No GPS fix with this photo' } }\n  }\n  const quality = fix.accuracy <= P.goodFixM ? 'good' : fix.accuracy <= P.weakFixM ? 'weak' : 'poor'\n  const R = 6371000\n  const toXY = (lat, lng) => [((lng - fix.lng) * Math.PI / 180) * R * Math.cos(fix.lat * Math.PI / 180), ((lat - fix.lat) * Math.PI / 180) * R]\n  const segDist = (p, a, b) => {\n    const dx = b[0] - a[0], dy = b[1] - a[1]\n    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)))\n    return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy)\n  }\n  const measure = (z) => {\n    if (z.circle) {\n      const c = toXY(z.circle.lat, z.circle.lng)\n      const d = Math.hypot(c[0], c[1]) - z.circle.radius_m\n      return { inside: d <= 0, edge: Math.abs(d) }\n    }\n    const pts = (z.polygon || []).map((p) => toXY(p[0], p[1]))\n    let inside = false\n    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {\n      const [xi, yi] = pts[i], [xj, yj] = pts[j]\n      if ((yi > 0) !== (yj > 0) && 0 < ((xj - xi) * (0 - yi)) / (yj - yi) + xi) inside = !inside\n    }\n    let edge = Infinity\n    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) edge = Math.min(edge, segDist([0, 0], pts[j], pts[i]))\n    return { inside, edge }\n  }\n  const scored = zones.map((z) => {\n    const m = measure(z)\n    return { area: z.area, name: z.name, inside: m.inside, dist: m.inside ? 0 : m.edge, edge: m.edge }\n  }).sort((a, b) => a.dist - b.dist)\n  const want = input.line_area || ''\n  const target = scored.find((s) => s.area === want)\n  const slack = fix.accuracy + P.edgeBufferM\n  let result = 'unknown'\n  if (target) {\n    if (target.inside && (target.edge >= fix.accuracy || quality === 'good')) result = 'in'\n    else if (target.inside || target.dist <= slack) result = 'edge'\n    else result = quality === 'poor' ? 'unknown' : 'out'\n  }\n  const nearest = scored[0]\n  const gpsNote = !zones.length ? 'No areas drawn for this site yet'\n        : !target ? 'No area drawn for ' + want\n        : result === 'in' ? 'Inside ' + target.name\n        : result === 'edge' ? 'At the edge of ' + target.name + ' (GPS ±' + Math.round(fix.accuracy) + ' m)'\n        : result === 'out' ? Math.round(target.dist) + ' m outside ' + target.name + (nearest && nearest.area !== want ? '; nearest is ' + nearest.name : '')\n        : 'GPS too weak (±' + Math.round(fix.accuracy) + ' m) to place it'\n  return {\n    ...input,\n    geo: {\n      quality, accuracy_m: Math.round(fix.accuracy), result: spotHit ? 'in' : result, gps_result: result, spot,\n      zone: target ? target.area : spotHit ? spot : '', distance_m: target ? Math.round(target.dist) : null,\n      nearest: nearest ? nearest.area : '',\n      note: spotHit ? 'Sticker for ' + spot + ' scanned · GPS: ' + gpsNote : spot ? gpsNote + ' · last sticker scanned: ' + spot : gpsNote,\n    },\n  }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.gps = input.body.gps; input.line_area = String(input.body.line || '').split('-')[0]; input.params = {\"goodFixM\":15,\"weakFixM\":40,\"edgeBufferM\":10};\nconst __sp = String(input.body && input.body.spot || '').split('.');\nconst __sw = require('crypto').createHmac('sha256', $env.VERA_WALK_SECRET || '').update('spot.' + __sp.slice(0, 3).join('.')).digest('base64url').slice(0, 22);\ninput.spot_area = __sp.length === 4 && (__sp[3] || '').length === __sw.length && require('crypto').timingSafeEqual(Buffer.from(__sp[3]), Buffer.from(__sw)) && Number(__sp[0]) === Number(input.mobilisation_id) ? __sp[1] : '';\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
       },
-      "notes": "Phone fix (with its own ± metres) against the area drawn for this line: in / edge / out / unknown. Never blocks the capture.",
+      "notes": "Phone fix (with its own ± metres) against the area drawn for this line: in / edge / out / unknown. A sticker of this area scanned just before counts as in. Never blocks the capture.",
       "notesInFlow": false,
       "onError": "continueErrorOutput"
     },
@@ -912,13 +981,350 @@
       "notesInFlow": false
     },
     {
+      "id": "47a01c04-31d4-499d-8bf9-cacfe8f1f5f4",
+      "name": "Areas for marking",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1160
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select w.id as walk_id, w.mobilisation_id, (select json_agg(distinct area) from lines where mobilisation_id = w.mobilisation_id) as areas from walks w where w.id = $1;",
+        "options": {
+          "queryReplacement": "={{ [($json.walk_id) ?? null] }}"
+        }
+      },
+      "notes": "Which areas this site has.\nGuardrails: error-out, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5d7b7047-d738-4e8a-81f8-245258690778",
+      "name": "Check the area shape",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        1160
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Check the area shape: generated from n8n/mobilise/logic.mjs validateZone. Edit there, then rebuild.\nconst __fn = function validateZone(input) {\n  const b = input.body || {}\n  const errors = []\n  const areas = Array.isArray(input.areas) ? input.areas : []\n  const sh = b.shape || {}\n  const okPt = (p) => Array.isArray(p) && p.length === 2 && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180\n  if (!/^[A-Z]{2,3}$/.test(String(b.area || ''))) errors.push('area must be an area code like LC')\n  else if (areas.length && !areas.includes(b.area)) errors.push('area ' + b.area + ' is not on this site\\'s checklist')\n  let shape = null\n  if (sh.circle) {\n    const c = sh.circle\n    if (!(Math.abs(c.lat) <= 90 && Math.abs(c.lng) <= 180)) errors.push('circle centre is not a valid point')\n    if (!(c.radius_m >= 5 && c.radius_m <= 150)) errors.push('radius must be 5 to 150 m')\n    if (!(c.accuracy_m > 0 && c.accuracy_m <= 30)) errors.push('GPS was too weak to mark the area (need ±30 m or better)')\n    shape = { circle: { lat: Number(c.lat), lng: Number(c.lng), radius_m: Math.round(c.radius_m) } }\n  } else if (Array.isArray(sh.polygon)) {\n    const p = sh.polygon\n    if (p.length < 3 || p.length > 30 || !p.every(okPt)) errors.push('outline needs 3 to 30 valid corners')\n    else {\n      const R = 6371000\n      const lat0 = p[0][0] * Math.PI / 180\n      const xy = p.map((q) => [q[1] * Math.PI / 180 * R * Math.cos(lat0), q[0] * Math.PI / 180 * R])\n      let a = 0\n      for (let i = 0, j = xy.length - 1; i < xy.length; j = i++) a += xy[j][0] * xy[i][1] - xy[i][0] * xy[j][1]\n      const area = Math.abs(a / 2)\n      if (area < 20) errors.push('outline is too small (under 20 m²): walk the real corners')\n      if (area > 200000) errors.push('outline is larger than 20 hectares')\n    }\n    if (!(sh.accuracy_m > 0 && sh.accuracy_m <= 30)) errors.push('GPS was too weak at one of the corners (need ±30 m or better)')\n    shape = { polygon: p.map((q) => [Number(q[0]), Number(q[1])]) }\n  } else errors.push('shape must be a circle or a polygon')\n  const name = String(b.name || '').trim().slice(0, 60) || String(b.area || '')\n  return { ...input, valid: errors.length === 0, errors, zone: { area: b.area, name, shape } }\n};\nconst item = $input.item;\nlet input = { ...item.json };\ninput.body = $('Check walk link ').item.json.body;\nconst out = __fn(input);\nreturn item.binary ? { json: out, binary: item.binary } : { json: out };"
+      },
+      "notes": "Known area, 3–30 corners or a 5–150 m circle, GPS ±30 m or better, a sane size.\nGuardrails: schema",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "0dbd7cc5-efb7-4c26-80e3-ff367835f777",
+      "name": "Shape OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        1160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Bad shapes get a 400 with the reasons.\nGuardrails: schema",
+      "notesInFlow": false
+    },
+    {
+      "id": "19d7f5d2-0f59-4466-860e-e73850918e22",
+      "name": "Save area shape",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1960,
+        1160
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "with w as (select mobilisation_id, engineer_id from walks where id = $1),\nd as (delete from zones z using w where z.mobilisation_id = w.mobilisation_id and z.area = $2 returning z.id),\ni as (insert into zones (mobilisation_id, area, name, shape, source) select w.mobilisation_id, $2, $3, $4::jsonb, 'engineer_drawn' from w returning id),\na as (insert into audit_log (actor, action, entity, entity_id, detail) select 'contact:' || w.engineer_id, 'mark_area', 'zone', $2, json_build_object('shape', $4::jsonb, 'replaced', (select count(*) from d)) from w)\nselect (select count(*) from i) as saved, (select count(*) from d) as replaced;",
+        "options": {
+          "queryReplacement": "={{ [($json.walk_id) ?? null, ($json.zone.area) ?? null, ($json.zone.name) ?? null, (JSON.stringify($json.zone.shape)) ?? null] }}"
+        }
+      },
+      "notes": "The engineer's shape replaces the contractor's pin for that area. The old one stays in the audit log.\nGuardrails: error-out, audit",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "aee7279b-9486-44da-8da9-4b121b128fa0",
+      "name": "Respond area saved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        1160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: $json.saved > 0, replaced: $json.replaced } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "The page draws it at once.",
+      "notesInFlow": false
+    },
+    {
+      "id": "47a852b3-fb5b-464e-8fb1-8500501ef6b2",
+      "name": "Respond bad shape",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        1360
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"validation_error\", \"details\": $json.errors } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "notes": "The page says why (usually: GPS too weak, wait and try again).",
+      "notesInFlow": false
+    },
+    {
+      "id": "73c352af-1ba4-47e0-8604-e89391921485",
+      "name": "Check sticker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1560
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: verifies the sticker's signature (HMAC) with the walk secret.\nconst crypto = require('crypto');\nconst item = $input.item;\nconst code = String((item.json.body || {}).code || '');\nconst parts = code.split('.');\nconst want = crypto.createHmac('sha256', $env.VERA_WALK_SECRET || '').update('spot.' + parts.slice(0, 3).join('.')).digest('base64url').slice(0, 22);\nconst sig = parts[3] || '';\nconst ok = parts.length === 4 && /^\\d+$/.test(parts[0]) && /^[A-Z]{2,3}$/.test(parts[1]) && /^\\d{1,2}$/.test(parts[2]) && sig.length === want.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(want));\nreturn { json: { ...item.json, spot_ok: ok, spot: ok ? { mobilisation_id: Number(parts[0]), area: parts[1], sticker: Number(parts[2]) } : null } };"
+      },
+      "notes": "The code is signed: a made-up or altered code fails here.\nGuardrails: auth",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "17588a81-8601-481e-8f53-926112cc5655",
+      "name": "Sticker genuine?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        1560
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.spot_ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "notes": "Only signed codes count.",
+      "notesInFlow": false
+    },
+    {
+      "id": "4783f966-afd6-4e2c-87a2-176ae0e0e827",
+      "name": "Record sticker scan",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1680,
+        1560
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into spot_checks (walk_id, area, sticker, ts, gps)\nselect w.id, $2, $3, coalesce(nullif($4, '')::timestamptz, now()), $5::jsonb from walks w where w.id = $1 and w.mobilisation_id = $6\non conflict do nothing returning area;",
+        "options": {
+          "queryReplacement": "={{ [($json.walk_id) ?? null, ($json.spot.area) ?? null, ($json.spot.sticker) ?? null, ($json.body.client_ts || '') ?? null, (JSON.stringify($json.body.gps || null)) ?? null, ($json.spot.mobilisation_id) ?? null] }}"
+        }
+      },
+      "notes": "Kept with time and GPS. A sticker from another site records nothing.\nGuardrails: error-out, audit, idempotent",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "828a437a-adaf-472b-8320-bc6ba6acb083",
+      "name": "Respond sticker",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1960,
+        1560
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: !!$json.area, area: $json.area || null, message: $json.area ? 'Sticker recorded' : 'This sticker belongs to another site' } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "The page switches to that area.",
+      "notesInFlow": false
+    },
+    {
+      "id": "6b5af210-cd1b-4684-8ba7-dac12f89ec61",
+      "name": "Respond bad sticker",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        1760
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"validation_error\", \"details\": [\"This is not a Vera sticker for this site\"] } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "notes": "Refused.",
+      "notesInFlow": false
+    },
+    {
+      "id": "cbb01f99-4c2f-4f85-871f-af27207a90de",
+      "name": "Areas for stickers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1960
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select w.id as walk_id, w.mobilisation_id, mo.project, (select json_agg(distinct area) from lines where mobilisation_id = w.mobilisation_id and \"when\" = 'walk') as areas\nfrom walks w join mobilisations mo on mo.id = w.mobilisation_id where w.id = $1;",
+        "options": {
+          "queryReplacement": "={{ [($json.walk_id) ?? null] }}"
+        }
+      },
+      "notes": "The areas walked on this site.\nGuardrails: error-out, retry",
+      "notesInFlow": false,
+      "credentials": {
+        "postgres": {
+          "id": "veraPostgres01",
+          "name": "Vera Postgres"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "47f96961-79c2-4912-8b68-bea5767d27e8",
+      "name": "Sign sticker codes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        1960
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Why Code: signs one code per sticker (HMAC with the walk secret).\nconst crypto = require('crypto');\nconst item = $input.item;\nconst per = Math.max(1, Math.min(20, Number(($('Check walk link ').item.json.body || {}).per_area) || 4));\nconst sign = (s) => crypto.createHmac('sha256', $env.VERA_WALK_SECRET || '').update('spot.' + s).digest('base64url').slice(0, 22);\nconst stickers = [];\nfor (const a of item.json.areas || []) for (let n = 1; n <= per; n++) { const s = item.json.mobilisation_id + '.' + a + '.' + n; stickers.push({ area: a, n, code: s + '.' + sign(s) }); }\nreturn { json: { project: item.json.project, stickers } };"
+      },
+      "notes": "One signed code per sticker (default 4 per area).\nGuardrails: auth",
+      "notesInFlow": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "c332533d-2bd6-4210-8774-36d04bd70d59",
+      "name": "Respond stickers",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        1960
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "notes": "The page prints them as QR codes, A4.",
+      "notesInFlow": false
+    },
+    {
       "id": "25c0e282-7ef2-425a-876f-c8e030161677",
       "name": "Respond 500",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
         560,
-        1160
+        2200
       ],
       "parameters": {
         "respondWith": "json",
@@ -1063,6 +1469,27 @@
         [
           {
             "node": "Mark walk finished",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Areas for marking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check sticker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Areas for stickers",
             "type": "main",
             "index": 0
           }
@@ -1312,6 +1739,168 @@
         [
           {
             "node": "Draft the NOC report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Areas for marking": {
+      "main": [
+        [
+          {
+            "node": "Check the area shape",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the area shape": {
+      "main": [
+        [
+          {
+            "node": "Shape OK?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape OK?": {
+      "main": [
+        [
+          {
+            "node": "Save area shape",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond bad shape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save area shape": {
+      "main": [
+        [
+          {
+            "node": "Respond area saved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check sticker": {
+      "main": [
+        [
+          {
+            "node": "Sticker genuine?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sticker genuine?": {
+      "main": [
+        [
+          {
+            "node": "Record sticker scan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond bad sticker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record sticker scan": {
+      "main": [
+        [
+          {
+            "node": "Respond sticker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Areas for stickers": {
+      "main": [
+        [
+          {
+            "node": "Sign sticker codes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign sticker codes": {
+      "main": [
+        [
+          {
+            "node": "Respond stickers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 500",
             "type": "main",
             "index": 0
           }

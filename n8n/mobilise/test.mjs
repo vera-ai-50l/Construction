@@ -34,6 +34,7 @@ export async function runTests() {
 
   // ---- setup
   R.push(t('setup: form validates and cleans phones', S.valid && S.clean.contractor_phone === '919820000001', S.errors))
+  R.push(t('setup: shadow mode is on unless the form says no', S.clean.flags.shadow === true && L.validateSetup({ ...MOB, shadow: 'no' }).clean.flags.shadow === false, null))
   R.push(t('setup: bad form gives reasons', L.validateSetup({ project: '', visit_date: '2026-12-01', start_date: '2026-11-20' }).errors.length >= 5, null))
   R.push(t(`setup: plant site gets ${S.checklist.length} lines, RMC site ${rmcSite.checklist.length}`, S.checklist.length !== rmcSite.checklist.length && S.checklist.some((l) => l.code === 'PAP-06') && !rmcSite.checklist.some((l) => l.code === 'PAP-06') && rmcSite.checklist.some((l) => l.code === 'PAP-08'), [S.checklist.length, rmcSite.checklist.length]))
   R.push(t('setup: template has 77 lines in 7 areas, codes unique', TEMPLATE.length === 77 && AREAS.length === 7 && new Set(TEMPLATE.map((l) => l.code)).size === 77, TEMPLATE.length))
@@ -104,6 +105,27 @@ export async function runTests() {
   R.push(t('confirm: 3 options → list (≤10 rows, titles ≤ 24)', cb3.request.body.interactive.type === 'list' && cb3.request.body.interactive.action.sections[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72), null))
   R.push(t('answer: contractor cannot sign the NOC', L.parseAnswer({ message: { interactive: { id: 'sign:3:approve' } }, contact_role: 'contractor' }).answer.ok === false, null))
   R.push(t('answer: engineer can sign', L.parseAnswer({ message: { interactive: { id: 'sign:3:approve' } }, contact_role: 'engineer', contact_id: 2 }).answer.ok === true, null))
+  const pa = (id, role) => L.parseAnswer({ message: { interactive: { id } }, contact_role: role, contact_id: 2 }).answer.ok
+  R.push(t('answer: "Show me" works for anyone; review only for reviewers; unknown choices refused', pa('show:latest', 'contractor') && pa('review:9:LC-03', 'reviewer') && !pa('review:9:LC-03', 'contractor') && !pa('close:4:maybe', 'engineer') && pa('close:4:reject', 'engineer') && pa('na:LC-10:reject', 'engineer') && !pa('bind::LC-03', 'contractor'), null))
+
+  // ---- closure, reviewer and "show a file" messages
+  R.push(t('bind: reply to an open-item reminder carries the item id', L.bindLine({ message: { type: 'image', context_wamid: 'wamid.ITEM' }, lines, prompts: [{ wamid: 'wamid.ITEM', kind: 'open_item', line: 'SF-08', ref: '12' }] }).open_item === '12', null))
+  const ca = L.buildClosureAsk({ open_item_id: 12, line_code: 'SF-08', text: 'Edge protection', finding: 'Missing on slab edge', project: 'Tower B' }).msg
+  R.push(t('closure: engineer gets "Accept, close it" / "Not fixed" for that item', ca.buttons[0].id === 'close:12:accept' && ca.buttons[1].id === 'close:12:reject' && ca.text.includes('Missing on slab edge'), ca))
+  const open5 = ['LC-03', 'LC-04', 'LC-05', 'LC-06', 'LC-07', 'LC-08', 'LC-09', 'LC-10', 'LC-11'].map((code) => ({ code, text: 'line ' + code }))
+  const rv1 = L.buildReviewMessage({ review_id: 9, reviewer_id: 5, evidence_id: 77, reason: 'Low confidence', options: ['LC-05', 'XX-01'], open_lines: open5, message: { caption: 'toilet' } })
+  R.push(t('review: unfiled file → suggested line first, ≤ 10 rows, resend and handled', rv1.review_type === 'file' && rv1.msg.buttons[0].id === 'review:9:LC-05' && rv1.msg.buttons.length === 10 && rv1.msg.buttons.some((b) => b.id === 'review:9:resend') && rv1.contact_id === 5 && rv1.msg.text.includes('toilet'), rv1.msg.buttons.map((b) => b.id)))
+  const rv2 = L.buildReviewMessage({ review_id: 3, evidence_id: 70, line_code: 'PAP-04', line_evidence: 'document', reason: 'Paper needs a person' })
+  R.push(t('review: paper to check → Accept / Send back / Handled', rv2.review_type === 'paper' && rv2.msg.buttons.map((b) => b.id).join() === 'review:3:accept,review:3:reject,review:3:done', null))
+  const rv3 = L.buildReviewMessage({ review_id: 4, evidence_id: 0, message_id: 8, reason: 'Download failed' })
+  R.push(t('review: no file → ask to resend / handled', rv3.review_type === 'other' && rv3.msg.buttons.length === 2, null))
+  const em2 = L.buildEvidenceMessage({ contact_id: 2, kind: 'close', ref: '12', msg: ca, media_id: 'MID', media_mime: 'image/jpeg' })
+  R.push(t('show: ≤ 3 answers → one message, photo as header, titles ≤ 20', em2.length === 1 && em2[0].request.body.interactive.header.image.id === 'MID' && em2[0].request.body.interactive.action.buttons.every((b) => b.reply.title.length <= 20) && em2[0].request.summary === 'a fixed item to approve', em2))
+  const em10 = L.buildEvidenceMessage({ contact_id: 5, kind: 'review', ref: '9', msg: rv1.msg, media_id: 'MID', media_mime: 'application/pdf' })
+  R.push(t('show: 10 answers → the PDF, then a list (rows ≤ 24 / 72 chars)', em10.length === 2 && em10[0].request.body.type === 'document' && em10[1].request.body.interactive.type === 'list' && em10[1].request.body.interactive.action.sections[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72), em10.map((x) => x.request.body.type)))
+  R.push(t('show: file could not be fetched → text and buttons still go', L.buildEvidenceMessage({ msg: rv2.msg, media_id: '' })[0].request.body.interactive.header === undefined, null))
+  const rep2 = L.composeReply({ fragments: [{ kind: 'closed', line: 'SF-08' }, { kind: 'reopened', line: 'LC-07' }, { kind: 'na', line: 'LC-10' }, { kind: 'resend', line: '', reason: 'photo unreadable' }] })
+  R.push(t('reply: closure, N/A and resend lines read plainly', rep2.reply.includes('Closed by the engineer: SF-08') && rep2.reply.includes('LC-07 still open') && rep2.reply.includes('not applicable') && rep2.reply.includes('Please send again: photo unreadable'), rep2.reply))
 
   // ---- paper checks (deterministic)
   const car = lines.find((l) => l.code === 'PAP-04')
@@ -127,7 +149,9 @@ export async function runTests() {
 
   // ---- text commands
   R.push(t('text: "baki kya hai" → gap list', L.readTextCommand({ message: { text: 'Sir baki kya hai' } }).command === 'gap_list', null))
-  R.push(t('text: "LC-10 NA creche not needed" → N/A request for LC-10', (() => { const c = L.readTextCommand({ message: { text: 'LC-10 NA creche not needed, no women workers' } }); return c.command === 'request_na' && c.line === 'LC-10' })(), L.readTextCommand({ message: { text: 'LC-10 NA creche not needed' } })))
+  R.push(t('text: "SY-08 NA weighbridge not needed" → N/A request for SY-08', (() => { const c = L.readTextCommand({ message: { text: 'SY-08 NA weighbridge not needed, RMC only' }, lines }); return c.command === 'request_na' && c.line === 'SY-08' })(), null))
+  R.push(t('text: N/A for a line not on this site (creche line, no creche) → help, engineer not asked', L.readTextCommand({ message: { text: 'LC-10 NA' }, lines }).help === 'unknown_line', null))
+  R.push(t('text: a reviewer\'s typed message → reviewer help, never filed', L.readTextCommand({ message: { text: 'ok done' }, contact_role: 'reviewer', lines }).help === 'reviewer', null))
 
   // ---- geofence
   const camp = { area: 'LC', name: 'Labour camp', polygon: [[19.2100, 72.9700], [19.2100, 72.9710], [19.2092, 72.9710], [19.2092, 72.9700]] }
@@ -139,12 +163,22 @@ export async function runTests() {
   R.push(t('GPS: ±90 m fix far away → unknown, never "out"', geo({ lat: 19.2140, lng: 72.9740, accuracy: 90 }).result === 'unknown', geo({ lat: 19.2140, lng: 72.9740, accuracy: 90 })))
   R.push(t('GPS: no fix → unknown, capture still saved', geo(null).result === 'unknown', null))
   R.push(t('GPS: circle zone (contractor pin) works', geo({ lat: 19.21205, lng: 72.97205, accuracy: 5 }, 'SY').result === 'in', null))
+  const st = (gps, spot_area, line_area = 'LC') => L.geofence({ gps, zones: [camp, yard], line_area, spot_area, params: PARAMS.geofence }).geo
+  R.push(t('sticker: indoors, no GPS, camp sticker scanned → in', st(null, 'LC').result === 'in', st(null, 'LC')))
+  R.push(t('sticker: weak GPS but camp sticker → in, GPS result still reported', (() => { const g = st({ lat: 19.2140, lng: 72.9740, accuracy: 90 }, 'LC'); return g.result === 'in' && g.gps_result === 'unknown' && g.note.includes('Sticker') })(), null))
+  R.push(t('sticker: yard sticker, camp line → GPS decides, note says which sticker', (() => { const g = st({ lat: 19.2120, lng: 72.9720, accuracy: 8 }, 'SY'); return g.result === 'out' && g.note.includes('last sticker scanned: SY') })(), null))
+  const zone = (body) => L.validateZone({ body, areas: ['LC', 'SY'] })
+  R.push(t('mark area: circle from a ±8 m fix → saved', zone({ area: 'LC', name: 'Labour camp', shape: { circle: { lat: 19.2096, lng: 72.9705, radius_m: 35, accuracy_m: 8 } } }).valid, null))
+  R.push(t('mark area: ±45 m fix / unknown area / 5 m² outline → refused with reasons', !zone({ area: 'LC', shape: { circle: { lat: 19.2, lng: 72.9, radius_m: 35, accuracy_m: 45 } } }).valid && !zone({ area: 'BP', shape: { circle: { lat: 19.2, lng: 72.9, radius_m: 35, accuracy_m: 5 } } }).valid && zone({ area: 'LC', shape: { polygon: [[19.2, 72.9], [19.20001, 72.9], [19.20001, 72.90001]], accuracy_m: 5 } }).errors[0].includes('too small'), null))
+  R.push(t('mark area: walked corners of the camp → saved', zone({ area: 'LC', shape: { polygon: camp.polygon, accuracy_m: 9 } }).valid, zone({ area: 'LC', shape: { polygon: camp.polygon, accuracy_m: 9 } }).errors))
 
   const cov = L.walkCoverage({ zones: [camp, yard], walk_areas: ['LC', 'SY', 'BP'], params: PARAMS.geofence, trail: [
     { lat: 19.2096, lng: 72.9705, accuracy: 8, ts: '2026-11-18T10:00:00+05:30' }, { lat: 19.2097, lng: 72.9706, accuracy: 9, ts: '2026-11-18T10:24:00+05:30' },
     { lat: 19.2120, lng: 72.9720, accuracy: 60, ts: '2026-11-18T10:40:00+05:30' },
   ] }).coverage
   R.push(t('coverage: camp walked 24 min; yard only a ±60 m fix → not counted; plant area not drawn', cov.areas[0].visited && cov.areas[0].minutes === 24 && !cov.areas[1].visited && !cov.areas[2].drawn, cov.areas))
+  const cov2 = L.walkCoverage({ zones: [camp], walk_areas: ['LC', 'BP'], params: PARAMS.geofence, trail: [], spots: [{ area: 'BP', ts: '2026-11-18T11:00:00+05:30' }] }).coverage
+  R.push(t('coverage: a sticker scanned in the plant counts as walked, even with no area drawn', cov2.areas[1].visited && cov2.areas[1].stickers === 1 && !cov2.areas[0].visited, cov2.areas))
 
   // ---- capture validation
   const cap = { capture_id: crypto.randomUUID(), line: 'LC-03', status: 'not_ok', gps: { lat: 19.2, lng: 72.9, accuracy: 7 }, client_ts: new Date().toISOString() }
@@ -161,7 +195,11 @@ export async function runTests() {
   const now = Date.parse('2026-11-15T19:00:00Z')
   R.push(t('send: inside window → session message', L.chooseSendMode({ phone: '919820000001', last_inbound_at: '2026-11-15T10:00:00Z', now, request: { body: { type: 'text', text: { body: 'x' } } } }).mode === 'session', null))
   R.push(t('send: outside window with template → template', L.chooseSendMode({ phone: '919820000001', last_inbound_at: '2026-11-13T10:00:00Z', now, request: { body: {}, template: { name: 'vera_mob_gap_list', params: ['a'] } } }).mode === 'template', null))
-  R.push(t('send: outside window, no template → not sent, logged', L.chooseSendMode({ phone: '919820000001', last_inbound_at: '2026-11-13T10:00:00Z', now, request: { body: {} } }).can_send === false, null))
+  const held = L.chooseSendMode({ phone: '919820000001', last_inbound_at: '2026-11-13T10:00:00Z', now, request: { summary: 'the NOC report to sign', body: { type: 'interactive' } } })
+  R.push(t('send: outside window, buttons/photo with no template → "Show me" template, real message held', held.mode === 'hold' && held.payload.template.name === 'vera_mob_action_needed' && held.payload.template.components[0].parameters[0].text === 'the NOC report to sign' && held.payload.template.components[1].parameters[0].payload === 'show:latest' && held.held_body.body.type === 'interactive', held.payload))
+  R.push(t('send: nothing to send → not sent, logged', L.chooseSendMode({ phone: '919820000001', last_inbound_at: '2026-11-13T10:00:00Z', now, request: {} }).can_send === false, null))
+  const tpl = L.chooseSendMode({ phone: '919820000001', now, request: { template: { name: 't', params: ['a'], header: { type: 'document', document: { id: 'M1' } }, buttons: ['x:1:a', 'x:1:b'] } } }).payload.template.components
+  R.push(t('send: template header + quick-reply payloads in the right order', tpl[0].type === 'header' && tpl[1].type === 'body' && tpl[3].index === '1' && tpl[3].parameters[0].payload === 'x:1:b', tpl))
   R.push(t('send: rate limit 131056 → retry, then a person after 3', L.classifySendError({ error: { message: '(#131056) pair rate limit', code: 131056 }, attempt: 0 }).send_error.action === 'retry' && L.classifySendError({ error: { code: 131056 }, attempt: 2 }).send_error.action === 'review', null))
   R.push(t('send: 131047 window closed → switch to template', (() => { const e = L.classifySendError({ error: { code: 131047 } }); return e.send_error.action === 'needs_template' && L.chooseSendMode({ ...e, phone: '919820000001', last_inbound_at: new Date().toISOString(), request: { body: { type: 'text' }, template: { name: 't' } } }).mode === 'template' })(), null))
 
@@ -242,6 +280,22 @@ export async function runTests() {
   const gateNode = nodeNamed(IDS.process, 'Confidence gate')
   const gated = await runCode(gateNode, [{ json: claude(ans()) }], { nodes: { 'Build classify request': { json: { ...creq[0].json } } } })
   R.push(t('n8n code: Confidence gate reads the Claude response node', gated[0].json.decision === 'auto' && gated[0].json.line === 'LC-03' && !gated[0].json.request, gated[0].json.decision))
+  const shadowGate = await runCode(gateNode, [{ json: claude(ans()) }], { nodes: { 'Build classify request': { json: { ...creq[0].json, mob: { flags: { shadow: true } } } } } })
+  R.push(t('n8n code: shadow mode → even 0.95 goes to the sender as buttons', shadowGate[0].json.decision === 'confirm' && shadowGate[0].json.options[0] === 'LC-03', shadowGate[0].json.decision))
+
+  // Stickers: signed in WF-03 "stickers", checked on scan and on every capture.
+  const stickers = await runCode(nodeNamed(IDS.walk, 'Sign sticker codes'), [{ json: { mobilisation_id: 7, project: 'Tower B', areas: ['LC', 'SY'] } }], { env, nodes: { 'Check walk link ': { json: { body: { per_area: 2 } } } } })
+  const codeLC = stickers[0].json.stickers[0].code
+  const scan = (code) => runCode(nodeNamed(IDS.walk, 'Check sticker'), [{ json: { body: { code } } }], { env })
+  const realScan = await scan(codeLC)
+  const fakeScan = await scan(codeLC.replace('.LC.', '.SY.'))
+  R.push(t('n8n code: 4 stickers signed; a real one verifies, an edited one is refused', stickers[0].json.stickers.length === 4 && realScan[0].json.spot_ok && realScan[0].json.spot.area === 'LC' && realScan[0].json.spot.mobilisation_id === 7 && !fakeScan[0].json.spot_ok, [realScan[0].json.spot, fakeScan[0].json.spot_ok]))
+  const placeNode = nodeNamed(IDS.walk, 'Place on site map')
+  const placed = await runCode(placeNode, [{ json: { mobilisation_id: 7, zones: [camp], body: { line: 'LC-03', gps: null, spot: codeLC } } }], { env })
+  const otherSite = await runCode(placeNode, [{ json: { mobilisation_id: 8, zones: [camp], body: { line: 'LC-03', gps: null, spot: codeLC } } }], { env })
+  R.push(t('n8n code: capture with this site\'s camp sticker → in; same sticker on another site → ignored', placed[0].json.geo.result === 'in' && otherSite[0].json.geo.result === 'unknown', [placed[0].json.geo, otherSite[0].json.geo]))
+  const frag = await runCode(nodeNamed(IDS.readPaper, 'Make reply fragment'), [{ json: { binding: { line: 'PAP-04' }, line: { code: 'PAP-04' }, message: { type: 'document' }, paper: { status: 'rejected', checks: [{ result: 'fail', note: 'Sum insured low' }] } } }])
+  R.push(t('n8n code: re-read paper gives the same reply line as WF-02', frag[0].json.fragment.kind === 'rejected' && frag[0].json.fragment.line === 'PAP-04' && frag[0].json.saved_line === 'PAP-04', frag[0].json.fragment))
 
   return R
 }

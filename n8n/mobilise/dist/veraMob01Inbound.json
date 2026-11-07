@@ -406,7 +406,7 @@
           "conditions": [
             {
               "id": "c1",
-              "leftValue": "={{ $json.status === 'failed' }}",
+              "leftValue": "={{ $json.status === 'failed' && $json.kind !== 'review' }}",
               "rightValue": "",
               "operator": {
                 "type": "boolean",
@@ -420,7 +420,7 @@
         "looseTypeValidation": true,
         "options": {}
       },
-      "notes": "A failed send must not go unnoticed.",
+      "notes": "A failed send must not go unnoticed. (A failed send to a reviewer is only logged, so it cannot loop.)",
       "notesInFlow": false
     },
     {
@@ -553,7 +553,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "with c as (\n  update contacts set last_inbound_at = now()\n  where id = (select c2.id from contacts c2 join mobilisations mo on mo.id = c2.mobilisation_id\n              where c2.phone = $1 and mo.phase <> 'closed' order by mo.visit_date desc limit 1)\n  returning id, mobilisation_id, role\n) update messages set contact_id = (select id from c), mobilisation_id = (select mobilisation_id from c)\n  where id = $2\n  returning id as message_id, contact_id, mobilisation_id, coalesce((select role from c), '') as role;",
+        "query": "with c as (\n  update contacts set last_inbound_at = now()\n  where id = (select c2.id from contacts c2 left join mobilisations mo on mo.id = c2.mobilisation_id\n              where c2.phone = $1 and (mo.phase <> 'closed' or (c2.role = 'reviewer' and c2.mobilisation_id is null))\n              order by mo.visit_date desc nulls last limit 1)\n  returning id, mobilisation_id, role\n) update messages set contact_id = (select id from c), mobilisation_id = (select mobilisation_id from c)\n  where id = $2\n  returning id as message_id, contact_id, mobilisation_id, coalesce((select role from c), '') as role;",
         "options": {
           "queryReplacement": "={{ [($('Split into events').item.json.from) ?? null, ($json.message_id) ?? null] }}"
         }
