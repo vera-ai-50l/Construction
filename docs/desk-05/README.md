@@ -4,6 +4,8 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 
 **The board** (`docs/desk-05/board.html`, published as a private artifact) covers who it is for, the three decisions and every node. This file covers how to run it.
 
+**To show it**: `/mobilise` walks through the day with the messages the workflows produce (contractor side in English, Hindi or Marathi), `/walk` is the engineer's page in demo mode, and `docs/desk-05/sample-noc-report.pdf` is the report he signs. A static build of these pages is deployed to the Vercel project `vera-desk05` (behind the team's Vercel login).
+
 ## What is here
 
 | Path | What it is |
@@ -18,6 +20,7 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 | `n8n/mobilise/test.mjs` | 134 checks. They run the generated Code-node source, the same text n8n runs. |
 | `n8n/mobilise/schema.sql` | Postgres tables, the `apply_answer` and `file_evidence` functions for button answers, and the `ai_accuracy` view. Safe to run again on an existing database (it adds the new columns). |
 | `n8n/mobilise/dist/*.json` | Importable workflows (rebuilt by `npm run build:mobilise`). |
+| `app/mobilise`, `components/day/DayDemo.tsx`, `n8n/mobilise/day-demo.mjs` | The day, step by step. `day-demo.mjs` makes every Vera message with the workflow code; `build` writes it to `content/day-demo.json`. |
 | `app/walk`, `components/walk/Walk.tsx` | The engineer's walk page. Without a link token it runs as a demo on the sample site. |
 | `components/walk/SiteMap.tsx` | The site map on the walk page: drawn areas, his position and trail; mark an area by standing in it or walking its corners. |
 | `app/walk/stickers`, `components/walk/Stickers.tsx` | Printable QR stickers (A4), signed for one site. |
