@@ -736,23 +736,61 @@ export function checkNarrative(input) {
 
 export function renderReport(input) {
   const s = input.score
+  const mob = input.mob || {}
   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+  const AREA = { PAP: 'Papers and licences', DR: 'Drawings and design readiness', LC: 'Labour camp', SY: 'Stores yard', BP: 'Batching plant / RMC', FW: 'Formwork and scaffolding', SF: 'Safety set-up' }
+  const areaName = (a) => AREA[a] || a
+  const ist = (ts) => (ts ? new Date(Date.parse(ts) + 5.5 * 3600 * 1000).toISOString().slice(11, 16) : '')
   const verdict = { ready: 'Ready to start', conditional: 'Ready to start with conditions', not_ready: 'Not ready' }[s.recommendation]
-  const rows = s.open_items.map((o) => '<tr><td>' + esc(o.line) + '</td><td>' + esc(o.severity) + '</td><td>' + esc(o.text) + '<br><small>' + esc(o.finding) + '</small></td><td>' + esc(o.due_on) + '</td></tr>').join('')
-  const areas = (input.narrative.areas || []).map((a) => '<h3>' + esc(a.area) + '</h3><p>' + esc(a.observation) + ' <small>(' + esc((a.lines || []).join(', ')) + ')</small></p>').join('')
-  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' + (a.stickers ? ', ' + a.stickers + ' sticker scan' + (a.stickers > 1 ? 's' : '') : '') : '<b>no GPS or sticker record</b>') +
-      (a.sticker_mismatch ? ' <b>· ' + a.sticker_mismatch + ' sticker scan' + (a.sticker_mismatch > 1 ? 's' : '') + ' with GPS far from this area (not counted)</b>' : '') + '</li>').join('')
-  const html = '<!doctype html><html><head><meta charset="utf-8"><title>NOC draft ' + esc(input.mob.project) + '</title>' +
-    '<style>body{font:12px/1.5 Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}.v{font-size:16px;font-weight:bold}.ai{color:#555;font-size:11px}</style></head><body>' +
-    '<h1>Mobilisation report (draft for signature): ' + esc(input.mob.project) + '</h1>' +
-    '<p>' + esc(input.mob.contractor_name) + ' · visit ' + esc(input.visit_date) + ' · checklist ' + esc(input.mob.template_version) + '</p>' +
-    '<p class="v">Recommendation from the checklist: ' + esc(verdict) + '</p>' +
-    '<p>' + s.done + ' of ' + s.total + ' lines closed. Open: ' + s.critical_open + ' critical, ' + s.major_open + ' major, ' + s.minor_open + ' minor.' + (s.areas_missed.length ? ' Areas with no GPS record: ' + esc(s.areas_missed.join(', ')) + '.' : '') + '</p>' +
-    '<h2>Areas walked</h2><ul>' + cov + '</ul>' +
-    '<h2>Open items</h2><table><tr><th>Line</th><th>Severity</th><th>Item</th><th>Due</th></tr>' + rows + '</table>' +
-    '<h2>Observations</h2>' + areas +
-    '<p class="ai">' + (input.narrative_ok ? 'Observations worded by AI from the engineer\'s voice remarks; checked against the checklist.' : 'AI wording failed its check; the engineer\'s transcribed remarks are shown as recorded.') + ' Recommendation, counts and dates are computed from the checklist, not by AI. Every line links to its photo or paper in Vera.</p>' +
-    '<p>Signed: ______________________ (engineer) Date: __________</p></body></html>'
+  const tone = { ready: 'ok', conditional: 'warn', not_ready: 'bad' }[s.recommendation]
+  const why = []
+  if (s.critical_open) why.push(s.critical_open + ' critical item' + (s.critical_open > 1 ? 's' : '') + ' open')
+  if ((s.areas_missed || []).length) why.push('no GPS or sticker record for ' + s.areas_missed.map(areaName).join(', '))
+  if (!why.length && s.major_open) why.push(s.major_open + ' major item' + (s.major_open > 1 ? 's' : '') + ' open, each with a due date')
+  if (!why.length) why.push('every critical and major line is closed')
+  const english = {}
+  for (const r of (input.narrative && input.narrative.remarks_en) || []) english[r.line] = r.english
+  const sev = (x) => '<span class="sev ' + esc(x) + '">' + esc(x) + '</span>'
+  const order = { critical: 0, major: 1, minor: 2 }
+  const items = (s.open_items || []).slice().sort((a, b) => order[a.severity] - order[b.severity] || String(a.line).localeCompare(String(b.line)))
+  const rows = items.map((o) => '<tr><td class="code">' + esc(o.line) + '</td><td>' + sev(o.severity) + '</td><td>' + esc(o.text) + '<div class="finding">' + esc(english[o.line] || o.finding) + '</div></td><td class="nowrap">' + esc(o.due_on) + '</td></tr>').join('')
+  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<tr><td>' + esc(areaName(a.area)) + '</td><td>' +
+    (a.visited ? (a.first ? esc(ist(a.first)) + (a.last && a.last !== a.first ? '–' + esc(ist(a.last)) : '') + ' · ' + a.minutes + ' min' : 'walked') : '<b>no GPS or sticker record</b>') +
+    '</td><td class="num">' + (a.fixes || 0) + '</td><td class="num">' + (a.photo_fixes || 0) + '</td><td class="num">' + (a.stickers || 0) + '</td><td>' +
+    (a.sticker_mismatch ? '<b>' + a.sticker_mismatch + ' sticker scan' + (a.sticker_mismatch > 1 ? 's' : '') + ' with GPS far from this area (not counted)</b>' : a.drawn === false ? 'area not drawn' : '') + '</td></tr>').join('')
+  const obs = ((input.narrative && input.narrative.areas) || []).map((a) => '<div class="obs"><h3>' + esc(areaName(a.area)) + ' <span class="codes">' + esc((a.lines || []).join(', ')) + '</span></h3><p>' + esc(a.observation) + '</p></div>').join('')
+  const remarks = (input.remarks || []).map((r) => '<tr><td class="code">' + esc(r.line) + '</td><td lang="' + esc(String(r.lang || '').slice(0, 2)) + '">' + esc(r.text) + (r.lang && !/^en/.test(r.lang) ? ' <span class="lang">' + esc(r.lang) + '</span>' : '') + '</td><td>' + esc(english[r.line] || '') + '</td></tr>').join('')
+  const byArea = (s.by_area || []).map((a) => '<tr><td>' + esc(areaName(a.area)) + '</td><td class="num">' + a.done + '/' + a.total + '</td><td class="num">' + a.open + '</td><td class="num">' + a.photos + '</td></tr>').join('')
+  const stat = (n, label, cls) => '<div class="stat ' + (cls || '') + '"><b>' + esc(n) + '</b><span>' + esc(label) + '</span></div>'
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>NOC draft ' + esc(mob.project) + '</title><style>' +
+    '@page{size:A4;margin:16mm 14mm 18mm}*{box-sizing:border-box}body{font:10.5px/1.5 "Noto Sans","Noto Sans Devanagari",Arial,sans-serif;color:#1d1813;margin:0}' +
+    '.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1d1813;padding-bottom:8px}.brand{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7d7166}' +
+    'h1{font-size:19px;margin:2px 0 0}.draft{border:1.5px solid #b4532a;color:#b4532a;font-weight:700;font-size:10px;padding:3px 8px;letter-spacing:.06em;text-transform:uppercase}' +
+    '.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 14px;margin:10px 0 12px}.meta div{font-size:9.5px;color:#7d7166}.meta b{display:block;color:#1d1813;font-size:10.5px;font-weight:600}' +
+    '.verdict{border-radius:6px;padding:10px 14px;margin:0 0 10px}.verdict b{font-size:16px;display:block}.verdict.bad{background:#f6e2d8;border-left:5px solid #b4532a}.verdict.warn{background:#f3e3c2;border-left:5px solid #c08a2b}.verdict.ok{background:#dfe5d6;border-left:5px solid #6f7f62}' +
+    '.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 14px}.stat{border:1px solid #e3dccf;border-radius:6px;padding:7px 9px}.stat b{font-size:17px;display:block;line-height:1.1}.stat span{color:#7d7166;font-size:9.5px}.stat.bad b{color:#b4532a}.stat.warn b{color:#a06f17}' +
+    'h2{font-size:12.5px;margin:16px 0 6px;padding-bottom:3px;border-bottom:1px solid #e3dccf;break-after:avoid}h3{break-after:avoid}.obs,.box,.verdict,.stats{break-inside:avoid}h3{font-size:11px;margin:8px 0 2px}.codes{font-weight:400;color:#7d7166;font-family:monospace;font-size:9.5px}' +
+    'table{border-collapse:collapse;width:100%;page-break-inside:auto}tr{page-break-inside:avoid}th{text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#7d7166;font-weight:600;border-bottom:1px solid #cfc6b6;padding:4px 6px}' +
+    'td{border-bottom:1px solid #eee7da;padding:5px 6px;vertical-align:top}.code{font-family:monospace;white-space:nowrap}.num{text-align:right;font-variant-numeric:tabular-nums}.nowrap{white-space:nowrap}.finding{color:#4a4038;font-size:9.5px;margin-top:2px}' +
+    '.sev{display:inline-block;border-radius:9px;padding:0 7px;font-size:9px;font-weight:600}.sev.critical{background:#f6e2d8;color:#9c4220}.sev.major{background:#f3e3c2;color:#8a5d12}.sev.minor{background:#ece7dd;color:#4a4038}' +
+    '.lang{font-size:8.5px;color:#7d7166;border:1px solid #d9d1c3;border-radius:3px;padding:0 3px}.obs p{margin:0 0 4px}.cols{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}' +
+    '.sign{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-top:10px}.box{border:1px solid #cfc6b6;border-radius:6px;padding:10px 12px;min-height:70px}.choice{margin:3px 0}.choice i{display:inline-block;width:10px;height:10px;border:1px solid #1d1813;margin-right:6px;vertical-align:-1px}' +
+    '.ai{color:#4a4038;font-size:9.5px;background:#f6f1e7;border-radius:6px;padding:8px 10px;margin-top:12px}' +
+    '</style></head><body>' +
+    '<div class="top"><div><div class="brand">Vera · Mobilisation report</div><h1>' + esc(mob.project) + '</h1></div><div class="draft">Draft for signature</div></div>' +
+    '<div class="meta"><div>Contractor<b>' + esc(mob.contractor_name) + '</b></div><div>Site<b>' + esc(mob.site_address || '') + '</b></div><div>Visit<b>' + esc(input.visit_date) + '</b></div><div>Checklist<b>' + esc(mob.template_version) + (input.version ? ' · report v' + esc(input.version) : '') + '</b></div></div>' +
+    '<div class="verdict ' + tone + '"><b>Recommendation from the checklist: ' + esc(verdict) + '</b>' + esc(why.join('; ')) + '.</div>' +
+    '<div class="stats">' + stat(s.done + '/' + s.total, 'lines closed') + stat(s.critical_open, 'critical open', s.critical_open ? 'bad' : '') + stat(s.major_open, 'major open', s.major_open ? 'warn' : '') + stat(s.minor_open, 'minor open') + stat((s.prewritten_pct || 0) + '%', 'lines with evidence on file') + '</div>' +
+    '<h2>Open items</h2>' + (rows ? '<table><tr><th>Line</th><th>Severity</th><th>Item and finding</th><th>Due</th></tr>' + rows + '</table>' : '<p>None.</p>') +
+    '<h2>Areas walked</h2><table><tr><th>Area</th><th>On site (IST)</th><th class="num">GPS fixes</th><th class="num">Photos with GPS</th><th class="num">Stickers</th><th></th></tr>' + cov + '</table>' +
+    '<h2>Observations</h2>' + (obs || '<p>No observations recorded.</p>') +
+    (remarks ? '<h2>Engineer\'s remarks, as spoken</h2><table><tr><th>Line</th><th>Original</th><th>English</th></tr>' + remarks + '</table>' : '') +
+    '<div class="cols"><div><h2>Lines by area</h2><table><tr><th>Area</th><th class="num">Closed</th><th class="num">Open</th><th class="num">Photos</th></tr>' + byArea + '</table></div>' +
+    '<div><h2>Sign-off</h2><div class="box"><div class="choice"><i></i>Approve</div><div class="choice"><i></i>Approve with the conditions above</div><div class="choice"><i></i>Hold</div></div></div></div>' +
+    '<div class="sign"><div class="box">Signed: ______________________ (engineer)<br><br>Name: ______________________</div><div class="box">Date: __________<br><br>Signed on WhatsApp by the engineer\'s own number; the tap and its message id are kept with this report.</div></div>' +
+    '<p class="ai">' + (input.narrative_ok ? 'Observations worded by AI from the engineer\'s voice remarks; checked against the checklist.' : 'AI wording failed its check; the engineer\'s transcribed remarks are shown as recorded.') +
+    ' Recommendation, counts and dates are computed from the checklist, not by AI. Areas count as walked only with GPS fixes inside them, allowing for each fix\'s own error, or a signed sticker scanned there. Every line links to its photo or paper in Vera.</p>' +
+    '</body></html>'
   return { ...input, html }
 }
 
