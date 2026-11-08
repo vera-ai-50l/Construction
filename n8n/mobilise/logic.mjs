@@ -473,12 +473,16 @@ export function walkCoverage(input) {
   }
   const areas = (input.walk_areas || [...new Set(zones.map((z) => z.area))]).map((area) => {
     const zs = zones.filter((z) => z.area === area)
+    // A sticker scan whose own GPS fix (a usable one) is far from every shape drawn for its
+    // area is not counted: it may be a photo of the sticker scanned somewhere else.
     const stickers = (input.spots || []).filter((s) => s.area === area)
-    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).concat(stickers.map((s) => ({ ts: s.ts, sticker: true })))
+    const far = (s) => !!(s.gps && s.gps.accuracy > 0 && s.gps.accuracy <= P.weakFixM && zs.length && !zs.some((z) => near({ ...s.gps, accuracy: s.gps.accuracy + (P.stickerGraceM || 50) }, z)))
+    const trusted = stickers.filter((s) => !far(s))
+    const hits = pts.filter((p) => p.accuracy <= P.weakFixM && zs.some((z) => near(p, z))).concat(trusted.map((s) => ({ ts: s.ts, sticker: true })))
       .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
     const mins = hits.length > 1 ? Math.round((Date.parse(hits[hits.length - 1].ts) - Date.parse(hits[0].ts)) / 60000) : 0
     return {
-      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.filter((h) => !h.sticker).length, photo_fixes: hits.filter((h) => h.photo).length, stickers: stickers.length,
+      area, drawn: zs.length > 0, visited: hits.length > 0, fixes: hits.filter((h) => !h.sticker).length, photo_fixes: hits.filter((h) => h.photo).length, stickers: trusted.length, sticker_mismatch: stickers.length - trusted.length,
       first: hits.length ? hits[0].ts : '', last: hits.length ? hits[hits.length - 1].ts : '', minutes: mins,
     }
   })
@@ -695,7 +699,8 @@ export function renderReport(input) {
   const verdict = { ready: 'Ready to start', conditional: 'Ready to start with conditions', not_ready: 'Not ready' }[s.recommendation]
   const rows = s.open_items.map((o) => '<tr><td>' + esc(o.line) + '</td><td>' + esc(o.severity) + '</td><td>' + esc(o.text) + '<br><small>' + esc(o.finding) + '</small></td><td>' + esc(o.due_on) + '</td></tr>').join('')
   const areas = (input.narrative.areas || []).map((a) => '<h3>' + esc(a.area) + '</h3><p>' + esc(a.observation) + ' <small>(' + esc((a.lines || []).join(', ')) + ')</small></p>').join('')
-  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' + (a.stickers ? ', ' + a.stickers + ' sticker scan' + (a.stickers > 1 ? 's' : '') : '') : '<b>no GPS or sticker record</b>') + '</li>').join('')
+  const cov = ((input.coverage && input.coverage.areas) || []).map((a) => '<li>' + esc(a.area) + ': ' + (a.visited ? 'walked, ' + a.minutes + ' min, ' + a.photo_fixes + ' photos with GPS' + (a.stickers ? ', ' + a.stickers + ' sticker scan' + (a.stickers > 1 ? 's' : '') : '') : '<b>no GPS or sticker record</b>') +
+      (a.sticker_mismatch ? ' <b>· ' + a.sticker_mismatch + ' sticker scan' + (a.sticker_mismatch > 1 ? 's' : '') + ' with GPS far from this area (not counted)</b>' : '') + '</li>').join('')
   const html = '<!doctype html><html><head><meta charset="utf-8"><title>NOC draft ' + esc(input.mob.project) + '</title>' +
     '<style>body{font:12px/1.5 Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 6px;text-align:left;vertical-align:top}.v{font-size:16px;font-weight:bold}.ai{color:#555;font-size:11px}</style></head><body>' +
     '<h1>Mobilisation report (draft for signature): ' + esc(input.mob.project) + '</h1>' +

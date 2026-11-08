@@ -122,6 +122,16 @@ const chip: Record<string, string> = {
 const label: Record<string, string> = { ok: 'OK', not_ok: 'Not OK', na: 'N/A', open: 'To check', accepted: 'Paper OK', filed: 'Photo in', review: 'Checking', rejected: 'Sent back' }
 const geoTone: Record<string, string> = { in: 'text-sage', edge: 'text-ochre', out: 'text-rust', unknown: 'text-ink-3' }
 
+// A sticker scan: remembered for SPOT_MIN minutes (photos of that area carry it) and queued
+// for the walk API with the time; flush() sends it with the fix at that moment.
+function takeSticker(code: string) {
+  const a = code.split('.')[1] || ''
+  store.set('vera-walk-spot', JSON.stringify({ code, area: a, at: Date.now() }))
+  const pend = (() => { try { return JSON.parse(store.get('vera-walk-spots') || '[]') } catch { return [] } })()
+  store.set('vera-walk-spots', JSON.stringify([...pend, { code, client_ts: new Date().toISOString() }].slice(-50)))
+  return a
+}
+
 export function Walk() {
   const [token, setToken] = useState('')
   const [list, setList] = useState<Checklist | null>(null)
@@ -147,10 +157,7 @@ export function Walk() {
     if (h.get('t')) store.set('vera-walk-token', t)
     const s = h.get('s')
     if (s) {
-      const a = s.split('.')[1] || ''
-      store.set('vera-walk-spot', JSON.stringify({ code: s, area: a, at: Date.now() }))
-      const pend = (() => { try { return JSON.parse(store.get('vera-walk-spots') || '[]') } catch { return [] } })()
-      store.set('vera-walk-spots', JSON.stringify([...pend, { code: s, client_ts: new Date().toISOString() }].slice(-50)))
+      const a = takeSticker(s)
       if (a) setArea(a)
       setSpotMsg('Sticker scanned: photos here are placed in ' + (AREA_NAMES[a] || a) + ' for the next ' + SPOT_MIN + ' minutes.')
     }
@@ -204,6 +211,15 @@ export function Walk() {
         else break // 401 / 5xx: keep it queued and try later
       } catch { break }
     }
+    // areas marked with no signal
+    const zones: { area: string }[] = (() => { try { return JSON.parse(store.get('vera-walk-zones') || '[]') } catch { return [] } })()
+    while (zones.length) {
+      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-vera-walk': token }, body: JSON.stringify(zones[0]) }).catch(() => null)
+      if (!r || r.status >= 500 || r.status === 401) break
+      if (r.status === 400) { const j = await r.json().catch(() => ({})); setSpotMsg('Area ' + zones[0].area + ' was not saved: ' + (j.details || []).join('; ')) }
+      zones.shift()
+      store.set('vera-walk-zones', JSON.stringify(zones))
+    }
     // sticker scans, with the fix at the time they are sent
     const spots: { code: string; client_ts: string }[] = (() => { try { return JSON.parse(store.get('vera-walk-spots') || '[]') } catch { return [] } })()
     while (spots.length) {
@@ -229,7 +245,19 @@ export function Walk() {
     window.addEventListener('online', on)
     window.addEventListener('offline', off)
     const t = setInterval(flush, 15000)
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); clearInterval(t) }
+    flush() // at once too: a sticker scan or captures left from last time go out without waiting
+    // the camera may open the sticker link in this same tab: only the #fragment changes
+    const onHash = () => {
+      const code = new URLSearchParams(location.hash.slice(1)).get('s')
+      if (!code) return
+      const a = takeSticker(code)
+      if (a) setArea(a)
+      setSpotMsg('Sticker scanned: photos here are placed in ' + (AREA_NAMES[a] || a) + ' for the next ' + SPOT_MIN + ' minutes.')
+      history.replaceState(null, '', location.pathname)
+      flush()
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); window.removeEventListener('hashchange', onHash); clearInterval(t) }
   }, [flush])
 
   const lines = useMemo(() => (list ? list.lines : []), [list])
@@ -269,25 +297,28 @@ export function Walk() {
     flush()
   }
 
-  // the engineer marks an area on the map; saved at once (needs signal), drawn locally
-  async function saveZone(shape: Shape): Promise<string | null> {
+  // the engineer marks an area on the map. Drawn at once; sent now, or kept on the phone
+  // and sent with the captures when there is signal.
+  async function saveZone(shape: Shape): Promise<{ ok: boolean; note?: string }> {
     const name = areas.find((a) => a.code === area)?.name || area
-    const local = (l: Checklist): Checklist => {
-      const { accuracy_m, ...rest } = ('circle' in shape ? shape.circle : shape) as { accuracy_m: number } & Record<string, unknown>
-      void accuracy_m
-      const z: Zone = 'circle' in shape ? { area, name, circle: rest as Zone['circle'] } : { area, name, polygon: (rest as { polygon: number[][] }).polygon }
-      return { ...l, zones: [...(l.zones || []).filter((x) => x.area !== area), z] }
-    }
-    if (!demo) {
-      if (!navigator.onLine) return 'No signal: marking an area needs signal. Try again at the gate.'
-      const r = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-vera-walk': token }, body: JSON.stringify({ action: 'zone', area, name, shape }) }).catch(() => null)
-      if (!r) return 'Could not reach Vera. Try again.'
-      const j = await r.json().catch(() => ({}))
-      if (r.status === 400) return 'Not saved: ' + (j.details || []).join('; ')
-      if (!r.ok || !j.ok) return 'Not saved (' + r.status + '). Try again.'
-    }
-    setList((l) => { if (!l) return l; const n = local(l); store.set('walk-list-' + token.split('.')[0], JSON.stringify(n)); return n })
-    return null
+    const draw = () => setList((l) => {
+      if (!l) return l
+      const z: Zone = 'circle' in shape
+        ? { area, name, circle: { lat: shape.circle.lat, lng: shape.circle.lng, radius_m: shape.circle.radius_m } }
+        : { area, name, polygon: shape.polygon }
+      const n = { ...l, zones: [...(l.zones || []).filter((x) => x.area !== area), z] }
+      store.set('walk-list-' + token.split('.')[0], JSON.stringify(n))
+      return n
+    })
+    if (demo) { draw(); return { ok: true } }
+    const body = { action: 'zone', area, name, shape }
+    const r = navigator.onLine ? await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-vera-walk': token }, body: JSON.stringify(body) }).catch(() => null) : null
+    if (r && r.status === 400) { const j = await r.json().catch(() => ({})); return { ok: false, note: 'Not saved: ' + (j.details || []).join('; ') } }
+    draw()
+    if (r && r.ok) return { ok: true }
+    const pend = (() => { try { return JSON.parse(store.get('vera-walk-zones') || '[]') } catch { return [] } })()
+    store.set('vera-walk-zones', JSON.stringify([...pend.filter((x: { area: string }) => x.area !== area), body]))
+    return { ok: true, note: name + ' is drawn and saved on the phone. It will be sent when there is signal.' }
   }
 
   async function finish() {

@@ -698,7 +698,7 @@ where mo.visit_date = current_date and not exists (select 1 from noc_reports r w
   (select json_agg(json_build_object('line', e.line_code, 'text', e.transcript, 'lang', e.transcript_lang)) from evidence e where e.mobilisation_id = mo.id and e.transcript is not null) as remarks,
   (select json_agg(json_build_object('lat', t.lat, 'lng', t.lng, 'accuracy', t.accuracy, 'ts', t.ts)) from trail t join walks w on w.id = t.walk_id where w.mobilisation_id = mo.id) as trail,
   (select json_agg(json_build_object('gps', e.gps)) from evidence e where e.mobilisation_id = mo.id and e.gps is not null) as captures,
-  (select json_agg(json_build_object('area', s.area, 'ts', s.ts)) from spot_checks s join walks w on w.id = s.walk_id where w.mobilisation_id = mo.id) as spots,
+  (select json_agg(json_build_object('area', s.area, 'ts', s.ts, 'gps', s.gps)) from spot_checks s join walks w on w.id = s.walk_id where w.mobilisation_id = mo.id) as spots,
   (select jsonb_agg(jsonb_build_object('area', z.area, 'name', z.name) || z.shape) from zones z where z.mobilisation_id = mo.id) as zones,
   (select json_agg(distinct l.area) from lines l where l.mobilisation_id = mo.id and l."when" = 'walk') as walk_areas,
   (select id from contacts where mobilisation_id = mo.id and role = 'engineer' limit 1) as contact_id,

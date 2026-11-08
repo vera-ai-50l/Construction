@@ -178,6 +178,13 @@ export async function runTests() {
   ] }).coverage
   R.push(t('coverage: camp walked 24 min; yard only a ±60 m fix → not counted; plant area not drawn', cov.areas[0].visited && cov.areas[0].minutes === 24 && !cov.areas[1].visited && !cov.areas[2].drawn, cov.areas))
   const cov2 = L.walkCoverage({ zones: [camp], walk_areas: ['LC', 'BP'], params: PARAMS.geofence, trail: [], spots: [{ area: 'BP', ts: '2026-11-18T11:00:00+05:30' }] }).coverage
+  const cov3 = L.walkCoverage({ zones: [camp], walk_areas: ['LC'], params: PARAMS.geofence, trail: [], spots: [
+    { area: 'LC', ts: '2026-11-18T11:00:00+05:30', gps: { lat: 19.2140, lng: 72.9740, accuracy: 10 } },
+    { area: 'LC', ts: '2026-11-18T11:05:00+05:30', gps: { lat: 19.2140, lng: 72.9740, accuracy: 300 } },
+  ] }).coverage
+  R.push(t('coverage: camp sticker scanned with a good fix 500 m away → not counted, flagged; same with a ±300 m fix → counted', cov3.areas[0].sticker_mismatch === 1 && cov3.areas[0].stickers === 1 && cov3.areas[0].visited, cov3.areas))
+  const cov4 = L.walkCoverage({ zones: [camp], walk_areas: ['LC'], params: PARAMS.geofence, trail: [], spots: [{ area: 'LC', ts: '2026-11-18T11:00:00+05:30', gps: { lat: 19.2140, lng: 72.9740, accuracy: 10 } }] }).coverage
+  R.push(t('coverage: the only camp record is a far-away sticker scan → camp not walked', !cov4.areas[0].visited && cov4.areas[0].sticker_mismatch === 1, cov4.areas))
   R.push(t('coverage: a sticker scanned in the plant counts as walked, even with no area drawn', cov2.areas[1].visited && cov2.areas[1].stickers === 1 && !cov2.areas[0].visited, cov2.areas))
 
   // ---- capture validation
@@ -229,6 +236,7 @@ export async function runTests() {
   R.push(t('wording: invented line or a verdict → falls back to engineer\'s own words', !badN.narrative_ok && badN.narrative.remarks_en[0].english === 'FIFO board nahi hai' && badN.narrative_problems.length === 2, badN.narrative_problems))
   const html = L.renderReport({ mob: MOB, visit_date: MOB.visit_date, score, narrative: good, narrative_ok: true, coverage: { areas: [{ area: 'LC', visited: true, minutes: 24, photo_fixes: 14 }] } }).html
   R.push(t('report: has verdict from code, open items, AI disclosure, signature line', html.includes('Ready to start with conditions') && html.includes('SY-02') && html.includes('not by AI') && html.includes('Signed:'), null))
+  R.push(t('report: says which sticker scans were not counted', L.renderReport({ mob: MOB, score: sc(walked), narrative: { areas: [] }, narrative_ok: true, coverage: { areas: [{ area: 'LC', visited: false, stickers: 0, sticker_mismatch: 1 }] } }).html.includes('GPS far from this area'), null))
   R.push(t('report: escapes text from the site', L.renderReport({ mob: { ...MOB, project: '<script>' }, score, narrative: good, narrative_ok: true }).html.includes('&lt;script&gt;'), null))
 
   // ---- open items

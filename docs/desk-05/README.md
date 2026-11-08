@@ -12,7 +12,7 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 | `n8n/mobilise/logic.mjs` | Every decision made by code: line binding, AI confidence gate, paper checks, geofence, gap list, scoring, report. Each function is pasted whole into an n8n Code node. |
 | `n8n/mobilise/workflows.mjs` | The 13 n8n workflows, defined once. Each node says what it does and which guardrails it has. |
 | `n8n/mobilise/build.mjs` | `check` (tests + guardrail lint), `build` (n8n JSON, board page, walk sample), `validate` (n8n-mcp schema check). |
-| `n8n/mobilise/test.mjs` | 114 checks. They run the generated Code-node source, the same text n8n runs. |
+| `n8n/mobilise/test.mjs` | 117 checks. They run the generated Code-node source, the same text n8n runs. |
 | `n8n/mobilise/schema.sql` | Postgres tables, the `apply_answer` and `file_evidence` functions for button answers, and the `ai_accuracy` view. Safe to run again on an existing database (it adds the new columns). |
 | `n8n/mobilise/dist/*.json` | Importable workflows (rebuilt by `npm run build:mobilise`). |
 | `app/walk`, `components/walk/Walk.tsx` | The engineer's walk page. Without a link token it runs as a demo on the sample site. |
@@ -71,7 +71,7 @@ npm run build:mobilise
 
 ## How it was checked
 
-- `npm run check:mobilise`: 114 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
+- `npm run check:mobilise`: 117 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
 - n8n-mcp `validate_workflow`: 0 errors and 0 warnings on all 13 workflows.
 - Imported and published in n8n 2.44.5, then run against a real Postgres:
   - WhatsApp in: Meta verify with the right and wrong token, an unsigned POST (401), a duplicate delivery (dropped), an unknown number (logged), a photo whose download failed (review queue).
@@ -83,7 +83,7 @@ npm run build:mobilise
   - Reviewer: WF-12 hands out items, WF-11 sends each (text and buttons still go when the file cannot be fetched); the reviewer files a photo on a line and accepts a paper; a contractor cannot use a reviewer button; `ai_accuracy` counts the confirmed items.
   - Walk page: checklist load, forged link (401), invalid capture (400), storage outage (503), trail points (204), marking an area (saved; a ±60 m fix refused), stickers (signed; an edited code refused), finish (202; the PDF service is down here, so the review queue gets the reason).
   - No message left in "processing".
-- The walk page, site map and sticker sheet were run in a phone-sized browser (Playwright, iPhone 13 profile) with no errors.
+- The walk page, site map and sticker sheet were run in a phone-sized browser (Playwright, iPhone 13 profile) with no errors, in demo mode and against the running n8n: checklist loaded through CORS from the signed link, an area marked with no signal was saved on the phone and reached the database when signal returned, the sticker sheet was signed by the server, and sticker scans were recorded with GPS whether the camera opened the link in a new tab or the same one.
 - These runs found and fixed nine bugs:
   - a retry loop that never stopped
   - messages left in "processing"
@@ -99,9 +99,8 @@ npm run build:mobilise
 ## Known limits and next steps
 
 - The checklist values marked "set by QA" must come from the developer's QA and EHS teams.
-- A QR sticker proves the walk link was used to scan it, not that the phone was at the door: a photo of a sticker could be scanned elsewhere. Each scan keeps its GPS and time, so a mismatch shows in the record; the report does not yet flag it on its own.
+- A QR sticker proves the walk link was used to scan it, not that the phone was at the door: a photo of the sticker could be scanned elsewhere. A scan whose GPS fix is usable (±40 m or better) and more than 50 m beyond every shape drawn for its area is not counted as a visit, and the report says so. A scan with no usable fix is counted, since indoors is where stickers are needed.
 - A web page cannot detect fake-GPS apps. The cross-checks are the photo itself, server time against phone time, the continuous trail and the stickers.
-- Marking an area needs signal at that moment (it is not queued like captures).
 - The site map is a plain drawing in metres with no satellite background, so it works offline and sends nothing to a map provider. A satellite view for drawing areas from the office is a possible addition.
 - The AI auto-file threshold (0.90 with a 0.30 lead) is a starting value. Set it from the `ai_accuracy` view after the shadow-mode sites.
 

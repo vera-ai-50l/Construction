@@ -19,7 +19,7 @@ const MAX_M = 30
 export function SiteMap({ zones, fix, trail, area, areaName, getFix, onSave, onClose }: {
   zones: Zone[]; fix: Fix | null; trail: Fix[]; area: string; areaName: string
   getFix: () => Fix | null
-  onSave: (shape: Shape) => Promise<string | null>
+  onSave: (shape: Shape) => Promise<{ ok: boolean; note?: string }>
   onClose: () => void
 }) {
   const [mode, setMode] = useState<'view' | 'circle' | 'corners'>('view')
@@ -77,10 +77,10 @@ export function SiteMap({ zones, fix, trail, area, areaName, getFix, onSave, onC
     const lng = seen.reduce((a, f, i) => a + f.lng * w[i], 0) / sw
     const best = Math.min(...seen.map((f) => f.accuracy))
     setBusy('Saving…')
-    const err = await onSave({ circle: { lat, lng, radius_m: radius, accuracy_m: Math.round(best) } })
+    const r = await onSave({ circle: { lat, lng, radius_m: radius, accuracy_m: Math.round(best) } })
     setBusy('')
-    setMsg(err || areaName + ' saved as a ' + radius + ' m circle (GPS ±' + Math.round(best) + ' m).')
-    if (!err) setMode('view')
+    setMsg(r.note || areaName + ' saved as a ' + radius + ' m circle (GPS ±' + Math.round(best) + ' m).')
+    if (r.ok) setMode('view')
   }
 
   async function addCorner() {
@@ -94,10 +94,10 @@ export function SiteMap({ zones, fix, trail, area, areaName, getFix, onSave, onC
 
   async function saveCorners() {
     setBusy('Saving…')
-    const err = await onSave({ polygon: corners.map((c) => [c.lat, c.lng]), accuracy_m: Math.round(Math.max(...corners.map((c) => c.accuracy))) })
+    const r = await onSave({ polygon: corners.map((c) => [c.lat, c.lng]), accuracy_m: Math.round(Math.max(...corners.map((c) => c.accuracy))) })
     setBusy('')
-    setMsg(err || areaName + ' saved with ' + corners.length + ' corners.')
-    if (!err) { setCorners([]); setMode('view') }
+    setMsg(r.note || areaName + ' saved with ' + corners.length + ' corners.')
+    if (r.ok) { setCorners([]); setMode('view') }
   }
 
   const path = (pts: number[][]) => pts.map((p, i) => (i ? 'L' : 'M') + view!.to(p[0], p[1]).map((v) => v.toFixed(1)).join(' ')).join(' ') + ' Z'
