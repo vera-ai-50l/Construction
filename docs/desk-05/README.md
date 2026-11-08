@@ -12,7 +12,7 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 | `n8n/mobilise/logic.mjs` | Every decision made by code: line binding, AI confidence gate, paper checks, geofence, gap list, scoring, report. Each function is pasted whole into an n8n Code node. |
 | `n8n/mobilise/workflows.mjs` | The 13 n8n workflows, defined once. Each node says what it does and which guardrails it has. |
 | `n8n/mobilise/build.mjs` | `check` (tests + guardrail lint), `build` (n8n JSON, board page, walk sample), `validate` (n8n-mcp schema check). |
-| `n8n/mobilise/test.mjs` | 117 checks. They run the generated Code-node source, the same text n8n runs. |
+| `n8n/mobilise/test.mjs` | 121 checks. They run the generated Code-node source, the same text n8n runs. |
 | `n8n/mobilise/schema.sql` | Postgres tables, the `apply_answer` and `file_evidence` functions for button answers, and the `ai_accuracy` view. Safe to run again on an existing database (it adds the new columns). |
 | `n8n/mobilise/dist/*.json` | Importable workflows (rebuilt by `npm run build:mobilise`). |
 | `app/walk`, `components/walk/Walk.tsx` | The engineer's walk page. Without a link token it runs as a demo on the sample site. |
@@ -71,7 +71,7 @@ npm run build:mobilise
 
 ## How it was checked
 
-- `npm run check:mobilise`: 117 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
+- `npm run check:mobilise`: 121 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
 - n8n-mcp `validate_workflow`: 0 errors and 0 warnings on all 13 workflows.
 - Imported and published in n8n 2.44.5, then run against a real Postgres:
   - WhatsApp in: Meta verify with the right and wrong token, an unsigned POST (401), a duplicate delivery (dropped), an unknown number (logged), a photo whose download failed (review queue).
@@ -94,7 +94,8 @@ npm run build:mobilise
   - the engineer's evening line never sent (it read the contractor send's output)
   - the N/A request had no engineer to go to, and a line code was cast to a number
   - template button replies ("Show me") fell into "what we accept"
-- **Not run yet**: real Meta, Claude, Sarvam and S3 calls (no credentials or network access to them here), and the walk page on a real phone at a real site.
+- **Sarvam, live**: four site remarks (Hindi, Marathi, Hinglish, English) were made as speech with Sarvam's text-to-speech, then sent through the exact WF-02 node "Transcribe voice (Sarvam)" inside n8n, followed by the generated "Bind to checklist line" node. Each came back in its own script and language and bound to the right line (LC-03, SY-01, SF-08, BP-06). The run showed that spoken line codes come back in Devanagari ("एल.सी. तीन", "एसएफ आठ"), so the binder now reads them; the real answers are kept in `n8n/mobilise/fixtures/sarvam/` as tests. Sarvam also accepted the formats phones send: WebM/Opus (Android walk page), MP4/AAC (iPhone walk page) and OGG/Opus (WhatsApp voice notes).
+- **Not run yet**: real Meta, Claude and S3 calls (no credentials or network access to them here; this environment does not take a key for Anthropic's API), and the walk page on a real phone at a real site.
 
 ## Known limits and next steps
 

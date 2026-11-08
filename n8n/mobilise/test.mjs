@@ -3,6 +3,7 @@
 // (the exact text n8n will run) for the nodes that use crypto, binary data or $env.
 
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import * as L from './logic.mjs'
 import { lines as TEMPLATE, areas as AREAS, params as PARAMS } from './checklist.mjs'
 import { IDS } from './workflows.mjs'
@@ -74,6 +75,13 @@ export async function runTests() {
   R.push(t('bind: unlabelled PDF → AI, photo-only lines excluded', aiDoc.needsAi && !aiDoc.candidates.includes('LC-03') && aiDoc.candidates.includes('PAP-04'), aiDoc.candidates.length))
   const closed = lines.map((l) => (l.area === 'LC' ? { ...l, status: 'ok' } : l))
   R.push(t('bind: lines already closed are not candidates', L.bindLine({ message: { type: 'image', context_wamid: 'wamid.PROMPT_LC' }, lines: closed, prompts: promptsSent }).candidates.every((c) => !c.startsWith('LC-')), null))
+  // Real Sarvam saaras:v3 answers (fixtures/sarvam): spoken line codes come back in Devanagari.
+  const stt = (f) => JSON.parse(fs.readFileSync(new URL('./fixtures/sarvam/' + f + '.json', import.meta.url)))
+  const spoken = { 'hi-lc03': 'LC-03', 'mr-sy01': 'SY-01', 'hinglish-sf08': 'SF-08', 'en-bp06': 'BP-06' }
+  const heard = Object.entries(spoken).map(([f, want]) => [f, bind({ type: 'audio', text: stt(f).transcript }), want])
+  R.push(t('voice (real Sarvam transcripts): "एल.सी. तीन", "एस.वाय.एक.", "एसएफ आठ", "BP06" → LC-03, SY-01, SF-08, BP-06', heard.every(([, b, want]) => b.line === want && b.method === 'spoken-code'), heard.map(([f, b]) => [f, b.line, b.method])))
+  R.push(t('voice: "LC teen", "BP zero six", "PAP chaar", "एल सी बारा" → LC-03, BP-06, PAP-04, LC-12', [['LC teen toilets', 'LC-03'], ['BP zero six lab', 'BP-06'], ['PAP chaar', 'PAP-04'], ['एल सी बारा', 'LC-12']].every(([x, want]) => bind({ type: 'audio', text: x }).line === want), null))
+  R.push(t('voice: plain numbers are not line codes ("बारा पोती", "ek do teen") → AI', !bind({ type: 'audio', text: 'बारा पोती उंच थप्पी आहेत' }).line && !bind({ type: 'audio', text: 'ok sir ek do teen' }).line, null))
   R.push(t('bind: plain text is not evidence', bind({ type: 'text', text: 'kal aayenge' }).method === 'not-evidence', null))
 
   // ---- classify request: schema enum is the candidate list
@@ -302,6 +310,8 @@ export async function runTests() {
   const placed = await runCode(placeNode, [{ json: { mobilisation_id: 7, zones: [camp], body: { line: 'LC-03', gps: null, spot: codeLC } } }], { env })
   const otherSite = await runCode(placeNode, [{ json: { mobilisation_id: 8, zones: [camp], body: { line: 'LC-03', gps: null, spot: codeLC } } }], { env })
   R.push(t('n8n code: capture with this site\'s camp sticker → in; same sticker on another site → ignored', placed[0].json.geo.result === 'in' && otherSite[0].json.geo.result === 'unknown', [placed[0].json.geo, otherSite[0].json.geo]))
+  const iphone = await runCode(nodeNamed(IDS.walk, 'Voice to file'), [{ json: {} }], { nodes: { 'Photo to file': { json: { body: { capture_id: 'c1', audio_b64: 'AAAA', audio_mime: 'audio/mp4;codecs=mp4a.40.2' } } } } })
+  R.push(t('n8n code: an iPhone voice remark is stored as .m4a (audio/mp4), not mislabelled .webm', iphone[0].binary.data.fileName === 'c1.m4a' && iphone[0].binary.data.mimeType === 'audio/mp4', iphone[0].binary.data))
   const frag = await runCode(nodeNamed(IDS.readPaper, 'Make reply fragment'), [{ json: { binding: { line: 'PAP-04' }, line: { code: 'PAP-04' }, message: { type: 'document' }, paper: { status: 'rejected', checks: [{ result: 'fail', note: 'Sum insured low' }] } } }])
   R.push(t('n8n code: re-read paper gives the same reply line as WF-02', frag[0].json.fragment.kind === 'rejected' && frag[0].json.fragment.line === 'PAP-04' && frag[0].json.saved_line === 'PAP-04', frag[0].json.fragment))
 

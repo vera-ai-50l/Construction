@@ -99,7 +99,48 @@ export function bindLine(input) {
     const code = hit[1].toUpperCase() + '-' + String(Number(hit[2])).padStart(2, '0')
     if (byCode[code]) found.add(code)
   }
-  if (found.size === 1) return done({ line: [...found][0], method: 'caption-code', confidence: 1, candidates: [] })
+  // Spoken codes, as speech-to-text writes them: "एल.सी. तीन" (LC 3), "एसएफ आठ" (SF 8),
+  // "एस.वाय.एक." (SY 1), "LC teen", "BP zero six". Letter names and number words in Hindi,
+  // Marathi and English; only sequences that spell a real area code count.
+  const letterNames = [['डब्ल्यू', 'W'], ['डबल्यू', 'W'], ['वाय', 'Y'], ['वाई', 'Y'], ['एफ', 'F'], ['एल', 'L'], ['एस', 'S'], ['बी', 'B'], ['सी', 'C'], ['डी', 'D'], ['पी', 'P'], ['आर', 'R'], ['ए', 'A']]
+  const numberWords = {
+    0: ['zero', 'शून्य'], 1: ['one', 'ek', 'एक'], 2: ['two', 'do', 'दो', 'दोन'], 3: ['three', 'teen', 'तीन'], 4: ['four', 'char', 'chaar', 'चार'],
+    5: ['five', 'paanch', 'panch', 'पांच', 'पाँच', 'पाच'], 6: ['six', 'chhe', 'chah', 'chhah', 'छह', 'छः', 'छे', 'सहा'], 7: ['seven', 'saat', 'सात'],
+    8: ['eight', 'aath', 'आठ'], 9: ['nine', 'nau', 'नौ', 'नऊ'], 10: ['ten', 'das', 'दस', 'दहा'], 11: ['eleven', 'gyarah', 'ग्यारह', 'अकरा'],
+    12: ['twelve', 'barah', 'बारह', 'बारा'], 13: ['thirteen', 'terah', 'तेरह', 'तेरा'], 14: ['fourteen', 'chaudah', 'चौदह', 'चौदा'],
+    15: ['fifteen', 'pandrah', 'पंद्रह', 'पंधरा'], 16: ['sixteen', 'solah', 'सोलह', 'सोळा'],
+  }
+  const wordToN = {}
+  for (const [k, ws] of Object.entries(numberWords)) for (const w of ws) wordToN[w] = Number(k)
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const L = letterNames.map((x) => esc(x[0])).join('|')
+  const W = Object.keys(wordToN).sort((a, b) => b.length - a.length).map(esc).join('|')
+  const edge = '(?![\\u0900-\\u097FA-Za-z])'
+  const spokenRe = new RegExp('(?<![\\u0900-\\u097FA-Za-z])((?:(?:' + L + '|[A-Za-z])[\\s.\\-]*){2,3}?)[\\s.\\-]*(\\d{1,2}|(?:' + W + ')' + edge + '(?:[\\s\\-]*(?:' + W + ')' + edge + ')?)', 'gi')
+  const toLatin = (seq) => {
+    let out = ''
+    let rest = seq.replace(/[\s.\-]/g, '')
+    while (rest) {
+      const hitL = letterNames.find(([dev]) => rest.startsWith(dev))
+      if (hitL) { out += hitL[1]; rest = rest.slice(hitL[0].length) } else if (/^[A-Za-z]/.test(rest)) { out += rest[0].toUpperCase(); rest = rest.slice(1) } else return ''
+    }
+    return out
+  }
+  const toNumber = (num) => {
+    if (/^\d+$/.test(num)) return Number(num)
+    const parts = num.toLowerCase().split(/[\s\-]+/).filter(Boolean).map((w) => wordToN[w])
+    if (parts.some((x) => x === undefined)) return NaN
+    return parts.length === 2 ? (parts[0] === 0 ? parts[1] : parts[0] * 10 + parts[1]) : parts[0]
+  }
+  let sp
+  while (areas.length && (sp = spokenRe.exec(text))) {
+    const area = toLatin(sp[1])
+    const num = toNumber(sp[2])
+    if (!areas.includes(area) || !(num >= 1 && num <= 99)) continue
+    const code = area + '-' + String(num).padStart(2, '0')
+    if (byCode[code]) found.add(code)
+  }
+  if (found.size === 1) return done({ line: [...found][0], method: m.type === 'audio' ? 'spoken-code' : 'caption-code', confidence: 1, candidates: [] })
   if (found.size > 1) return done({ line: '', method: 'ambiguous-caption', confidence: 0, candidates: [...found], needsAi: false, ask: true })
 
   const promptArea = prompt && prompt.kind === 'area' ? prompt.area : ''

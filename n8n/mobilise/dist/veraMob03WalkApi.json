@@ -752,7 +752,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const item = $input.item;\nconst b = $('Photo to file').item.json.body;\nreturn { json: { capture_id: b.capture_id }, binary: { data: { data: b.audio_b64, mimeType: b.audio_mime || 'audio/webm', fileName: b.capture_id + '.webm', fileExtension: 'webm' } } };"
+        "jsCode": "// Why Code: base64 from the page → an audio file, named for what the phone recorded (Android: webm, iPhone: mp4).\nconst b = $('Photo to file').item.json.body;\nconst mime = String(b.audio_mime || 'audio/webm').split(';')[0];\nconst ext = { 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' }[mime] || 'webm';\nreturn { json: { capture_id: b.capture_id }, binary: { data: { data: b.audio_b64, mimeType: mime, fileName: b.capture_id + '.' + ext, fileExtension: ext } } };"
       },
       "notes": "Base64 → audio file.",
       "notesInFlow": false
