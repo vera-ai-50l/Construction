@@ -12,7 +12,9 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 | `n8n/mobilise/logic.mjs` | Every decision made by code: line binding, AI confidence gate, paper checks, geofence, gap list, scoring, report. Each function is pasted whole into an n8n Code node. |
 | `n8n/mobilise/workflows.mjs` | The 13 n8n workflows, defined once. Each node says what it does and which guardrails it has. |
 | `n8n/mobilise/build.mjs` | `check` (tests + guardrail lint), `build` (n8n JSON, board page, walk sample), `validate` (n8n-mcp schema check). |
-| `n8n/mobilise/test.mjs` | 121 checks. They run the generated Code-node source, the same text n8n runs. |
+| `n8n/mobilise/messages.mjs` | Every message a contractor gets, in English, Hindi and Marathi (picked by `contacts.language`, set on the site form), and the WhatsApp template texts to submit. |
+| `n8n/mobilise/sample-report.mjs` | Builds `docs/desk-05/sample-noc-report.pdf` from a realistic sample visit, through the same code WF-06 runs. |
+| `n8n/mobilise/test.mjs` | 133 checks. They run the generated Code-node source, the same text n8n runs. |
 | `n8n/mobilise/schema.sql` | Postgres tables, the `apply_answer` and `file_evidence` functions for button answers, and the `ai_accuracy` view. Safe to run again on an existing database (it adds the new columns). |
 | `n8n/mobilise/dist/*.json` | Importable workflows (rebuilt by `npm run build:mobilise`). |
 | `app/walk`, `components/walk/Walk.tsx` | The engineer's walk page. Without a link token it runs as a demo on the sample site. |
@@ -66,12 +68,12 @@ npm run build:mobilise
    - `Vera ops email` (SMTP)
 5. **Import**: import 09, 11 and 00 first, then the rest (`n8n import:workflow --input=…`), then publish each. Every workflow already names WF-00 as its error workflow.
 6. **Meta app**: set the callback URL to `https://<n8n>/webhook/vera/mob/wa` with `VERA_WA_VERIFY_TOKEN`, and subscribe to `messages`. Meta allows one webhook per app, which is why WF-01 is the only door in.
-7. **Templates to get approved** (utility): `vera_mob_welcome`, `vera_mob_gap_list`, `vera_mob_engineer_brief`, `vera_mob_walk_link`, `vera_mob_open_item`, `vera_mob_escalation`, and `vera_mob_action_needed` (body: "Vera has {{1}} for you.", one quick-reply button "Show me"). Their parameters are in the workflows.
+7. **Templates to get approved** (category Utility). The exact texts are in `messages.mjs` (`TEMPLATES`): `vera_mob_gap_list`, `vera_mob_open_item` and `vera_mob_action_needed` (one quick-reply button, "Show me") in English, Hindi and Marathi under the same name; `vera_mob_engineer_brief`, `vera_mob_walk_link` and `vera_mob_escalation` in English. None starts or ends with a variable, which Meta rejects. The area lists for a new contractor are held behind `vera_mob_action_needed` until they tap it, so no separate welcome template is needed.
 8. **Walk page**: set `NEXT_PUBLIC_VERA_N8N_URL` on the Next.js deployment, and set `VERA_WALK_URL` to `<site>/walk`.
 
 ## How it was checked
 
-- `npm run check:mobilise`: 121 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
+- `npm run check:mobilise`: 133 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
 - n8n-mcp `validate_workflow`: 0 errors and 0 warnings on all 13 workflows.
 - Imported and published in n8n 2.44.5, then run against a real Postgres:
   - WhatsApp in: Meta verify with the right and wrong token, an unsigned POST (401), a duplicate delivery (dropped), an unknown number (logged), a photo whose download failed (review queue).
@@ -94,6 +96,7 @@ npm run build:mobilise
   - the engineer's evening line never sent (it read the contractor send's output)
   - the N/A request had no engineer to go to, and a line code was cast to a number
   - template button replies ("Show me") fell into "what we accept"
+- **Languages**: in n8n, a contractor set to Hindi got the gap list, help and "what we accept" lines in Hindi with the Hindi template ready; the engineer's brief stayed in English. The Hindi and Marathi texts should be read once by a native speaker on the site team before the pilot.
 - **Sarvam, live**: four site remarks (Hindi, Marathi, Hinglish, English) were made as speech with Sarvam's text-to-speech, then sent through the exact WF-02 node "Transcribe voice (Sarvam)" inside n8n, followed by the generated "Bind to checklist line" node. Each came back in its own script and language and bound to the right line (LC-03, SY-01, SF-08, BP-06). The run showed that spoken line codes come back in Devanagari ("एल.सी. तीन", "एसएफ आठ"), so the binder now reads them; the real answers are kept in `n8n/mobilise/fixtures/sarvam/` as tests. Sarvam also accepted the formats phones send: WebM/Opus (Android walk page), MP4/AAC (iPhone walk page) and OGG/Opus (WhatsApp voice notes).
 - **Not run yet**: real Meta, Claude and S3 calls (no credentials or network access to them here; this environment does not take a key for Anthropic's API), and the walk page on a real phone at a real site.
 

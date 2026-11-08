@@ -572,39 +572,39 @@ export function validateZone(input) {
 // ---------------------------------------------------------------------------
 
 export function gapList(input) {
+  // Text in the person's language (input.lang), from messages.mjs (input.texts, added by the node); English if missing.
+  const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) }
   const mob = input.mob || {}
   const lines = input.lines || []
   const now = Number(input.now || Date.now())
   const todayIst = new Date(now + 5.5 * 3600 * 1000).toISOString().slice(0, 10) // calendar days in India
   const daysLeft = Math.round((Date.parse(mob.visit_date) - Date.parse(todayIst)) / 86400000)
   const paper = lines.filter((l) => l.when === 'paper')
-  const label = { open: 'not received', filed: 'received, being checked', review: 'received, being checked', rejected: 'sent back' }
   const missing = paper.filter((l) => !['accepted', 'na'].includes(l.status))
   const critical = missing.filter((l) => l.severity === 'critical')
   const preWalk = lines.filter((l) => l.when === 'walk' && l.evidence !== 'document')
   const prePhotos = preWalk.filter((l) => l.status === 'filed' || l.status === 'accepted').length
-  const byArea = {}
-  for (const l of missing) (byArea[l.area] = byArea[l.area] || []).push(l)
+  const project = mob.project || 'Site'
   const out = []
-  out.push('*' + (mob.project || 'Site') + ': papers still needed*')
-  out.push(daysLeft > 0 ? 'Engineer visit in ' + daysLeft + ' day' + (daysLeft === 1 ? '' : 's') + ' (' + mob.visit_date + ').' : 'Engineer visit is today.')
-  out.push(paper.length - missing.length + ' of ' + paper.length + ' papers accepted. ' + critical.length + ' critical still open.')
+  out.push(T('gap_title', { project }))
+  out.push(daysLeft > 0 ? T(daysLeft === 1 ? 'gap_visit_in_1' : 'gap_visit_in_n', { n: daysLeft, date: mob.visit_date }) : T('gap_visit_today'))
+  out.push(T('gap_counts', { ok: paper.length - missing.length, total: paper.length, crit: critical.length }))
   for (const l of missing) {
     const why = l.status === 'rejected' && l.reason ? ': ' + l.reason : ''
-    out.push((l.severity === 'critical' ? '🔴 ' : '• ') + l.code + ' ' + l.text + ' (' + (label[l.status] || l.status) + why + ')')
+    out.push((l.severity === 'critical' ? '🔴 ' : '• ') + l.code + ' ' + l.text + ' (' + T('st_' + l.status) + why + ')')
   }
   out.push('')
-  out.push('Site photos sent so far: ' + prePhotos + ' of ' + preWalk.length + ' lines (optional before the visit).')
-  out.push('Reply to this message with the paper, or write the line code (e.g. PAP-04) with the photo.')
+  out.push(T('gap_photos', { n: prePhotos, total: preWalk.length }))
+  out.push(T('gap_reply'))
   const lastIn = Number(input.last_inbound_ms || 0)
   const inWindow = lastIn > 0 && now - lastIn < 23.5 * 3600 * 1000
   return {
-    ...input,
+    ...input, texts: undefined,
     gap: {
       text: out.join('\n'), missing: missing.length, critical: critical.length, total: paper.length,
       mode: inWindow ? 'session' : 'template',
-      template: { name: 'vera_mob_gap_list', language: 'en', params: [mob.project || 'Site', String(missing.length), String(critical.length), mob.visit_date || ''] },
-      engineer_line: (mob.project || 'Site') + ': ' + (paper.length - missing.length) + '/' + paper.length + ' papers accepted, ' + critical.length + ' critical open' + (critical.length ? ' (' + critical.map((l) => l.code).join(', ') + ')' : '') + '. Site photos on ' + prePhotos + '/' + preWalk.length + ' lines.',
+      template: { name: 'vera_mob_gap_list', language: ['hi', 'mr'].includes(input.lang) ? input.lang : 'en', params: [project, String(missing.length), String(critical.length), mob.visit_date || ''] },
+      engineer_line: project + ': ' + (paper.length - missing.length) + '/' + paper.length + ' papers accepted, ' + critical.length + ' critical open' + (critical.length ? ' (' + critical.map((l) => l.code).join(', ') + ')' : '') + '. Site photos on ' + prePhotos + '/' + preWalk.length + ' lines.',
       ready_to_travel: critical.length === 0,
     },
   }
@@ -615,26 +615,25 @@ export function gapList(input) {
 // ---------------------------------------------------------------------------
 
 export function composeReply(input) {
+  // Text in the person's language (input.lang), from messages.mjs (input.texts, added by the node); English if missing.
+  const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) }
   const frags = Array.isArray(input.fragments) ? input.fragments : []
-  const filed = frags.filter((f) => f.kind === 'filed')
-  const accepted = frags.filter((f) => f.kind === 'accepted')
-  const rejected = frags.filter((f) => f.kind === 'rejected')
-  const review = frags.filter((f) => f.kind === 'review')
-  const asks = frags.filter((f) => f.kind === 'unclear')
   const of = (k) => frags.filter((f) => f.kind === k)
+  const codes = (k) => of(k).map((f) => f.line || T('r_review_item')).join(', ')
   const out = []
-  if (accepted.length) out.push('✅ Accepted: ' + accepted.map((f) => f.line).join(', '))
-  if (filed.length) out.push('📎 Filed: ' + filed.map((f) => f.line).join(', ') + (filed.some((f) => f.photo) ? ' (site photos are checked by the engineer on the visit day)' : ''))
-  for (const f of rejected) out.push('↩️ ' + f.line + ' sent back: ' + f.reason)
-  if (review.length) out.push('🔎 Being checked by our team: ' + review.map((f) => f.line || 'item').join(', '))
-  if (of('na').length) out.push('➖ Marked not applicable by the engineer: ' + of('na').map((f) => f.line).join(', '))
-  for (const f of of('na_refused')) out.push('↩️ ' + f.line + ' is needed: the engineer did not agree to N/A')
-  if (of('closed').length) out.push('✅ Closed by the engineer: ' + of('closed').map((f) => f.line).join(', '))
-  for (const f of of('reopened')) out.push('↩️ ' + f.line + ' still open: the engineer did not accept the photo. Fix it and reply to the reminder with a new photo.')
-  for (const f of of('resend')) out.push('🔁 Please send again' + (f.line ? ' for ' + f.line : '') + ': ' + (f.reason || 'we could not use the last file'))
-  if (asks.length) out.push('❓ ' + asks.length + ' item' + (asks.length > 1 ? 's' : '') + ' could not be placed. Please reply to it with the line code.')
-  if (input.open_count != null) out.push('Still open: ' + input.open_count + ' line' + (input.open_count === 1 ? '' : 's') + '. Send *status* for the list.')
-  return { ...input, reply: out.join('\n'), count: frags.length }
+  if (of('accepted').length) out.push(T('r_accepted', { lines: codes('accepted') }))
+  if (of('filed').length) out.push(T('r_filed', { lines: codes('filed') }) + (of('filed').some((f) => f.photo) ? T('r_filed_photo_note') : ''))
+  for (const f of of('rejected')) out.push(T('r_rejected', { line: f.line, reason: f.reason }))
+  if (of('review').length) out.push(T('r_review', { lines: codes('review') }))
+  if (of('na').length) out.push(T('r_na', { lines: codes('na') }))
+  for (const f of of('na_refused')) out.push(T('r_na_refused', { line: f.line }))
+  if (of('closed').length) out.push(T('r_closed', { lines: codes('closed') }))
+  for (const f of of('reopened')) out.push(T('r_reopened', { line: f.line }))
+  for (const f of of('resend')) out.push(T(f.line ? 'r_resend_line' : 'r_resend', { line: f.line, reason: f.reason || T('r_resend_default') }))
+  const asks = of('unclear').length
+  if (asks) out.push(T(asks === 1 ? 'r_unclear_1' : 'r_unclear_n', { n: asks }))
+  if (input.open_count != null) out.push(T(Number(input.open_count) === 1 ? 'r_open_1' : 'r_open_n', { n: input.open_count }))
+  return { ...input, texts: undefined, reply: out.join('\n'), count: frags.length }
 }
 
 // ---------------------------------------------------------------------------
@@ -825,7 +824,7 @@ export function chooseSendMode(input) {
   if (req.body) {
     return {
       ...input, can_send: true, mode: 'hold', attempt, held_body: req,
-      payload: template({ name: 'vera_mob_action_needed', language: 'en', params: [String(req.summary || 'a message')], buttons: ['show:latest'] }),
+      payload: template({ name: 'vera_mob_action_needed', language: ['hi', 'mr'].includes(input.language) ? input.language : 'en', params: [String(req.summary || 'a message')], buttons: ['show:latest'] }),
     }
   }
   return { ...input, can_send: false, why: 'Nothing to send' }
@@ -850,25 +849,27 @@ export function classifySendError(input) {
 
 // One-tap confirmation: up to 3 buttons (WhatsApp's limit), else a list (up to 10 rows).
 export function buildConfirm(input) {
+  // Text in the person's language (input.lang), from messages.mjs (input.texts, added by the node); English if missing.
+  const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) }
   const opts = (input.options || []).slice(0, 10)
   const byCode = {}
   for (const l of input.lines || []) byCode[l.code] = l
   const short = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
   const ev = input.evidence_id || input.message_id
-  const body = { text: 'Which checklist line is this for?' + (input.reason ? '\n' + short(input.reason, 200) : '') }
+  const body = { text: T('confirm_q') }
   let interactive
   if (opts.length && opts.length <= 2) {
     interactive = {
       type: 'button', body,
-      action: { buttons: opts.map((c) => ({ type: 'reply', reply: { id: 'bind:' + ev + ':' + c, title: short(c + ' ' + (byCode[c] ? byCode[c].text : ''), 20) } })).concat([{ type: 'reply', reply: { id: 'bind:' + ev + ':OTHER', title: 'Something else' } }]) },
+      action: { buttons: opts.map((c) => ({ type: 'reply', reply: { id: 'bind:' + ev + ':' + c, title: short(c + ' ' + (byCode[c] ? byCode[c].text : ''), 20) } })).concat([{ type: 'reply', reply: { id: 'bind:' + ev + ':OTHER', title: short(T('confirm_other'), 20) } }]) },
     }
   } else {
     const rows = (opts.length ? opts : (input.lines || []).filter((l) => !['accepted', 'ok', 'na'].includes(l.status)).slice(0, 9).map((l) => l.code))
       .map((c) => ({ id: 'bind:' + ev + ':' + c, title: short(c, 24), description: short(byCode[c] ? byCode[c].text : '', 72) }))
-    rows.push({ id: 'bind:' + ev + ':OTHER', title: 'Something else', description: 'Type the line code, e.g. LC-03' })
-    interactive = { type: 'list', body, action: { button: 'Choose line', sections: [{ title: 'Open lines', rows: rows.slice(0, 10) }] } }
+    rows.push({ id: 'bind:' + ev + ':OTHER', title: short(T('confirm_other'), 24), description: short(T('confirm_other_desc'), 72) })
+    interactive = { type: 'list', body, action: { button: short(T('confirm_button'), 20), sections: [{ title: short(T('confirm_section'), 24), rows: rows.slice(0, 10) }] } }
   }
-  return { ...input, request: { body: { type: 'interactive', context: input.wamid ? { message_id: input.wamid } : undefined, interactive } } }
+  return { ...input, texts: undefined, request: { body: { type: 'interactive', context: input.wamid ? { message_id: input.wamid } : undefined, interactive } } }
 }
 
 // Button and list answers carry their meaning in the id we gave them: "<verb>:<ref>:<value>".
@@ -1001,6 +1002,7 @@ export function validateSetup(input) {
       contract_value_inr: Number(f.contract_value_inr), peak_workers: Number(f.peak_workers),
       flags: { concrete: f.concrete, lifting: /yes|true|1/i.test(String(f.lifting)), creche: /yes|true|1/i.test(String(f.creche)), excavation: /yes|true|1/i.test(String(f.excavation)), shadow: !/^(no|false|0)$/i.test(String(f.shadow == null ? 'yes' : f.shadow).trim()) },
       contractor_phone: String(f.contractor_phone || '').replace(/\D/g, ''), engineer_phone: String(f.engineer_phone || '').replace(/\D/g, ''),
+      contractor_lang: /hindi|हिन्दी|^hi$/i.test(String(f.contractor_lang || '')) ? 'hi' : /marathi|मराठी|^mr$/i.test(String(f.contractor_lang || '')) ? 'mr' : 'en',
     },
   }
 }
@@ -1020,14 +1022,20 @@ export function instantiateChecklist(input) {
 // One prompt per area. Replying to it with photos files them under that area for sure;
 // a number in the caption picks the line. This is what keeps AI's guessing small.
 export function buildAreaPrompts(input) {
+  // Text in the person's language (input.lang), from messages.mjs (input.texts, added by the node); English if missing.
+  const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) }
   const rows = input.checklist || []
   const out = []
+  const project = input.project || ''
   for (const a of input.checklist_areas || []) {
+    const name = T('area_' + a.code) === 'area_' + a.code ? a.name : T('area_' + a.code)
     const ls = rows.filter((r) => r.area === a.code)
     const lines = ls.map((l) => Number(l.code.split('-')[1]) + '. ' + l.text + (l.severity === 'critical' ? ' 🔴' : '')).join('\n')
     out.push({
       mobilisation_id: input.mobilisation_id, contact_id: input.contractor_contact_id, kind: 'area', area: a.code, line_code: '',
-      request: { body: { type: 'text', text: { preview_url: false, body: '*' + a.name + ' (' + a.code + ')*\n' + lines + '\n\nReply to *this message* with photos or papers for ' + a.name + '. Write the number in the caption (e.g. 3).' } } },
+      // Outside the 24-hour window (the first contact) these are held behind the "Show me"
+      // template; the contractor's tap releases all of them.
+      request: { summary: T('area_prompt_summary', { project }), body: { type: 'text', text: { preview_url: false, body: '*' + name + ' (' + a.code + ')*\n' + lines + '\n\n' + T('area_prompt_footer', { area: name }) } } },
     })
   }
   return out
@@ -1038,17 +1046,19 @@ export function buildAreaPrompts(input) {
 // ---------------------------------------------------------------------------
 
 export function reminderPlan(input) {
+  // Text in the person's language (input.lang), from messages.mjs (input.texts, added by the node); English if missing.
+  const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) }
   const today = String(input.today || new Date().toISOString().slice(0, 10))
   const it = input.item || {}
   const overdueDays = Math.round((Date.parse(today) - Date.parse(it.due_on)) / 86400000)
   const who = it.severity === 'critical' && overdueDays >= 1 ? 'escalate' : 'contractor'
-  const text = (overdueDays > 0 ? '⏰ Overdue by ' + overdueDays + ' day' + (overdueDays > 1 ? 's' : '') : '📌 Due today') + ': ' + it.line + ' ' + it.text +
-    (it.finding ? '\nFinding: ' + it.finding : '') + '\nReply to *this message* with a photo once it is fixed. The engineer approves it from the photo.'
+  const text = (overdueDays > 0 ? T(overdueDays === 1 ? 'rem_overdue_1' : 'rem_overdue_n', { n: overdueDays }) : T('rem_due_today')) + ': ' + it.line + ' ' + it.text +
+    (it.finding ? '\n' + T('rem_finding', { finding: it.finding }) : '') + '\n' + T('rem_reply')
   return {
-    ...input, who, overdue_days: overdueDays,
+    ...input, texts: undefined, who, overdue_days: overdueDays,
     request: {
       body: { type: 'text', text: { preview_url: false, body: text } },
-      template: { name: 'vera_mob_open_item', language: 'en', params: [it.line, it.text, it.due_on] },
+      template: { name: 'vera_mob_open_item', language: ['hi', 'mr'].includes(input.lang) ? input.lang : 'en', params: [it.line, it.text, it.due_on] },
     },
     escalation: who === 'escalate' ? (input.project || 'Site') + ': critical item ' + it.line + ' is ' + overdueDays + ' day(s) overdue. ' + it.text : '',
   }

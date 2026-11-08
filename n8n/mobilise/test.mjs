@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import * as L from './logic.mjs'
 import { lines as TEMPLATE, areas as AREAS, params as PARAMS } from './checklist.mjs'
 import { IDS } from './workflows.mjs'
+import { TEXTS, TEMPLATES } from './messages.mjs'
 import { runCode, nodeNamed } from './build.mjs'
 
 const t = (label, ok, got) => [label, !!ok, got]
@@ -39,7 +40,7 @@ export async function runTests() {
   R.push(t('setup: bad form gives reasons', L.validateSetup({ project: '', visit_date: '2026-12-01', start_date: '2026-11-20' }).errors.length >= 5, null))
   R.push(t(`setup: plant site gets ${S.checklist.length} lines, RMC site ${rmcSite.checklist.length}`, S.checklist.length !== rmcSite.checklist.length && S.checklist.some((l) => l.code === 'PAP-06') && !rmcSite.checklist.some((l) => l.code === 'PAP-06') && rmcSite.checklist.some((l) => l.code === 'PAP-08'), [S.checklist.length, rmcSite.checklist.length]))
   R.push(t('setup: template has 77 lines in 7 areas, codes unique', TEMPLATE.length === 77 && AREAS.length === 7 && new Set(TEMPLATE.map((l) => l.code)).size === 77, TEMPLATE.length))
-  const prompts = L.buildAreaPrompts({ ...S, mobilisation_id: 1, contractor_contact_id: 7 })
+  const prompts = L.buildAreaPrompts({ ...S, mobilisation_id: 1, contractor_contact_id: 7, texts: TEXTS })
   R.push(t('setup: one area prompt per area, numbered lines', prompts.length === S.checklist_areas.length && prompts[0].request.body.text.body.includes('Reply to *this message*'), prompts.length))
 
   // ---- webhook explode
@@ -107,8 +108,8 @@ export async function runTests() {
   R.push(t('gate: NONE → ask sender with list', gate(claude(ans({ line_code: 'NONE', confidence: 0.9, alternatives: [] }))).decision === 'confirm', null))
 
   // ---- confirm buttons
-  const cb2 = L.buildConfirm({ options: ['LC-03', 'LC-04'], lines, evidence_id: 55 })
-  const cb3 = L.buildConfirm({ options: ['LC-03', 'LC-04', 'LC-05'], lines, evidence_id: 55 })
+  const cb2 = L.buildConfirm({ options: ['LC-03', 'LC-04'], lines, evidence_id: 55, texts: TEXTS })
+  const cb3 = L.buildConfirm({ options: ['LC-03', 'LC-04', 'LC-05'], lines, evidence_id: 55, texts: TEXTS })
   R.push(t('confirm: ≤2 options → 3 buttons (WhatsApp max), titles ≤ 20 chars', cb2.request.body.interactive.type === 'button' && cb2.request.body.interactive.action.buttons.length === 3 && cb2.request.body.interactive.action.buttons.every((b) => b.reply.title.length <= 20), null))
   R.push(t('confirm: 3 options → list (≤10 rows, titles ≤ 24)', cb3.request.body.interactive.type === 'list' && cb3.request.body.interactive.action.sections[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72), null))
   R.push(t('answer: contractor cannot sign the NOC', L.parseAnswer({ message: { interactive: { id: 'sign:3:approve' } }, contact_role: 'contractor' }).answer.ok === false, null))
@@ -132,7 +133,7 @@ export async function runTests() {
   const em10 = L.buildEvidenceMessage({ contact_id: 5, kind: 'review', ref: '9', msg: rv1.msg, media_id: 'MID', media_mime: 'application/pdf' })
   R.push(t('show: 10 answers → the PDF, then a list (rows ≤ 24 / 72 chars)', em10.length === 2 && em10[0].request.body.type === 'document' && em10[1].request.body.interactive.type === 'list' && em10[1].request.body.interactive.action.sections[0].rows.every((r) => r.title.length <= 24 && r.description.length <= 72), em10.map((x) => x.request.body.type)))
   R.push(t('show: file could not be fetched → text and buttons still go', L.buildEvidenceMessage({ msg: rv2.msg, media_id: '' })[0].request.body.interactive.header === undefined, null))
-  const rep2 = L.composeReply({ fragments: [{ kind: 'closed', line: 'SF-08' }, { kind: 'reopened', line: 'LC-07' }, { kind: 'na', line: 'LC-10' }, { kind: 'resend', line: '', reason: 'photo unreadable' }] })
+  const rep2 = L.composeReply({ texts: TEXTS, fragments: [{ kind: 'closed', line: 'SF-08' }, { kind: 'reopened', line: 'LC-07' }, { kind: 'na', line: 'LC-10' }, { kind: 'resend', line: '', reason: 'photo unreadable' }] })
   R.push(t('reply: closure, N/A and resend lines read plainly', rep2.reply.includes('Closed by the engineer: SF-08') && rep2.reply.includes('LC-07 still open') && rep2.reply.includes('not applicable') && rep2.reply.includes('Please send again: photo unreadable'), rep2.reply))
 
   // ---- paper checks (deterministic)
@@ -202,7 +203,7 @@ export async function runTests() {
 
   // ---- gap list and window
   const withStatus = lines.map((l) => (l.code === 'PAP-03' ? { ...l, status: 'accepted' } : l.code === 'PAP-04' ? { ...l, status: 'rejected', reason: 'Sum insured below contract value' } : l))
-  const gl = L.gapList({ mob: MOB, lines: withStatus, now: Date.parse('2026-11-15T19:00:00+05:30'), last_inbound_ms: Date.parse('2026-11-15T11:00:00+05:30') })
+  const gl = L.gapList({ texts: TEXTS, mob: MOB, lines: withStatus, now: Date.parse('2026-11-15T19:00:00+05:30'), last_inbound_ms: Date.parse('2026-11-15T11:00:00+05:30') })
   R.push(t('gap list: counts, sent-back reason, critical marked, inside window → free message', gl.gap.mode === 'session' && gl.gap.text.includes('PAP-04') && gl.gap.text.includes('Sum insured below') && gl.gap.text.includes('3 days') && !gl.gap.ready_to_travel, gl.gap.text.split('\n').slice(0, 4)))
   R.push(t('gap list: no message from them in 24 h → template', L.gapList({ mob: MOB, lines: withStatus, now: Date.parse('2026-11-15T19:00:00+05:30'), last_inbound_ms: Date.parse('2026-11-14T10:00:00+05:30') }).gap.mode === 'template', null))
 
@@ -225,8 +226,33 @@ export async function runTests() {
   const w1 = await runCode(whyNode, [{ json: rate }], { nodes: { 'Session or template?': { json: { attempt: 0 } }, 'Wait 30 s': { json: { attempt: 2 } } } })
   R.push(t('n8n code: retry counter survives the Wait loop (3rd failure → a person)', w1[0].json.attempt === 3 && w1[0].json.send_error.action === 'review', w1[0].json.send_error))
   // ---- replies
-  const rep = L.composeReply({ fragments: [{ kind: 'accepted', line: 'PAP-03' }, { kind: 'filed', line: 'LC-03', photo: true }, { kind: 'filed', line: 'LC-05', photo: true }, { kind: 'rejected', line: 'PAP-04', reason: 'Sum insured below contract value' }], open_count: 9 })
+  const rep = L.composeReply({ texts: TEXTS, fragments: [{ kind: 'accepted', line: 'PAP-03' }, { kind: 'filed', line: 'LC-03', photo: true }, { kind: 'filed', line: 'LC-05', photo: true }, { kind: 'rejected', line: 'PAP-04', reason: 'Sum insured below contract value' }], open_count: 9 })
   R.push(t('reply: 4 items → 1 message', rep.reply.split('\n').length === 4 && rep.reply.includes('LC-03, LC-05'), rep.reply))
+
+  // ---- languages (messages.mjs)
+  const keys = Object.keys(TEXTS.en)
+  const gaps = ['hi', 'mr'].map((l) => [l, keys.filter((k) => !TEXTS[l][k]), Object.keys(TEXTS[l]).filter((k) => !TEXTS.en[k])])
+  R.push(t('languages: Hindi and Marathi have every message English has, and no stray ones', gaps.every(([, miss, extra]) => !miss.length && !extra.length), gaps))
+  const holes = (txt) => (String(txt).match(/\{(\w+)\}/g) || []).sort().join()
+  const mism = ['hi', 'mr'].flatMap((l) => keys.filter((k) => holes(TEXTS[l][k]) !== holes(TEXTS.en[k])).map((k) => l + ':' + k))
+  R.push(t('languages: every translation fills the same {blanks} as the English', !mism.length, mism))
+  const tooLong = ['en', 'hi', 'mr'].flatMap((l) => [['confirm_other', 20], ['confirm_button', 20], ['confirm_section', 24]].filter(([k, n]) => [...TEXTS[l][k]].length > n).map(([k]) => l + ':' + k))
+  R.push(t('languages: button and list titles fit WhatsApp limits (20 / 24 characters) in all languages', !tooLong.length, tooLong))
+  const glHi = L.gapList({ texts: TEXTS, lang: 'hi', mob: MOB, lines: withStatus, now: Date.parse('2026-11-15T19:00:00+05:30'), last_inbound_ms: 0 })
+  R.push(t('languages: Hindi gap list, Hindi template, line codes and reasons kept', glHi.gap.text.includes('अभी बाकी कागज़ात') && glHi.gap.text.includes('3 दिन') && glHi.gap.text.includes('PAP-04') && glHi.gap.text.includes('Sum insured below') && glHi.gap.template.language === 'hi' && glHi.gap.mode === 'template', glHi.gap.text.split('\n').slice(0, 3)))
+  const repMr = L.composeReply({ texts: TEXTS, lang: 'mr', fragments: [{ kind: 'accepted', line: 'PAP-03' }, { kind: 'filed', line: 'LC-03', photo: true }], open_count: 4 })
+  R.push(t('languages: Marathi burst reply', repMr.reply.includes('मंजूर: PAP-03') && repMr.reply.includes('जमा: LC-03') && repMr.reply.includes('अजून बाकी: 4 लाइन'), repMr.reply))
+  const apMr = L.buildAreaPrompts({ ...S, mobilisation_id: 1, contractor_contact_id: 7, texts: TEXTS, lang: 'mr', project: 'Tower B' })
+  R.push(t('languages: Marathi area prompt names the area in Marathi; held summary in Marathi too', apMr.find((p) => p.area === 'LC').request.body.text.body.startsWith('*लेबर कॅम्प (LC)*') && apMr[0].request.summary.includes('Tower B'), apMr.find((p) => p.area === 'LC').request.body.text.body.slice(0, 80)))
+  const cbHi = L.buildConfirm({ options: ['LC-03'], lines, evidence_id: 5, texts: TEXTS, lang: 'hi' })
+  R.push(t('languages: Hindi confirm question and "Something else" button', cbHi.request.body.interactive.body.text === 'यह किस चेकलिस्ट लाइन के लिए है?' && cbHi.request.body.interactive.action.buttons[1].reply.title === 'कुछ और', cbHi.request.body.interactive))
+  R.push(t('languages: reminder in Hindi uses the Hindi template', L.reminderPlan({ texts: TEXTS, lang: 'hi', item: { line: 'SF-08', severity: 'major', text: 'Main DB', due_on: '2026-11-20' }, today: '2026-11-21' }).request.template.language === 'hi', null))
+  R.push(t('languages: "Show me" template goes in the contact\'s language', L.chooseSendMode({ phone: '919820000001', language: 'mr', now, request: { body: { type: 'text' }, summary: 'x' } }).payload.template.language.code === 'mr', null))
+  R.push(t('languages: set-up form maps "मराठी (Marathi)" to mr, default English', L.validateSetup({ contractor_lang: 'मराठी (Marathi)' }).clean.contractor_lang === 'mr' && L.validateSetup({}).clean.contractor_lang === 'en', null))
+  const tplBad = TEMPLATES.flatMap((tp) => ['en', 'hi', 'mr'].filter((l) => tp[l]).filter((l) => /^\s*\{\{|\}\}[\s.*]*$/.test(tp[l]) || (tp[l].match(/\{\{\d\}\}/g) || []).length !== tp.params.length).map((l) => tp.name + ':' + l))
+  R.push(t('templates: no body starts or ends with a variable (Meta rejects those); variables match the parameters', !tplBad.length, tplBad))
+  const helpNode = await runCode(nodeNamed(IDS.process, 'Build help text'), [{ json: { contact_lang: 'hi', help: 'unknown_line', line: 'LC-10' } }])
+  R.push(t('n8n code: help node answers in Hindi and does not carry the text table forward', helpNode[0].json.request.body.text.body.startsWith('LC-10 इस साइट') && !helpNode[0].json.texts, helpNode[0].json.request.body.text.body))
 
   // ---- scoring and the report
   const walked = lines.map((l) => ({ ...l, status: l.when === 'paper' ? 'accepted' : 'ok', photos: 1 }))
@@ -248,7 +274,7 @@ export async function runTests() {
   R.push(t('report: escapes text from the site', L.renderReport({ mob: { ...MOB, project: '<script>' }, score, narrative: good, narrative_ok: true }).html.includes('&lt;script&gt;'), null))
 
   // ---- open items
-  const rp = L.reminderPlan({ item: { id: 4, line: 'LC-07', severity: 'critical', text: 'RCCB', due_on: '2026-11-18' }, today: '2026-11-20', project: 'Tower B' })
+  const rp = L.reminderPlan({ texts: TEXTS, item: { id: 4, line: 'LC-07', severity: 'critical', text: 'RCCB', due_on: '2026-11-18' }, today: '2026-11-20', project: 'Tower B' })
   R.push(t('closure: critical item 2 days overdue → escalate to project head', rp.who === 'escalate' && rp.overdue_days === 2 && rp.escalation.includes('LC-07'), rp))
 
   // ---- generated Code-node source (what n8n runs)

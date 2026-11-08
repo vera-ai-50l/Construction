@@ -12,6 +12,7 @@
 
 import * as L from './logic.mjs'
 import { lines as TEMPLATE, areas as AREAS, params as PARAMS } from './checklist.mjs'
+import { TEXTS, LANGUAGES } from './messages.mjs'
 
 export const IDS = {
   errors: 'veraMob00Errors1',
@@ -245,7 +246,7 @@ const k = { 'Project': 'project', 'Package': 'package', 'Contractor (legal name)
   'Site address': 'site_address', 'Address words that must appear on papers': 'site_keywords', 'Work start date': 'start_date', 'Engineer visit date': 'visit_date',
   'Contract end date': 'contract_end', 'Contract value (₹)': 'contract_value_inr', 'Planned peak labour': 'peak_workers', 'Concrete': 'concrete',
   'Tower crane / hoist at site': 'lifting', 'Creche needed': 'creche', 'Excavation at start': 'excavation',
-  'Contractor phone (WhatsApp)': 'contractor_phone', 'Engineer phone (WhatsApp)': 'engineer_phone', 'Shadow mode: a person confirms every AI filing': 'shadow' };
+  'Contractor phone (WhatsApp)': 'contractor_phone', 'Engineer phone (WhatsApp)': 'engineer_phone', 'Shadow mode: a person confirms every AI filing': 'shadow', "Contractor's language": 'contractor_lang' };
 const out = {};
 for (const [label, key] of Object.entries(k)) out[key] = f[label] == null ? '' : f[label];
 return { json: out };`
@@ -286,6 +287,7 @@ returning id, mobilisation_id, contact_id, kind, status, error;`,
   load: `update messages set state = 'processing', state_at = now() where id = $1 and state in ('new', 'needs_human')
 returning id as message_id, contact_id, mobilisation_id, body as message,
   (select role from contacts where id = messages.contact_id) as contact_role,
+  (select language from contacts where id = messages.contact_id) as contact_lang,
   (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'evidence', evidence, 'when', "when",
           'severity', severity, 'docType', doc_type, 'rules', rules, 'hint', hint, 'status', status) order by code)
      from lines where mobilisation_id = messages.mobilisation_id) as lines,
@@ -324,6 +326,10 @@ returning contact_id, mobilisation_id, kind, coalesce(area, '') as area, coalesc
 }
 
 // ---------------------------------------------------------------- shared Code-node functions
+
+// Every Code node that writes to a contractor gets the texts of messages.mjs; input.lang picks one.
+const TX = 'input.texts = ' + JSON.stringify(TEXTS) + ';'
+const T_SRC = "const T = (k, v) => { const all = input.texts || {}; const t = (all[input.lang] || {})[k] || (all.en || {})[k] || k; return String(t).replace(/\\{(\\w+)\\}/g, (_, n) => (v && v[n] != null ? String(v[n]) : '')) };"
 
 // One line for the reply: accepted / sent back (with why) / filed. Used by WF-02 and WF-10.
 function makeFragment(input) {
@@ -417,7 +423,14 @@ export const workflows = [
       http('Download the file', { method: 'GET', url: '={{ $json.url }}', auth: 'wa', file: true, timeout: 60000 }, at(4, 0), 'Downloaded at once, before the link expires.', { guard: ['retry', 'error-out', 'timeout'], onError: true }),
       snippet('Hash and size check', HASH, at(5, 0), 'SHA-256 of the file. Same file already used on another line, or too large: stopped.', { guard: ['dedupe', 'schema'] }),
       iff('File OK?', '={{ $json.file_ok }}', at(6, 0), 'Reused or oversized files do not get filed.'),
-      code('Explain file problem', (input) => ({ ...input, request: { body: { type: 'text', text: { body: input.file.reused_from ? 'This exact file was already sent for ' + input.file.reused_from + '. Please send a new photo for this line.' : 'This file is too large. Please send a smaller photo or a PDF under 25 MB.' } } } }), at(7, -1), 'Tells the sender why, in one line.'),
+      snippet('Explain file problem', `// Why Code: one line in the sender's language (messages.mjs).
+const item = $input.item;
+let input = { ...item.json };
+${TX}
+input.lang = input.contact_lang;
+${T_SRC}
+const used = input.file.reused_from === 'another line' ? T('file_reused_other') : input.file.reused_from;
+return { json: { ...input, texts: undefined, request: { body: { type: 'text', text: { body: input.file.reused_from ? T('file_reused', { line: used }) : T('file_too_big') } } } } };`, at(7, -1), 'Tells the sender why, in one line, in their language.'),
       send('Send file problem', at(8, -1), 'Through WF-09.', { kind: 'reply' }),
       iff('Voice note?', "={{ $json.message.type === 'audio' }}", at(7, -1.6), 'Voice is typed out first, so a spoken line code ("LC teen") can bind it.'),
       http('Transcribe voice (Sarvam)', { url: SARVAM, auth: 'sarvam', form: [{ parameterType: 'formBinaryData', name: 'file', inputDataFieldName: 'data' }, { name: 'model', value: 'saaras:v3' }, { name: 'mode', value: 'transcribe' }, { name: 'language_code', value: 'unknown' }], timeout: 90000 }, at(8, -2.4), 'Hindi / Marathi / Hinglish → text in its own script. English comes in the report.', { guard: ['retry', 'error-out', 'timeout'], onError: true }),
@@ -439,7 +452,7 @@ return { json: { ...ctx.json, message, transcript: t || '[voice note: transcript
 values ($1, null, $2, $3, $4, $5, $6, $7, 'ai', $8::jsonb, nullif($9, ''), nullif($10, ''), $11) returning id as evidence_id;`,
         "={{ $json.mobilisation_id }},={{ $json.message_id }},={{ $json.message.type === 'document' ? 'document' : $json.message.type === 'audio' ? 'audio' : 'photo' }},={{ $json.s3_key }},={{ $json.file.sha256 }},={{ $json.file.mime }},={{ $json.file.bytes }},={{ JSON.stringify($json.ai_answer || null) }},={{ $json.transcript || '' }},={{ $json.transcript_lang || '' }},={{ $json.contact_id }}",
         at(18, 2.1), 'The file is kept, with no line yet, so the button answer has something to file.', { guard: ['audit', 'retry'] }),
-      code('Build confirm buttons', L.buildConfirm, at(19, 2.1), 'Top 3 lines as one-tap buttons, plus "Something else".', { pre: "input = { ...$('Save as unfiled evidence').item.json, ...input }; input = { ...input, ...($('Confidence gate').isExecuted ? $('Confidence gate').item.json : $('Bind to checklist line').item.json), evidence_id: $input.item.json.evidence_id, wamid: ($('Load and lock message').item.json.message || {}).wamid }; input.options = input.options && input.options.length ? input.options : ((input.binding && input.binding.ask && input.binding.candidates) || []);" }),
+      code('Build confirm buttons', L.buildConfirm, at(19, 2.1), 'Top 3 lines as one-tap buttons, plus "Something else".', { pre: "input = { ...$('Save as unfiled evidence').item.json, ...input }; input = { ...input, ...($('Confidence gate').isExecuted ? $('Confidence gate').item.json : $('Bind to checklist line').item.json), evidence_id: $input.item.json.evidence_id, wamid: ($('Load and lock message').item.json.message || {}).wamid }; input.options = input.options && input.options.length ? input.options : ((input.binding && input.binding.ask && input.binding.candidates) || []); input.lang = $('Load and lock message').item.json.contact_lang; " + TX }),
       send('Ask sender to confirm', at(20, 2.1), 'The answer comes back as a button reply and is applied in one transaction.', { kind: 'confirm', ref: "={{ String($json.message_id) }}" }),
       pg('Send to review queue', SQL.review, "={{ $('Load and lock message').item.json.mobilisation_id }},={{ $('Load and lock message').item.json.message_id }},={{ $json.reason || ($json.error && $json.error.message) || 'Could not process automatically' }},={{ JSON.stringify($json.options || []) }}", at(18, 3.3), 'A person files it, usually within the hour. The sender is told it is being checked.', { guard: ['human', 'audit'] }),
       pg('Mark needs a person', SQL.needsHuman, "={{ $('Load and lock message').item.json.message_id }},={{ ($json.error && $json.error.message) || $json.reason || 'step failed' }}", at(19, 3.3), 'Any failed step lands here: download, storage, AI. The message is never dropped.', { guard: ['human', 'error-out'] }),
@@ -471,14 +484,14 @@ values ($1, null, $2, $3, $4, $5, $6, $7, 'ai', $8::jsonb, nullif($9, ''), nulli
       code('Read typed text', L.readTextCommand, at(3, 4), '"status", "baki kya hai", "LC-10 NA creche not needed", or a remark.'),
       sw('Which command?', '={{ $json.command }}', ['gap_list', 'help', 'request_na', 'remark'], at(4, 4), 'Small, fixed set of commands. Anything else is a remark.'),
       sub('Send the gap list now', IDS.gaps, { mobilisation_id: '={{ $json.mobilisation_id }}' }, at(5, 3.4), 'Same list as 7 PM, on demand.'),
-      code('Build help text', (input) => ({
-        ...input,
-        request: { body: { type: 'text', text: { body: input.help === 'reviewer'
-          ? 'Review items come here as messages with buttons. Answer with the buttons; typed messages are not filed.'
-          : input.help === 'unknown_line'
-            ? input.line + ' is not on this site\'s checklist. Send *status* to see the line codes.'
-            : 'Send photos or PDFs as a *reply* to the area message, with the line number in the caption (e.g. 3). Send *status* to see what is still needed. Voice notes are fine.' } } },
-      }), at(5, 4.4), 'Two lines of help (reviewers and unknown line codes get their own line).'),
+      snippet('Build help text', `// Why Code: help in the sender's language (messages.mjs).
+const item = $input.item;
+let input = { ...item.json };
+${TX}
+input.lang = input.contact_lang;
+${T_SRC}
+const body = input.help === 'reviewer' ? T('help_reviewer') : input.help === 'unknown_line' ? T('help_unknown_line', { line: input.line }) : T('help');
+return { json: { ...input, texts: undefined, request: { body: { type: 'text', text: { body } } } } };`, at(5, 4.4), 'Two lines of help in their language (reviewers and unknown line codes get their own line).'),
       send('Send help', at(6, 4.4), 'Through WF-09.', { kind: 'help' }),
       code('Build N/A request', (input) => ({ ...input, request: { summary: 'a not-applicable request', body: { type: 'interactive', interactive: { type: 'button', body: { text: 'Contractor asks to mark ' + input.line + ' as not applicable: "' + (input.reason || 'no reason given') + '". Approve?' }, action: { buttons: [{ type: 'reply', reply: { id: 'na:' + input.line + ':approve', title: 'Approve N/A' } }, { type: 'reply', reply: { id: 'na:' + input.line + ':reject', title: 'Reject' } }] } } } } }), at(5, 5.4), 'Only the engineer can mark a line N/A.', { guard: ['human'] }),
       send('Ask engineer about N/A', at(6, 5.4), 'Engineer decides with one tap. The contractor hears the answer.', { kind: 'confirm', contact: '={{ $json.engineer_contact_id }}', line: '={{ $json.line }}' }, { guard: ['human'] }),
@@ -500,7 +513,13 @@ values ($1, null, $2, $3, $4, $5, $6, $7, 'ai', $8::jsonb, nullif($9, ''), nulli
 select $1, o.area, o.area || ' (pin from contractor)', json_build_object('circle', json_build_object('lat', $2::float, 'lng', $3::float, 'radius_m', 30)), 'contractor_pin'
 from outbound o where o.wamid = $4 and o.kind = 'area' returning id;`, "={{ $json.mobilisation_id }},={{ $json.message.location.lat }},={{ $json.message.location.lng }},={{ $json.message.context_wamid }}", at(3, 8.6), 'A pin sent as a reply to an area prompt becomes a 30 m circle for that area. The engineer can redraw it.', { alwaysOutput: true }),
 
-      code('Build "what we accept"', (input) => ({ ...input, request: { body: { type: 'text', text: { body: 'Please send a photo, a PDF or a voice note. Videos and stickers are not filed.' } } } }), at(3, 9.8), 'Unsupported types get a polite line, not silence.'),
+      snippet('Build "what we accept"', `// Why Code: one polite line in the sender's language (messages.mjs).
+const item = $input.item;
+let input = { ...item.json };
+${TX}
+input.lang = input.contact_lang;
+${T_SRC}
+return { json: { ...input, texts: undefined, request: { body: { type: 'text', text: { body: T('accept_types') } } } } };`, at(3, 9.8), 'Unsupported types get a polite line, not silence.'),
       send('Send "what we accept"', at(4, 9.8), 'Through WF-09.', { kind: 'help' }),
     )
       .link('From the router', 'Load and lock message').link('Load and lock message', 'What kind of message?')
@@ -648,12 +667,12 @@ from walks w join mobilisations mo on mo.id = w.mobilisation_id where w.id = $1;
       trigger('On demand (status)', { mobilisation_id: 'number' }, at(0, 1.2), 'When the contractor types "status".'),
       pg('Sites in paper-check window', `select mo.id as mobilisation_id, row_to_json(mo) as mob,
   (select json_agg(json_build_object('code', code, 'area', area, 'text', text, 'when', "when", 'severity', severity, 'evidence', evidence, 'status', status, 'reason', reason) order by code) from lines where mobilisation_id = mo.id) as lines,
-  c.id as contact_id, extract(epoch from c.last_inbound_at) * 1000 as last_inbound_ms,
+  c.id as contact_id, c.language as lang, extract(epoch from c.last_inbound_at) * 1000 as last_inbound_ms,
   (select id from contacts where mobilisation_id = mo.id and role = 'engineer' limit 1) as engineer_contact_id
 from mobilisations mo join contacts c on c.mobilisation_id = mo.id and c.role = 'contractor'
 where mo.phase = 'paper' and (mo.id = nullif($1, '')::bigint or ($1 = '' and mo.visit_date between current_date and current_date + 3));`, "={{ $json.mobilisation_id ? String($json.mobilisation_id) : '' }}", at(1, 0.6), 'Every site whose visit is in the next 3 days (or the one that asked).', { guard: ['retry'] }),
       n('One site at a time', 'loop', { batchSize: 1, options: {} }, at(2, 0.6), 'A failure on one site does not stop the others.'),
-      code('Build gap list', L.gapList, at(3, 0), 'Missing papers by severity, what was sent back and why, how many site photos so far.'),
+      code('Build gap list', L.gapList, at(3, 0), 'Missing papers by severity, what was sent back and why, how many site photos so far. In the contractor\'s language.', { pre: TX }),
       send('Send to contractor', at(4, 0), 'Free inside 24 h of their last message; otherwise the approved utility template.', { kind: 'gap_list', request: '={{ { body: { type: "text", text: { preview_url: false, body: $json.gap.text } }, template: $json.gap.template } }}' }, { guard: ['window'] }),
       send('Tell the engineer', at(5, 0), '"Ready to travel" or the list of critical papers still open.', { kind: 'gap_list', contact: "={{ $('Build gap list').item.json.engineer_contact_id }}", mob: "={{ $('Build gap list').item.json.mobilisation_id }}", request: "={{ { body: { type: 'text', text: { body: $('Build gap list').item.json.gap.engineer_line } }, template: { name: 'vera_mob_engineer_brief', language: 'en', params: [$('Build gap list').item.json.gap.engineer_line] } } }}" }),
       noop('All sites done', at(3, 1.6), 'End of run.'),
@@ -676,9 +695,10 @@ where mo.phase = 'paper' and (mo.id = nullif($1, '')::bigint or ($1 = '' and mo.
   returning r.id, r.contact_id, r.mobilisation_id, r.fragment
 )
 select contact_id, max(mobilisation_id) as mobilisation_id, json_agg(fragment order by id) as fragments, json_agg(id) as ids,
+  (select language from contacts k where k.id = c.contact_id) as lang,
   (select count(*) from lines l where l.mobilisation_id = max(c.mobilisation_id) and l.status not in ('accepted', 'ok', 'na') and l."when" = 'paper') as open_count
 from c group by contact_id;`, '', at(1, 0), 'Claims each burst once, so two runs never send the same reply.', { guard: ['idempotent', 'retry'] }),
-      code('Compose one reply', L.composeReply, at(2, 0), '"✅ Accepted PAP-03. ↩️ PAP-04 sent back: sum insured below contract value. Still open: 6."'),
+      code('Compose one reply', L.composeReply, at(2, 0), '"✅ Accepted PAP-03. ↩️ PAP-04 sent back: sum insured below contract value. Still open: 6." In their language.', { pre: TX }),
       send('Send the reply', at(3, 0), 'Through WF-09.', { kind: 'reply', request: '={{ { body: { type: "text", text: { body: $json.reply } } } }}' }),
       pg('Mark reply sent', `update reply_queue set sent_at = now() where id = any(($1)::bigint[]) returning id;`, "={{ '{' + $('Compose one reply').item.json.ids.join(',') + '}' }}", at(4, 0), 'Done.'),
     )
@@ -750,10 +770,11 @@ return { json: { contact_id: v.contact_id, mobilisation_id: v.mobilisation_id, r
       pg('Items due or overdue', `select oi.id, oi.mobilisation_id, json_build_object('id', oi.id, 'line', oi.line_code, 'severity', oi.severity, 'text', oi.text, 'finding', oi.finding, 'due_on', oi.due_on::text) as item,
   mo.project, current_date::text as today,
   (select id from contacts where mobilisation_id = oi.mobilisation_id and role = 'contractor' limit 1) as contact_id,
+  (select language from contacts where mobilisation_id = oi.mobilisation_id and role = 'contractor' limit 1) as lang,
   (select id from contacts where mobilisation_id = oi.mobilisation_id and role = 'project_head' limit 1) as head_contact_id
 from open_items oi join mobilisations mo on mo.id = oi.mobilisation_id where oi.status = 'open' and oi.due_on <= current_date;`, '', at(1, 0), 'Only items that are due.', { guard: ['retry'] }),
       n('Each item', 'loop', { batchSize: 1, options: {} }, at(2, 0), 'One at a time.'),
-      code('Reminder or escalate?', L.reminderPlan, at(3, -0.5), 'Critical and overdue → the project head hears about it.'),
+      code('Reminder or escalate?', L.reminderPlan, at(3, -0.5), 'Critical and overdue → the project head hears about it. Reminder in the contractor\'s language.', { pre: TX }),
       send('Remind the contractor', at(4, -0.5), 'Sent as a message they can reply to: the reply binds to this item for sure.', { kind: 'open_item', line: '={{ $json.item.line }}', ref: '={{ String($json.item.id) }}' }),
       iff('Escalate?', "={{ $('Reminder or escalate?').item.json.who === 'escalate' }}", at(5, -0.5), 'Only critical items, only when overdue.'),
       send('Tell the project head', at(6, -1.2), 'One line with the item and days overdue.', { kind: 'open_item', contact: "={{ $('Reminder or escalate?').item.json.head_contact_id }}", mob: "={{ $('Reminder or escalate?').item.json.mobilisation_id }}", request: "={{ { body: { type: 'text', text: { body: $('Reminder or escalate?').item.json.escalation } }, template: { name: 'vera_mob_escalation', language: 'en', params: [$('Reminder or escalate?').item.json.escalation] } } }}" }),
@@ -777,6 +798,7 @@ from open_items oi join mobilisations mo on mo.id = oi.mobilisation_id where oi.
           ['Contract end date', 'date', true], ['Contract value (₹)', 'number', true], ['Planned peak labour', 'number', true],
           ['Concrete', 'dropdown', true, ['plant', 'rmc']], ['Tower crane / hoist at site', 'dropdown', true, ['yes', 'no']], ['Creche needed', 'dropdown', true, ['yes', 'no']],
           ['Excavation at start', 'dropdown', true, ['yes', 'no']], ['Contractor phone (WhatsApp)', 'text', true], ['Engineer phone (WhatsApp)', 'text', true],
+          ["Contractor's language", 'dropdown', true, LANGUAGES.map((l) => l.label)],
           ['Shadow mode: a person confirms every AI filing', 'dropdown', true, ['yes', 'no']],
         ].map(([fieldLabel, fieldType, requiredField, opts]) => ({ fieldLabel, fieldType, requiredField, ...(opts ? { fieldOptions: { values: opts.map((option) => ({ option })) } } : {}) })) },
         options: {},
@@ -794,14 +816,14 @@ from open_items oi join mobilisations mo on mo.id = oi.mobilisation_id where oi.
   insert into lines (mobilisation_id, code, area, text, evidence, "when", severity, doc_type, rules, hint)
   select (select id from mo), r->>'code', r->>'area', r->>'text', r->>'evidence', r->>'when', r->>'severity', r->>'doc_type', r->'rules', r->>'hint' from jsonb_array_elements($2::jsonb) r returning 1
 ), k as (
-  insert into contacts (mobilisation_id, phone, role) values ((select id from mo), $3, 'contractor'), ((select id from mo), $4, 'engineer') returning id, role
+  insert into contacts (mobilisation_id, phone, role, language) values ((select id from mo), $3, 'contractor', $6), ((select id from mo), $4, 'engineer', 'en') returning id, role
 ), wk as (
   insert into walks (mobilisation_id, engineer_id, expires_at) select (select id from mo), (select id from k where role = 'engineer'), ($5::date + 2)::timestamptz returning id
 )
 select (select id from mo) as mobilisation_id, (select id from k where role = 'contractor') as contractor_contact_id, (select id from k where role = 'engineer') as engineer_contact_id,
   (select id from wk) as walk_id, (select count(*) from l) as lines_created;`,
-      "={{ JSON.stringify($json.clean) }},={{ JSON.stringify($json.checklist) }},={{ $json.clean.contractor_phone }},={{ $json.clean.engineer_phone }},={{ $json.clean.visit_date }}", at(5, 0), 'All in one statement: either the whole site is created or nothing is.', { guard: ['audit'] }),
-      code('Build area prompts', L.buildAreaPrompts, at(6, 0), 'One message per area, each listing its lines by number.', { mode: 'all', pre: "input.checklist = $('Copy checklist for this site').first().json.checklist; input.checklist_areas = $('Copy checklist for this site').first().json.checklist_areas;" }),
+      "={{ JSON.stringify($json.clean) }},={{ JSON.stringify($json.checklist) }},={{ $json.clean.contractor_phone }},={{ $json.clean.engineer_phone }},={{ $json.clean.visit_date }},={{ $json.clean.contractor_lang || 'en' }}", at(5, 0), 'All in one statement: either the whole site is created or nothing is.', { guard: ['audit'] }),
+      code('Build area prompts', L.buildAreaPrompts, at(6, 0), 'One message per area, each listing its lines by number, in the contractor\'s language.', { mode: 'all', pre: "input.checklist = $('Copy checklist for this site').first().json.checklist; input.checklist_areas = $('Copy checklist for this site').first().json.checklist_areas; input.lang = $('Check the form').first().json.clean.contractor_lang; input.project = $('Check the form').first().json.clean.project; " + TX }),
       send('Send area prompts', at(7, 0), 'The first one goes as the welcome template (outside the 24 h window); the contractor\'s reply opens the window for the rest.', { kind: 'area', area: '={{ $json.area }}', contact: '={{ $json.contact_id }}' }),
       snippet('Sign the walk link', WALK_SIGN, at(6, 1.2), 'Signed link for the engineer, valid until the day after the visit.', { guard: ['auth'], pre: '' }),
       send('Send engineer the walk link', at(7, 1.2), 'Through WF-09.', { kind: 'help', contact: "={{ $('Create site, lines, contacts').item.json.engineer_contact_id }}", mob: "={{ $('Create site, lines, contacts').item.json.mobilisation_id }}" }),
@@ -816,7 +838,7 @@ select (select id from mo) as mobilisation_id, (select id from k where role = 'c
     'The only way Vera sends anything. Picks session message or template by the 24-hour window, logs every message id (so replies bind to lines), backs off on rate limits, and never fails silently.',
     (w) => w.add(
       trigger('Asked to send', { contact_id: 'number', mobilisation_id: 'number', kind: 'string', area: 'string', line_code: 'string', ref: 'string', request: 'object' }, at(0, 0), 'Who, what, and why (kind / area / line).'),
-      pg('Load contact and window', `select $1::bigint as contact_id, c.phone, c.last_inbound_at, c.role from contacts c where c.id = $1;`, '={{ $json.contact_id }}', at(1, 0), 'Phone and when they last wrote to us.', { guard: ['retry'] }),
+      pg('Load contact and window', `select $1::bigint as contact_id, c.phone, c.last_inbound_at, c.role, c.language from contacts c where c.id = $1;`, '={{ $json.contact_id }}', at(1, 0), 'Phone and when they last wrote to us.', { guard: ['retry'] }),
       code('Session or template?', L.chooseSendMode, at(2, 0), 'Inside 24 h of their last message: the message itself. Outside: its approved template; or, for buttons, photos and the NOC, one generic template with a "Show me" button while the real message is held.', { guard: ['window'], pre: "input = { ...input, request: $('Asked to send').item.json.request, attempt: input.attempt || 0 };" }),
       iff('Can send?', '={{ $json.can_send }}', at(3, 0), 'No phone, or outside the window with no template: not sent, logged.', { guard: ['window'] }),
       pg('Log not sent', `insert into outbound (mobilisation_id, contact_id, kind, area, line_code, ref, payload, status, error) values ($1, $2, $3, $4, $5, $6, $7::jsonb, 'not_sent', $8::jsonb) returning id;`,
