@@ -1,0 +1,446 @@
+{
+ "project": "Sample Tower B, Thane",
+ "languages": {
+  "en": {
+   "t5": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "first message",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "Vera has the papers and photos list for Sample Tower B, Thane for you. Tap the button below to see it.",
+      "buttons": [
+       "Show me"
+      ],
+      "template": true
+     },
+     {
+      "from": "them",
+      "text": "Show me",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "*Papers and licences (PAP)*\n1. Establishment registration for this site (OSH Code; BOCW registration accepted during transition) 🔴\n2. Contract labour licence (OSH Code single licence; CLRA Form VI accepted during transition) 🔴\n3. Employees' compensation (WC) policy 🔴\n4. Contractor's All Risks (CAR) policy with third-party liability 🔴\n5. ESIC and PF registration codes\n6. Batching plant calibration certificate (weigh batchers, admixture dispenser) 🔴\n7. Consent to Operate (MPCB) for the batching plant 🔴\n9. Safety officer appointment letter and qualification 🔴\n10. Site EHS plan approved by developer EHS\n11. Emergency plan: nearest hospital tie-up and ambulance contact\n12. Lifting appliances: load test certificates (tower crane, hoist) by competent person 🔴\n13. Temporary power: connection approval and licensed electrical supervisor\n14. Worker list with ID check (ID numbers masked) and induction plan\n15. Quality assurance plan and inspection test plan approved by developer QA\n16. Survey instruments calibration (total station, auto level)\n\nReply to *this message* with photos or papers for Papers and licences. Write the number in the caption (e.g. 3)."
+     },
+     {
+      "from": "vera",
+      "text": "*Labour camp (LC)*\n1. Camp location safe: not low-lying, not under power lines, layout as approved 🔴\n2. Rooms: ventilation, windows, space per person as per developer camp standard\n3. Toilets: enough for the workforce, separate for women, clean, with water 🔴\n4. Bathing and washing area with drainage\n5. Drinking water: potable source, marked, away from toilets and washing areas 🔴\n6. Kitchen separate from rooms; gas cylinders not inside rooms 🔴\n7. Electrical: RCCB/ELCB, earthing, no loose wiring 🔴\n8. Fire extinguishers and fire buckets, charged, with dates 🔴\n9. First-aid box stocked; trained first-aider named\n11. Waste bins, drainage, mosquito control\n12. Notice board: wage days, grievance contact, emergency numbers (Hindi / Marathi)\n13. Lighting for night movement\n14. Boundary and security for the camp\n\nReply to *this message* with photos or papers for Labour camp. Write the number in the caption (e.g. 3)."
+     },
+     {
+      "from": "vera",
+      "text": "+ 5 more areas",
+      "note": true
+     }
+    ]
+   },
+   "t3": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "papers and photos",
+    "msgs": [
+     {
+      "from": "them",
+      "text": "",
+      "file": "Labour licence.pdf",
+      "replyTo": "*Papers and licences (PAP)*",
+      "caption": "2"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "file": "CAR policy schedule.pdf",
+      "caption": "PAP 4"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Toilet block",
+      "replyTo": "*Labour camp (LC)*",
+      "caption": "3"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "voice": "0:12",
+      "transcript": "एल.सी. पाँच, पीने के पानी का नल धोने की जगह के पास है।"
+     },
+     {
+      "from": "vera",
+      "text": "✅ Accepted: PAP-02\n📎 Filed: LC-03, LC-05 (site photos are checked by the engineer on the visit day)\n↩️ PAP-04 sent back: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000\nStill open: 18 lines. Send *status* for the list.",
+      "after": "90 s of quiet"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Cement shed"
+     },
+     {
+      "from": "vera",
+      "text": "Which checklist line is this for?",
+      "buttons": [
+       "SY-01 Cement shed: …",
+       "SY-02 Cement stacke…",
+       "Something else"
+      ]
+     },
+     {
+      "from": "them",
+      "text": "SY-01 Cement shed: …",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "📎 Filed: SY-01 (site photos are checked by the engineer on the visit day)\nStill open: 18 lines. Send *status* for the list.",
+      "after": "90 s"
+     }
+    ]
+   },
+   "t1": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "7 PM",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "*Sample Tower B, Thane: papers still needed*\nEngineer visit in 1 day (2026-11-18).\n18 of 21 papers accepted. 2 critical still open.\n🔴 PAP-01 Establishment registration for this site (OSH Code; BOCW registration accepted during transition) (not received)\n🔴 PAP-04 Contractor's All Risks (CAR) policy with third-party liability (sent back: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000)\n• PAP-14 Worker list with ID check (ID numbers masked) and induction plan (received, being checked)\n\nSite photos sent so far: 3 of 53 lines (optional before the visit).\nReply to this message with the paper, or write the line code (e.g. PAP-04) with the photo."
+     }
+    ],
+    "engineer": "Sample Tower B, Thane: 18/21 papers accepted, 2 critical open (PAP-01, PAP-04). Site photos on 3/53 lines."
+   },
+   "after": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "next morning",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "⏰ Overdue by 1 day: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site\nFinding: Earthing pit test report not available\nReply to *this message* with a photo once it is fixed. The engineer approves it from the photo."
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Earthing pit test report",
+      "replyTo": "⏰ Overdue by 1 day: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site"
+     },
+     {
+      "from": "vera",
+      "text": "✅ Closed by the engineer: SF-08",
+      "after": "engineer taps Accept"
+     }
+    ]
+   }
+  },
+  "hi": {
+   "t5": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "first message",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "Vera के पास आपके लिए Sample Tower B, Thane के कागज़ों और फ़ोटो की सूची है। देखने के लिए नीचे का बटन दबाएँ।",
+      "buttons": [
+       "दिखाओ"
+      ],
+      "template": true
+     },
+     {
+      "from": "them",
+      "text": "दिखाओ",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "*कागज़ात और लाइसेंस (PAP)*\n1. Establishment registration for this site (OSH Code; BOCW registration accepted during transition) 🔴\n2. Contract labour licence (OSH Code single licence; CLRA Form VI accepted during transition) 🔴\n3. Employees' compensation (WC) policy 🔴\n4. Contractor's All Risks (CAR) policy with third-party liability 🔴\n5. ESIC and PF registration codes\n6. Batching plant calibration certificate (weigh batchers, admixture dispenser) 🔴\n7. Consent to Operate (MPCB) for the batching plant 🔴\n9. Safety officer appointment letter and qualification 🔴\n10. Site EHS plan approved by developer EHS\n11. Emergency plan: nearest hospital tie-up and ambulance contact\n12. Lifting appliances: load test certificates (tower crane, hoist) by competent person 🔴\n13. Temporary power: connection approval and licensed electrical supervisor\n14. Worker list with ID check (ID numbers masked) and induction plan\n15. Quality assurance plan and inspection test plan approved by developer QA\n16. Survey instruments calibration (total station, auto level)\n\nकागज़ात और लाइसेंस के फ़ोटो या कागज़ *इसी मैसेज के जवाब (reply)* में भेजें। कैप्शन में लाइन नंबर लिखें (जैसे 3)।"
+     },
+     {
+      "from": "vera",
+      "text": "*लेबर कैंप (LC)*\n1. Camp location safe: not low-lying, not under power lines, layout as approved 🔴\n2. Rooms: ventilation, windows, space per person as per developer camp standard\n3. Toilets: enough for the workforce, separate for women, clean, with water 🔴\n4. Bathing and washing area with drainage\n5. Drinking water: potable source, marked, away from toilets and washing areas 🔴\n6. Kitchen separate from rooms; gas cylinders not inside rooms 🔴\n7. Electrical: RCCB/ELCB, earthing, no loose wiring 🔴\n8. Fire extinguishers and fire buckets, charged, with dates 🔴\n9. First-aid box stocked; trained first-aider named\n11. Waste bins, drainage, mosquito control\n12. Notice board: wage days, grievance contact, emergency numbers (Hindi / Marathi)\n13. Lighting for night movement\n14. Boundary and security for the camp\n\nलेबर कैंप के फ़ोटो या कागज़ *इसी मैसेज के जवाब (reply)* में भेजें। कैप्शन में लाइन नंबर लिखें (जैसे 3)।"
+     },
+     {
+      "from": "vera",
+      "text": "+ 5 more areas",
+      "note": true
+     }
+    ]
+   },
+   "t3": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "papers and photos",
+    "msgs": [
+     {
+      "from": "them",
+      "text": "",
+      "file": "Labour licence.pdf",
+      "replyTo": "*कागज़ात और लाइसेंस (PAP)*",
+      "caption": "2"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "file": "CAR policy schedule.pdf",
+      "caption": "PAP 4"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Toilet block",
+      "replyTo": "*लेबर कैंप (LC)*",
+      "caption": "3"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "voice": "0:12",
+      "transcript": "एल.सी. पाँच, पीने के पानी का नल धोने की जगह के पास है।"
+     },
+     {
+      "from": "vera",
+      "text": "✅ मंज़ूर: PAP-02\n📎 जमा: LC-03, LC-05 (साइट फ़ोटो विज़िट के दिन इंजीनियर जाँचेंगे)\n↩️ PAP-04 वापस: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000\nअभी बाकी: 18 लाइन। सूची के लिए *status* भेजें।",
+      "after": "90 s of quiet"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Cement shed"
+     },
+     {
+      "from": "vera",
+      "text": "यह किस चेकलिस्ट लाइन के लिए है?",
+      "buttons": [
+       "SY-01 Cement shed: …",
+       "SY-02 Cement stacke…",
+       "कुछ और"
+      ]
+     },
+     {
+      "from": "them",
+      "text": "SY-01 Cement shed: …",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "📎 जमा: SY-01 (साइट फ़ोटो विज़िट के दिन इंजीनियर जाँचेंगे)\nअभी बाकी: 18 लाइन। सूची के लिए *status* भेजें।",
+      "after": "90 s"
+     }
+    ]
+   },
+   "t1": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "7 PM",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "*Sample Tower B, Thane: अभी बाकी कागज़ात*\nइंजीनियर विज़िट 1 दिन में है (2026-11-18)।\n21 में से 18 कागज़ मंज़ूर। 2 ज़रूरी (critical) अभी बाकी।\n🔴 PAP-01 Establishment registration for this site (OSH Code; BOCW registration accepted during transition) (नहीं मिला)\n🔴 PAP-04 Contractor's All Risks (CAR) policy with third-party liability (वापस भेजा: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000)\n• PAP-14 Worker list with ID check (ID numbers masked) and induction plan (मिला, जाँच चल रही है)\n\nअब तक साइट फ़ोटो: 53 में से 3 लाइन (विज़िट से पहले ज़रूरी नहीं)।\nकागज़ इसी मैसेज के जवाब में भेजें, या फ़ोटो के साथ लाइन कोड लिखें (जैसे PAP-04)।"
+     }
+    ],
+    "engineer": "Sample Tower B, Thane: 18/21 papers accepted, 2 critical open (PAP-01, PAP-04). Site photos on 3/53 lines."
+   },
+   "after": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "next morning",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "⏰ 1 दिन की देरी: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site\nकमी: Earthing pit test report not available\nठीक होने पर *इसी मैसेज* पर फ़ोटो reply करें। इंजीनियर फ़ोटो देखकर मंज़ूर करेंगे।"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Earthing pit test report",
+      "replyTo": "⏰ 1 दिन की देरी: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site"
+     },
+     {
+      "from": "vera",
+      "text": "✅ इंजीनियर ने बंद किया: SF-08",
+      "after": "engineer taps Accept"
+     }
+    ]
+   }
+  },
+  "mr": {
+   "t5": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "first message",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "Vera कडे तुमच्यासाठी Sample Tower B, Thane च्या कागदपत्रांची आणि फोटोंची यादी आहे. पाहण्यासाठी खालचे बटण दाबा.",
+      "buttons": [
+       "दाखवा"
+      ],
+      "template": true
+     },
+     {
+      "from": "them",
+      "text": "दाखवा",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "*कागदपत्रे आणि परवाने (PAP)*\n1. Establishment registration for this site (OSH Code; BOCW registration accepted during transition) 🔴\n2. Contract labour licence (OSH Code single licence; CLRA Form VI accepted during transition) 🔴\n3. Employees' compensation (WC) policy 🔴\n4. Contractor's All Risks (CAR) policy with third-party liability 🔴\n5. ESIC and PF registration codes\n6. Batching plant calibration certificate (weigh batchers, admixture dispenser) 🔴\n7. Consent to Operate (MPCB) for the batching plant 🔴\n9. Safety officer appointment letter and qualification 🔴\n10. Site EHS plan approved by developer EHS\n11. Emergency plan: nearest hospital tie-up and ambulance contact\n12. Lifting appliances: load test certificates (tower crane, hoist) by competent person 🔴\n13. Temporary power: connection approval and licensed electrical supervisor\n14. Worker list with ID check (ID numbers masked) and induction plan\n15. Quality assurance plan and inspection test plan approved by developer QA\n16. Survey instruments calibration (total station, auto level)\n\nकागदपत्रे आणि परवाने चे फोटो किंवा कागद *याच मेसेजला उत्तर (reply)* म्हणून पाठवा. कॅप्शनमध्ये लाइन नंबर लिहा (उदा. 3)."
+     },
+     {
+      "from": "vera",
+      "text": "*लेबर कॅम्प (LC)*\n1. Camp location safe: not low-lying, not under power lines, layout as approved 🔴\n2. Rooms: ventilation, windows, space per person as per developer camp standard\n3. Toilets: enough for the workforce, separate for women, clean, with water 🔴\n4. Bathing and washing area with drainage\n5. Drinking water: potable source, marked, away from toilets and washing areas 🔴\n6. Kitchen separate from rooms; gas cylinders not inside rooms 🔴\n7. Electrical: RCCB/ELCB, earthing, no loose wiring 🔴\n8. Fire extinguishers and fire buckets, charged, with dates 🔴\n9. First-aid box stocked; trained first-aider named\n11. Waste bins, drainage, mosquito control\n12. Notice board: wage days, grievance contact, emergency numbers (Hindi / Marathi)\n13. Lighting for night movement\n14. Boundary and security for the camp\n\nलेबर कॅम्प चे फोटो किंवा कागद *याच मेसेजला उत्तर (reply)* म्हणून पाठवा. कॅप्शनमध्ये लाइन नंबर लिहा (उदा. 3)."
+     },
+     {
+      "from": "vera",
+      "text": "+ 5 more areas",
+      "note": true
+     }
+    ]
+   },
+   "t3": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "papers and photos",
+    "msgs": [
+     {
+      "from": "them",
+      "text": "",
+      "file": "Labour licence.pdf",
+      "replyTo": "*कागदपत्रे आणि परवाने (PAP)*",
+      "caption": "2"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "file": "CAR policy schedule.pdf",
+      "caption": "PAP 4"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Toilet block",
+      "replyTo": "*लेबर कॅम्प (LC)*",
+      "caption": "3"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "voice": "0:12",
+      "transcript": "एल.सी. पाँच, पीने के पानी का नल धोने की जगह के पास है।"
+     },
+     {
+      "from": "vera",
+      "text": "✅ मंजूर: PAP-02\n📎 जमा: LC-03, LC-05 (साइट फोटो भेटीच्या दिवशी इंजिनिअर तपासतील)\n↩️ PAP-04 परत: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000\nअजून बाकी: 18 लाइन. यादीसाठी *status* पाठवा.",
+      "after": "90 s of quiet"
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Cement shed"
+     },
+     {
+      "from": "vera",
+      "text": "हे कोणत्या चेकलिस्ट लाइनसाठी आहे?",
+      "buttons": [
+       "SY-01 Cement shed: …",
+       "SY-02 Cement stacke…",
+       "दुसरे काही"
+      ]
+     },
+     {
+      "from": "them",
+      "text": "SY-01 Cement shed: …",
+      "tap": true
+     },
+     {
+      "from": "vera",
+      "text": "📎 जमा: SY-01 (साइट फोटो भेटीच्या दिवशी इंजिनिअर तपासतील)\nअजून बाकी: 18 लाइन. यादीसाठी *status* पाठवा.",
+      "after": "90 s"
+     }
+    ]
+   },
+   "t1": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "7 PM",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "*Sample Tower B, Thane: अजून बाकी कागदपत्रे*\nइंजिनिअरची भेट 1 दिवसात आहे (2026-11-18).\n21 पैकी 18 कागद मंजूर. 2 महत्त्वाचे (critical) अजून बाकी.\n🔴 PAP-01 Establishment registration for this site (OSH Code; BOCW registration accepted during transition) (मिळाले नाही)\n🔴 PAP-04 Contractor's All Risks (CAR) policy with third-party liability (परत पाठवले: Sum insured ₹90,00,00,000; contract ₹1,25,00,00,000)\n• PAP-14 Worker list with ID check (ID numbers masked) and induction plan (मिळाले, तपासणी सुरू)\n\nआतापर्यंत साइट फोटो: 53 पैकी 3 लाइन (भेटीपूर्वी आवश्यक नाही).\nकागद याच मेसेजला उत्तर म्हणून पाठवा, किंवा फोटोसोबत लाइन कोड लिहा (उदा. PAP-04)."
+     }
+    ],
+    "engineer": "Sample Tower B, Thane: 18/21 papers accepted, 2 critical open (PAP-01, PAP-04). Site photos on 3/53 lines."
+   },
+   "after": {
+    "who": "Contractor · Shree Ganesh Constructions",
+    "sub": "next morning",
+    "msgs": [
+     {
+      "from": "vera",
+      "text": "⏰ 1 दिवस उशीर: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site\nत्रुटी: Earthing pit test report not available\nदुरुस्त झाल्यावर *याच मेसेजला* फोटो reply करा. इंजिनिअर फोटो पाहून मंजूर करतील."
+     },
+     {
+      "from": "them",
+      "text": "",
+      "photo": "Earthing pit test report",
+      "replyTo": "⏰ 1 दिवस उशीर: SF-08 Site electrical: main DB with RCCB, earthing pits, licensed electrician on site"
+     },
+     {
+      "from": "vera",
+      "text": "✅ इंजिनिअरने बंद केले: SF-08",
+      "after": "engineer taps Accept"
+     }
+    ]
+   }
+  }
+ },
+ "engineer": {
+  "walkLink": "*Site visit 2026-11-18: Sample Tower B, Thane*\nOpen this on the day. Tap a line, take the photo, say your remark. GPS is recorded with each photo.\nhttps://vera…/walk#t=…",
+  "noc": {
+   "file": "NOC-draft-Sample Tower B, Thane.pdf",
+   "text": "Sample Tower B, Thane: Not ready. 66/74 lines closed; 5 critical, 2 major open. Please read and sign.",
+   "buttons": [
+    "Approve",
+    "With conditions",
+    "Hold"
+   ]
+  },
+  "closure": {
+   "text": "Sample Tower B, Thane: the contractor says SF-08 is fixed.\nSite electrical: main DB with RCCB, earthing pits, licensed electrician on site\nAt the visit: Earthing pit test report not available\nAccept the photo to close it.",
+   "buttons": [
+    "Accept, close it",
+    "Not fixed"
+   ]
+  }
+ },
+ "visit": {
+  "areas": [
+   {
+    "area": "DR",
+    "minutes": 15,
+    "stickers": 0
+   },
+   {
+    "area": "LC",
+    "minutes": 42,
+    "stickers": 0
+   },
+   {
+    "area": "SY",
+    "minutes": 21,
+    "stickers": 0
+   },
+   {
+    "area": "BP",
+    "minutes": 22,
+    "stickers": 1
+   },
+   {
+    "area": "FW",
+    "minutes": 0,
+    "stickers": 0
+   },
+   {
+    "area": "SF",
+    "minutes": 14,
+    "stickers": 0
+   }
+  ],
+  "recommendation": "Not ready",
+  "done": 66,
+  "total": 74,
+  "critical": 5,
+  "major": 2,
+  "minor": 1,
+  "prewritten": 97
+ }
+}

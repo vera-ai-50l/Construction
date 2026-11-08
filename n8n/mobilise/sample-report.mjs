@@ -85,6 +85,8 @@ if (isMain) {
     await p.pdf({ path: path.join(out, 'sample-noc-report.pdf'), format: 'A4', printBackground: true, preferCSSPageSize: true })
     await b.close()
     console.log('wrote docs/desk-05/sample-noc-report.pdf')
+    fs.mkdirSync(path.join(here, '..', '..', 'public', 'desk05'), { recursive: true })
+    fs.copyFileSync(path.join(out, 'sample-noc-report.pdf'), path.join(here, '..', '..', 'public', 'desk05', 'sample-noc-report.pdf'))
   } catch (e) { console.log('PDF skipped (Playwright not available): ' + e.message.split('\n')[0]) }
   console.log(x.score.recommendation, x.score.done + '/' + x.score.total, 'crit', x.score.critical_open, 'major', x.score.major_open, 'minor', x.score.minor_open, 'missed', x.score.areas_missed, 'prewritten', x.score.prewritten_pct)
   console.log(x.coverage.areas.map((a) => a.area + ':' + a.visited + ':' + a.minutes + 'min:' + a.stickers).join(' '))

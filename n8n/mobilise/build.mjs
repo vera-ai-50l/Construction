@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { workflows, IDS } from './workflows.mjs'
 import { lines as TEMPLATE, areas as AREAS, TEMPLATE_VERSION, linesFor } from './checklist.mjs'
 import { runTests } from './test.mjs'
+import { dayDemo } from './day-demo.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -295,6 +296,9 @@ function build() {
   }
   fs.writeFileSync(path.join(here, '..', '..', 'content', 'walk-sample.json'), JSON.stringify(sample, null, 1) + '\n')
   console.log('wrote content/walk-sample.json')
+  // The one-day demo page (/mobilise): every Vera message made by the workflow code.
+  fs.writeFileSync(path.join(here, '..', '..', 'content', 'day-demo.json'), JSON.stringify(dayDemo(), null, 1) + '\n')
+  console.log('wrote content/day-demo.json')
   // The board page: same data, so the node map on the board is the workflow that runs.
   const page = fs.readFileSync(path.join(here, 'board.template.html'), 'utf8').replace('/*BOARD_DATA*/null', JSON.stringify(boardData()).replace(/</g, '\\u003c'))
   const out = path.join(here, '..', '..', 'docs', 'desk-05', 'board.html')
