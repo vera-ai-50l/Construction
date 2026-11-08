@@ -8,7 +8,9 @@
     "start": "next start",
     "check:n8n": "node n8n/vera-demo.mjs check",
     "check:mobilise": "node n8n/mobilise/build.mjs check",
-    "build:mobilise": "node n8n/mobilise/build.mjs build"
+    "build:mobilise": "node n8n/mobilise/build.mjs build",
+    "eval:claude": "node n8n/mobilise/eval/run-claude.mjs",
+    "eval:papers": "node n8n/mobilise/eval/make-papers.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "2.1.10",

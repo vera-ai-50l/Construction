@@ -14,7 +14,8 @@ Open a new site in one day instead of three. The contractor sends papers and pho
 | `n8n/mobilise/build.mjs` | `check` (tests + guardrail lint), `build` (n8n JSON, board page, walk sample), `validate` (n8n-mcp schema check). |
 | `n8n/mobilise/messages.mjs` | Every message a contractor gets, in English, Hindi and Marathi (picked by `contacts.language`, set on the site form), and the WhatsApp template texts to submit. |
 | `n8n/mobilise/sample-report.mjs` | Builds `docs/desk-05/sample-noc-report.pdf` from a realistic sample visit, through the same code WF-06 runs. |
-| `n8n/mobilise/test.mjs` | 133 checks. They run the generated Code-node source, the same text n8n runs. |
+| `n8n/mobilise/eval/` | The live Claude test (`run-claude.mjs`) and its sample papers with their answer key. |
+| `n8n/mobilise/test.mjs` | 134 checks. They run the generated Code-node source, the same text n8n runs. |
 | `n8n/mobilise/schema.sql` | Postgres tables, the `apply_answer` and `file_evidence` functions for button answers, and the `ai_accuracy` view. Safe to run again on an existing database (it adds the new columns). |
 | `n8n/mobilise/dist/*.json` | Importable workflows (rebuilt by `npm run build:mobilise`). |
 | `app/walk`, `components/walk/Walk.tsx` | The engineer's walk page. Without a link token it runs as a demo on the sample site. |
@@ -73,7 +74,7 @@ npm run build:mobilise
 
 ## How it was checked
 
-- `npm run check:mobilise`: 133 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
+- `npm run check:mobilise`: 134 checks pass. They cover the decision functions and the generated Code-node source (signature check, file hash, walk link and sticker sign and verify, retry counter, shadow mode). The lint checks that every error output is wired, every Switch has a fallback, SQL uses parameters only, and every webhook path answers.
 - n8n-mcp `validate_workflow`: 0 errors and 0 warnings on all 13 workflows.
 - Imported and published in n8n 2.44.5, then run against a real Postgres:
   - WhatsApp in: Meta verify with the right and wrong token, an unsigned POST (401), a duplicate delivery (dropped), an unknown number (logged), a photo whose download failed (review queue).
@@ -99,6 +100,21 @@ npm run build:mobilise
 - **Languages**: in n8n, a contractor set to Hindi got the gap list, help and "what we accept" lines in Hindi with the Hindi template ready; the engineer's brief stayed in English. The Hindi and Marathi texts should be read once by a native speaker on the site team before the pilot.
 - **Sarvam, live**: four site remarks (Hindi, Marathi, Hinglish, English) were made as speech with Sarvam's text-to-speech, then sent through the exact WF-02 node "Transcribe voice (Sarvam)" inside n8n, followed by the generated "Bind to checklist line" node. Each came back in its own script and language and bound to the right line (LC-03, SY-01, SF-08, BP-06). The run showed that spoken line codes come back in Devanagari ("एल.सी. तीन", "एसएफ आठ"), so the binder now reads them; the real answers are kept in `n8n/mobilise/fixtures/sarvam/` as tests. Sarvam also accepted the formats phones send: WebM/Opus (Android walk page), MP4/AAC (iPhone walk page) and OGG/Opus (WhatsApp voice notes).
 - **Not run yet**: real Meta, Claude and S3 calls (no credentials or network access to them here; this environment does not take a key for Anthropic's API), and the walk page on a real phone at a real site.
+
+## Testing Claude live (on your computer)
+
+This environment cannot call Claude, so the AI steps are tested with a script you run with your own API key. It sends exactly the requests the n8n nodes send (same URL, headers, model and answer formats, built by the same `logic.mjs` functions) and scores the answers:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... npm run eval:claude
+```
+
+- **Which line**: 8 sample papers as PDFs, 2 of them also as phone photos, and 4 voice notes (Hindi, Marathi, Hinglish, English) with no line code. Does Claude pick the right line, and does the confidence gate file it or ask?
+- **Reading a paper**: are names, dates, amounts and worker counts copied correctly?
+- **Paper checks**: with what Claude read, do the checks reach the right verdict? Three papers are good; five have a planted fault (sum insured below contract value, licence for 300 workers against 450 planned, WC policy expiring a month after start, registration for another site, full Aadhaar numbers visible).
+- **Report wording**: does the NOC observations answer pass the wording check?
+
+`npm run eval:claude -- --dry-run` checks the script itself with the answer key (no calls). Results go to `n8n/mobilise/eval/results/`. The papers are invented, watermarked "SAMPLE FOR TESTING", and rebuilt with `npm run eval:papers`; their answer key is in `eval/papers.mjs`.
 
 ## Known limits and next steps
 

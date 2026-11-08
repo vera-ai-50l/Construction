@@ -9,3 +9,4 @@ n8n/dist/
 *.log
 .DS_Store
 next-env.d.ts
+n8n/mobilise/eval/results/

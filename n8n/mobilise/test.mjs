@@ -8,6 +8,7 @@ import * as L from './logic.mjs'
 import { lines as TEMPLATE, areas as AREAS, params as PARAMS } from './checklist.mjs'
 import { IDS } from './workflows.mjs'
 import { TEXTS, TEMPLATES } from './messages.mjs'
+import { CASES as PAPER_CASES, SITE as EVAL_SITE } from './eval/papers.mjs'
 import { runCode, nodeNamed } from './build.mjs'
 
 const t = (label, ok, got) => [label, !!ok, got]
@@ -228,6 +229,14 @@ export async function runTests() {
   // ---- replies
   const rep = L.composeReply({ texts: TEXTS, fragments: [{ kind: 'accepted', line: 'PAP-03' }, { kind: 'filed', line: 'LC-03', photo: true }, { kind: 'filed', line: 'LC-05', photo: true }, { kind: 'rejected', line: 'PAP-04', reason: 'Sum insured below contract value' }], open_count: 9 })
   R.push(t('reply: 4 items → 1 message', rep.reply.split('\n').length === 4 && rep.reply.includes('LC-03, LC-05'), rep.reply))
+
+  // ---- the Claude eval's answer key (eval/papers.mjs) must agree with the paper checks
+  const keyWrong = PAPER_CASES.filter((c) => {
+    const r = L.checkPaper({ line: lines.find((l) => l.code === c.line), fields: { doc_type: c.docType, readable: true, contains_unmasked_id: false, ...c.fields }, mob: EVAL_SITE, params: PARAMS }).paper
+    const failing = r.checks.filter((x) => x.result === 'fail').map((x) => x.rule)
+    return r.status !== c.expect || !(c.failing || []).every((f) => failing.includes(f)) || !fs.existsSync(new URL('./eval/papers/' + c.id + '.pdf', import.meta.url))
+  }).map((c) => c.id)
+  R.push(t('eval: the 8 sample papers exist and their answer key gives the expected verdicts', PAPER_CASES.length === 8 && !keyWrong.length, keyWrong))
 
   // ---- languages (messages.mjs)
   const keys = Object.keys(TEXTS.en)

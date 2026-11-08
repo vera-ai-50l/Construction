@@ -31,7 +31,7 @@ export const IDS = {
 }
 
 const GRAPH = 'https://graph.facebook.com/v23.0' // bump deliberately, like the n8n image tag
-const CLAUDE = 'https://api.anthropic.com/v1/messages'
+export const CLAUDE = 'https://api.anthropic.com/v1/messages'
 const SARVAM = 'https://api.sarvam.ai/speech-to-text'
 
 export const CREDS = {
@@ -365,7 +365,7 @@ const stickers = [];
 for (const a of item.json.areas || []) for (let n = 1; n <= per; n++) { const s = item.json.mobilisation_id + '.' + a + '.' + n; stickers.push({ area: a, n, code: s + '.' + sign(s) }); }
 return { json: { project: item.json.project, stickers } };`
 
-const CLAUDE_HEADERS = { 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'content-type': 'application/json' }
+export const CLAUDE_HEADERS = { 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'content-type': 'application/json' }
 
 // ---------------------------------------------------------------- the workflows
 
