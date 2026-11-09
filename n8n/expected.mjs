@@ -31,4 +31,16 @@ export const expectations = {
     t('net = recoverable − already recovered', Math.round((o.headline.recoverable - o.headline.alreadyRecovered) * 100) === Math.round(o.headline.net * 100), o.headline),
     t('confidence split adds up to net', Math.round(Object.values(o.headline.byConfidence).reduce((a, b) => a + b, 0) * 100) === Math.round(o.headline.net * 100) + Math.round(o.contractors.reduce((a, c) => a + c.unallocatedRecovered, 0) * 100), o.headline),
   ],
+  // IPC Compliance Kit on lib/ipc-sample.json (6 fictional homes, October 2026).
+  veraHealthIpcKit1: (o) => [
+    t('23 of 24 audits returned, Hollyfield environment missing', o.stats.returns === 23 && o.missing.length === 1 && o.missing[0].home === 'HF', o.missing),
+    t('21 actions, 5 red', o.actions.length === 21 && o.actions.filter((a) => a.rag === 'red').length === 5, o.actions.length),
+    t('Millbrook commodes red at 66.7%', o.scores.find((s) => s.home === 'MB' && s.type === 'commode')?.pct === 66.7, o.scores.filter((s) => s.home === 'MB')),
+    t('one outbreak: Rosewood, 3 cases in 32 h', o.outbreaks.length === 1 && o.outbreaks[0].home === 'RW' && o.outbreaks[0].cases === 3 && o.outbreaks[0].spanH === 32, o.outbreaks),
+    t('Elm Court cases 5 days apart are not an outbreak', !o.outbreaks.some((x) => x.home === 'EC'), o.watch),
+    t('32 staff to chase for training', o.chase.length === 32, o.chase.length),
+    t('37.21 h a month back for the homes', o.value.month.homeSaved === 37.21, o.value.month),
+    t('10.5 h a month back for the adviser', o.value.month.adviserSaved === 10.5, o.value.month),
+    t('£2,107.61 a month, £25,291 a year', o.value.month.pounds === 2107.61 && o.value.year.pounds === 25291, o.value.year),
+  ],
 }

@@ -41,15 +41,15 @@ export function Reveal({
 }
 
 // Same observer, exposed as a hook for components that animate their own parts.
-export function useInView<T extends HTMLElement>(margin = '0px 0px -20% 0px') {
+export function useInView<T extends HTMLElement>(margin = '0px 0px -20% 0px', threshold = 0.15) {
   const ref = useRef<T>(null)
   const [inView, setInView] = useState(false)
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: margin, threshold: 0.15 })
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: margin, threshold })
     io.observe(el)
     return () => io.disconnect()
-  }, [margin])
+  }, [margin, threshold])
   return [ref, inView] as const
 }

@@ -70,7 +70,7 @@ export function RunButton({ compact = false, big = false, className = '' }: { co
 }
 
 // Before → after board. Each row is caught by one flow step and flips to its fix when that step runs.
-export function BeforeAfter({ rows, steps }: { rows: RunRow[]; steps: { title: string }[] }) {
+export function BeforeAfter({ rows, steps, where = 'in your registers today' }: { rows: RunRow[]; steps: { title: string }[]; where?: string }) {
   const r = useRun()
   if (!r) return null
   const { phase, step } = r
@@ -90,7 +90,7 @@ export function BeforeAfter({ rows, steps }: { rows: RunRow[]; steps: { title: s
     >
       <div className="mb-6 hidden grid-cols-[1fr_3rem_1fr] items-end gap-4 md:grid">
         <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">
-          Before · <span className="text-rust">{rows.length - count} open</span> in your registers today
+          Before · <span className="text-rust">{rows.length - count} open</span> {where}
         </p>
         <span />
         <p className="text-[11px] uppercase tracking-[0.2em] text-ink-3">

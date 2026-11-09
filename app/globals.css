@@ -16,6 +16,8 @@
   --color-ochre: #b7791f;
   --color-ochre-2: #f8ecd4;
   --color-espresso: #1c1c1c;
+  /* "After" bars in charts: passes the dataviz palette checks against rust (sage reads grey). */
+  --color-go: #0f8b5f;
 
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-sans: var(--font-poppins), var(--font-geist), ui-sans-serif, system-ui, sans-serif;
@@ -124,4 +126,73 @@ body {
 @keyframes type-in {
   from { opacity: 0; transform: translate3d(0, 0.6rem, 0); }
   to { opacity: 1; transform: none; }
+}
+
+/* Range slider for the /ipc calculator: hairline track, filled to the thumb, island thumb. */
+.vera-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.vera-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-ink) var(--p, 50%), rgb(23 23 23 / 0.1) var(--p, 50%));
+}
+.vera-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-ink) var(--p, 50%), rgb(23 23 23 / 0.1) var(--p, 50%));
+}
+.vera-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -9px;
+  height: 22px;
+  width: 22px;
+  border-radius: 999px;
+  background: var(--color-card);
+  box-shadow: 0 0 0 1px rgb(23 23 23 / 0.12), 0 6px 16px -6px rgb(0 0 0 / 0.35);
+  transition: transform 400ms var(--ease-spring);
+}
+.vera-range::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-card);
+  box-shadow: 0 0 0 1px rgb(23 23 23 / 0.12), 0 6px 16px -6px rgb(0 0 0 / 0.35);
+}
+.vera-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.vera-range:focus-visible {
+  outline: 2px solid var(--color-rust);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* /ipc hero: paper forms drifting behind the dashboard (transform only). */
+@keyframes drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-7deg); }
+  50% { transform: translate3d(-6px, -10px, 0) rotate(-5deg); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(5deg); }
+  50% { transform: translate3d(8px, -6px, 0) rotate(7deg); }
+}
+@keyframes row-in {
+  0%, 12% { opacity: 0; transform: translate3d(0, 6px, 0); }
+  22%, 88% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate3d(0, -4px, 0); }
+}
+@keyframes toast {
+  0%, 52% { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.97); }
+  60%, 90% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translate3d(0, -6px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .no-motion-ok { animation: none !important; opacity: 1 !important; transform: none !important; }
 }

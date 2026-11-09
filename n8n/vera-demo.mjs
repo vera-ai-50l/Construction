@@ -22,11 +22,12 @@ import { fileURLToPath } from 'node:url'
 import { flow as leak } from './flows/leak.mjs'
 import { flow as desk } from './flows/desk.mjs'
 import { flow as free } from './flows/free-issue.mjs'
+import { flow as ipc } from './flows/ipc.mjs'
 import { expectations } from './expected.mjs'
 import { buildFreeIssueSample } from './free-issue-csv.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const flows = [leak, desk, free]
+const flows = [leak, desk, free, ipc]
 
 // ---------- workflow JSON ----------
 
