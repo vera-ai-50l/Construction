@@ -1,0 +1,171 @@
+@import "tailwindcss";
+@import "lenis/dist/lenis.css";
+
+/* Light mode inverts the palette: ink↔bone, white↔black. Sections keep their rhythm, flipped. */
+:root,
+[data-theme="dark"] {
+  --ink: #0a0a09;
+  --ink-2: #121110;
+  --ink-3: #1a1815;
+  --bone: #f4f1ec;
+  --concrete: #e9e5de;
+  --white: #fff;
+  --black: #000;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --ink: #f1ede6;
+  --ink-2: #faf8f4;
+  --ink-3: #e6e1d8;
+  --bone: #12110f;
+  --concrete: #1a1815;
+  --white: #000;
+  --black: #fff;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-bone: var(--bone);
+  --color-concrete: var(--concrete);
+  --color-white: var(--white);
+  --color-black: var(--black);
+  --color-coal: #0a0a09;
+  --color-dust: #8f897f;
+  --color-hivis: #ff5b1f;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-deva: var(--font-noto-deva), var(--font-geist-sans), sans-serif;
+
+  --ease-vera: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  background: var(--color-ink);
+}
+
+/* Theme switch: the new palette wipes in as a circle from the toggle (see ThemeToggle). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: var(--color-hivis);
+  color: var(--color-coal);
+}
+
+@media (pointer: fine) {
+  html,
+  a,
+  button,
+  input {
+    cursor: none;
+  }
+}
+
+/* Film grain: fixed, never on a scrolling layer. */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: grain 1.2s steps(6) infinite;
+}
+
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -4%); }
+  60% { transform: translate(-4%, -1%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes marquee {
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+.marquee {
+  animation: marquee 38s linear infinite;
+}
+
+.marquee-wrap:hover .marquee {
+  animation-play-state: paused;
+}
+
+/* Blueprint grid used behind a few sections. */
+.blueprint {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--bone) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--bone) 5%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Native range, dressed. */
+.vera-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+}
+.vera-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-hivis) var(--fill), color-mix(in oklab, var(--ink) 12%, transparent) var(--fill));
+}
+.vera-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-hivis) var(--fill), color-mix(in oklab, var(--ink) 12%, transparent) var(--fill));
+}
+.vera-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  border: 6px solid var(--color-bone);
+  box-shadow: 0 0 0 1px rgba(10, 10, 9, 0.15), 0 8px 20px -6px rgba(10, 10, 9, 0.45);
+  transition: transform 0.4s var(--ease-vera);
+}
+.vera-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  border: 6px solid var(--color-bone);
+  box-shadow: 0 0 0 1px rgba(10, 10, 9, 0.15), 0 8px 20px -6px rgba(10, 10, 9, 0.45);
+}
+.vera-range:active::-webkit-slider-thumb {
+  transform: scale(1.18);
+}
+.vera-range:focus-visible {
+  outline: 2px solid var(--color-hivis);
+  outline-offset: 6px;
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grain,
+  .marquee {
+    animation: none;
+  }
+}

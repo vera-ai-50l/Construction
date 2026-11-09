@@ -1,0 +1,4 @@
+# local HQ data (dev only; production uses Redis)
+/data
+/app/hq
+/app/api/hq

@@ -1,0 +1,17 @@
+[
+  { "id": "m1", "site": "kharadi", "time": "08:10", "kind": "voice", "dur": "0:21", "text": "आज 7th फ्लोर स्लैब की तैयारी है। रमेश कॉन्ट्रैक्टर के 18 मिस्त्री और 24 हेल्पर आए हैं। साई स्टील के 12 बार बेंडर।", "en": "Getting the 7th floor slab ready today. Ramesh contractor sent 18 masons and 24 helpers. Sai Steel, 12 bar benders." },
+  { "id": "m2", "site": "hinjewadi", "time": "08:32", "kind": "text", "text": "Patil labour 26 aaye, 8 kam aaye aaj" },
+  { "id": "m3", "site": "nashik", "time": "08:45", "kind": "voice", "dur": "0:09", "text": "आज 22 कामगार आले, गणेश कॉन्ट्रॅक्टरचे", "en": "22 workers came today, Ganesh contractor's. (Marathi)" },
+  { "id": "m4", "site": "kharadi", "time": "09:40", "kind": "photo", "text": "7th floor slab shuttering done, steel binding chalu" },
+  { "id": "m5", "site": "hinjewadi", "time": "10:15", "kind": "voice", "dur": "0:14", "text": "बारिश की वजह से 2 घंटे काम बंद रहा, 26 लोग खाली बैठे।", "en": "Work stopped 2 hours because of rain, 26 people sat idle." },
+  { "id": "m6", "site": "kharadi", "time": "11:05", "kind": "challan", "text": "Cement 400 bag aaya, challan OT/1342" },
+  { "id": "m7", "site": "nashik", "time": "12:30", "kind": "text", "text": "Flooring PCC 46 cum complete grid A-D" },
+  { "id": "m8", "site": "hinjewadi", "time": "13:00", "kind": "photo", "text": "Column C4-C9 bar binding" },
+  { "id": "m9", "site": "kharadi", "time": "14:20", "kind": "voice", "dur": "0:17", "text": "पंप 3 घंटे लेट आया, 15 लोग खाली बैठे रहे। RMC प्लांट ने बोला ब्रेकडाउन था।", "en": "Pump came 3 hours late, 15 people sat idle. RMC plant said it was a breakdown." },
+  { "id": "m10", "site": "kharadi", "time": "14:26", "kind": "photo", "text": "TM line mein khade, pump abhi tak nahi aaya" },
+  { "id": "m11", "site": "nashik", "time": "16:00", "kind": "challan", "text": "AAC block 2400 nos aaye, challan DAD/551 lekin PO number nahi diya" },
+  { "id": "m12", "site": "hinjewadi", "time": "18:10", "kind": "text", "text": "PEB erection 6 frames done out of 8 planned. Drawing revision R3 abhi tak client se nahi aaya, grid 7-9 ruka hua hai" },
+  { "id": "m13", "site": "hinjewadi", "time": "18:30", "kind": "challan", "text": "Steel 14.2 MT Fe500 aaya, challan SBS/0921, weighbridge 13.9" },
+  { "id": "m14", "site": "kharadi", "time": "19:30", "kind": "text", "text": "Slab L7 casting 38 cum done, kal 14 cum baaki" },
+  { "id": "m15", "site": "kharadi", "time": "19:45", "kind": "text", "text": "cement stock 210 bag bacha" }
+]

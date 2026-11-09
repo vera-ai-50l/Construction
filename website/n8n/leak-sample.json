@@ -1,0 +1,1972 @@
+{
+ "site": "Riverview Tower B, Kharadi (Pune)",
+ "period": {
+  "from": "2026-08-01",
+  "to": "2026-10-28",
+  "label": "Aug – Oct 2026"
+ },
+ "pos": [
+  {
+   "po": "PO-2611",
+   "date": "2026-08-01",
+   "supplier": "Om Traders (UltraTech)",
+   "material": "cement",
+   "qty": 2500,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "po": "PO-2614",
+   "date": "2026-08-02",
+   "supplier": "Shree Balaji Steels",
+   "material": "steel",
+   "qty": 80,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "po": "PO-2620",
+   "date": "2026-08-03",
+   "supplier": "Pune Ready Mix",
+   "material": "rmc",
+   "qty": 800,
+   "unit": "cum",
+   "rate": 5400
+  },
+  {
+   "po": "PO-2633",
+   "date": "2026-08-05",
+   "supplier": "Deccan AAC Depot",
+   "material": "aac",
+   "qty": 30000,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "po": "PO-2648",
+   "date": "2026-09-04",
+   "supplier": "Om Traders (UltraTech)",
+   "material": "cement",
+   "qty": 2500,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "po": "PO-2655",
+   "date": "2026-09-06",
+   "supplier": "Shree Balaji Steels",
+   "material": "steel",
+   "qty": 75,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "po": "PO-2690",
+   "date": "2026-09-28",
+   "supplier": "Pune Ready Mix",
+   "material": "rmc",
+   "qty": 800,
+   "unit": "cum",
+   "rate": 5400
+  },
+  {
+   "po": "PO-2694",
+   "date": "2026-09-30",
+   "supplier": "Deccan AAC Depot",
+   "material": "aac",
+   "qty": 20000,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "po": "PO-2702",
+   "date": "2026-10-06",
+   "supplier": "Om Traders (UltraTech)",
+   "material": "cement",
+   "qty": 2500,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "po": "PO-2709",
+   "date": "2026-10-07",
+   "supplier": "Shree Balaji Steels",
+   "material": "steel",
+   "qty": 60,
+   "unit": "MT",
+   "rate": 58500
+  }
+ ],
+ "challans": [
+  {
+   "challan": "PRM/2194",
+   "date": "2026-08-03",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 56,
+   "received": 56,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "OT/1134",
+   "date": "2026-08-04",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "PRM/2195",
+   "date": "2026-08-05",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 62,
+   "received": 62,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "SBS/885",
+   "date": "2026-08-06",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2614",
+   "material": "steel",
+   "qty": 15.8,
+   "received": 15.8,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "OT/1143",
+   "date": "2026-08-08",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "PRM/2198",
+   "date": "2026-08-08",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 51,
+   "received": 51,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/545",
+   "date": "2026-08-08",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2201",
+   "date": "2026-08-11",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 41,
+   "received": 41,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "SBS/889",
+   "date": "2026-08-12",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2614",
+   "material": "steel",
+   "qty": 18,
+   "received": 17.4,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "DAD/551",
+   "date": "2026-08-12",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2204",
+   "date": "2026-08-14",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 45,
+   "received": 45,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "PRM/2195",
+   "date": "2026-08-14",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 62,
+   "received": 62,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "OT/1153",
+   "date": "2026-08-15",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "DAD/555",
+   "date": "2026-08-15",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2207",
+   "date": "2026-08-17",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 45,
+   "received": 45,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "OT/1164",
+   "date": "2026-08-20",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "SBS/897",
+   "date": "2026-08-20",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2614",
+   "material": "steel",
+   "qty": 15.9,
+   "received": 15.6,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2211",
+   "date": "2026-08-20",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 60,
+   "received": 60,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/560",
+   "date": "2026-08-20",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1172",
+   "date": "2026-08-23",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 392,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "PRM/2212",
+   "date": "2026-08-23",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 40,
+   "received": 40,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/564",
+   "date": "2026-08-23",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "SBS/902",
+   "date": "2026-08-25",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2614",
+   "material": "steel",
+   "qty": 18.2,
+   "received": 17.8,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2214",
+   "date": "2026-08-25",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 50,
+   "received": 50,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "PRM/2216",
+   "date": "2026-08-28",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 47,
+   "received": 47,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/570",
+   "date": "2026-08-28",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1181",
+   "date": "2026-08-30",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2611",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "PRM/2218",
+   "date": "2026-08-31",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 43,
+   "received": 43,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "SBS/906",
+   "date": "2026-09-01",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2614",
+   "material": "steel",
+   "qty": 15.5,
+   "received": 15.5,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "DAD/573",
+   "date": "2026-09-01",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1191",
+   "date": "2026-09-03",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "PRM/2222",
+   "date": "2026-09-03",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 53,
+   "received": 53,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/575",
+   "date": "2026-09-04",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2225",
+   "date": "2026-09-06",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 56,
+   "received": 56,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "OT/1206",
+   "date": "2026-09-07",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "SBS/910",
+   "date": "2026-09-08",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2655",
+   "material": "steel",
+   "qty": 17.8,
+   "received": 17.5,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2227",
+   "date": "2026-09-09",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 45,
+   "received": 45,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/581",
+   "date": "2026-09-09",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2229",
+   "date": "2026-09-12",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 61,
+   "received": 61,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/584",
+   "date": "2026-09-12",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1215",
+   "date": "2026-09-13",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "PRM/2230",
+   "date": "2026-09-15",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 44,
+   "received": 44,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "SBS/913",
+   "date": "2026-09-17",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2655",
+   "material": "steel",
+   "qty": 17,
+   "received": 16.6,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2231",
+   "date": "2026-09-17",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 52,
+   "received": 52,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/590",
+   "date": "2026-09-17",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1229",
+   "date": "2026-09-18",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "PRM/2233",
+   "date": "2026-09-20",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 51,
+   "received": 51,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "OT/1206",
+   "date": "2026-09-21",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 380
+  },
+  {
+   "challan": "DAD/593",
+   "date": "2026-09-21",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2633",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "KBT/118",
+   "date": "2026-09-21",
+   "supplier": "Kharadi Block Traders",
+   "po": "",
+   "material": "aac",
+   "qty": 2400,
+   "received": 2400,
+   "unit": "nos",
+   "rate": 64
+  },
+  {
+   "challan": "OT/1239",
+   "date": "2026-09-22",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "SBS/918",
+   "date": "2026-09-23",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2655",
+   "material": "steel",
+   "qty": 18.6,
+   "received": 18.2,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2236",
+   "date": "2026-09-23",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 46,
+   "received": 46,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/595",
+   "date": "2026-09-24",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2237",
+   "date": "2026-09-26",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2620",
+   "material": "rmc",
+   "qty": 38,
+   "received": 38,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/597",
+   "date": "2026-09-28",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1252",
+   "date": "2026-09-29",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2648",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "SBS/925",
+   "date": "2026-09-29",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2655",
+   "material": "steel",
+   "qty": 16.9,
+   "received": 16.9,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2241",
+   "date": "2026-09-29",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 53,
+   "received": 53,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "PRM/2245",
+   "date": "2026-10-02",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 40,
+   "received": 40,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/599",
+   "date": "2026-10-02",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1259",
+   "date": "2026-10-03",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2702",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "KBT/131",
+   "date": "2026-10-03",
+   "supplier": "Kharadi Block Traders",
+   "po": "",
+   "material": "aac",
+   "qty": 2400,
+   "received": 2400,
+   "unit": "nos",
+   "rate": 64
+  },
+  {
+   "challan": "PRM/2246",
+   "date": "2026-10-05",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 60,
+   "received": 60,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "OT/1268",
+   "date": "2026-10-07",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2702",
+   "material": "cement",
+   "qty": 400,
+   "received": 395,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "SBS/928",
+   "date": "2026-10-07",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2709",
+   "material": "steel",
+   "qty": 15.2,
+   "received": 14.8,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2250",
+   "date": "2026-10-07",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 52,
+   "received": 52,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "DAD/604",
+   "date": "2026-10-07",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "PRM/2254",
+   "date": "2026-10-10",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 41,
+   "received": 41,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/609",
+   "date": "2026-10-10",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "OT/1282",
+   "date": "2026-10-13",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2702",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "PRM/2256",
+   "date": "2026-10-13",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 51,
+   "received": 51,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/614",
+   "date": "2026-10-14",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "SBS/931",
+   "date": "2026-10-15",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2709",
+   "material": "steel",
+   "qty": 18.1,
+   "received": 17.7,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2260",
+   "date": "2026-10-16",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 51,
+   "received": 51,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "A"
+  },
+  {
+   "challan": "OT/1293",
+   "date": "2026-10-18",
+   "supplier": "Om Traders (UltraTech)",
+   "po": "PO-2702",
+   "material": "cement",
+   "qty": 400,
+   "received": 400,
+   "unit": "bag",
+   "rate": 395
+  },
+  {
+   "challan": "PRM/2263",
+   "date": "2026-10-19",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 58,
+   "received": 58,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "DAD/620",
+   "date": "2026-10-19",
+   "supplier": "Deccan AAC Depot",
+   "po": "PO-2694",
+   "material": "aac",
+   "qty": 2500,
+   "received": 2500,
+   "unit": "nos",
+   "rate": 62
+  },
+  {
+   "challan": "SBS/934",
+   "date": "2026-10-20",
+   "supplier": "Shree Balaji Steels",
+   "po": "PO-2709",
+   "material": "steel",
+   "qty": 18.4,
+   "received": 18,
+   "unit": "MT",
+   "rate": 58500
+  },
+  {
+   "challan": "PRM/2266",
+   "date": "2026-10-22",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 39,
+   "received": 39,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  },
+  {
+   "challan": "PRM/2270",
+   "date": "2026-10-25",
+   "supplier": "Pune Ready Mix",
+   "po": "PO-2690",
+   "material": "rmc",
+   "qty": 45,
+   "received": 45,
+   "unit": "cum",
+   "rate": 5400,
+   "wing": "B"
+  }
+ ],
+ "issues": [
+  {
+   "slip": "IS-3101",
+   "date": "2026-08-05",
+   "material": "cement",
+   "qty": 80,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3102",
+   "date": "2026-08-05",
+   "material": "steel",
+   "qty": 8.7,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3103",
+   "date": "2026-08-05",
+   "material": "aac",
+   "qty": 2640,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3104",
+   "date": "2026-08-06",
+   "material": "cement",
+   "qty": 53,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3105",
+   "date": "2026-08-06",
+   "material": "cement",
+   "qty": 112,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3106",
+   "date": "2026-08-06",
+   "material": "cement",
+   "qty": 164,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3107",
+   "date": "2026-08-06",
+   "material": "aac",
+   "qty": 2164,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3108",
+   "date": "2026-08-07",
+   "material": "cement",
+   "qty": 199,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3109",
+   "date": "2026-08-07",
+   "material": "cement",
+   "qty": 175,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3110",
+   "date": "2026-08-07",
+   "material": "steel",
+   "qty": 9,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3111",
+   "date": "2026-08-13",
+   "material": "steel",
+   "qty": 9.1,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3112",
+   "date": "2026-08-15",
+   "material": "cement",
+   "qty": 55,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3113",
+   "date": "2026-08-15",
+   "material": "cement",
+   "qty": 234,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3114",
+   "date": "2026-08-15",
+   "material": "steel",
+   "qty": 10.5,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3115",
+   "date": "2026-08-16",
+   "material": "cement",
+   "qty": 226,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3116",
+   "date": "2026-08-16",
+   "material": "cement",
+   "qty": 154,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3117",
+   "date": "2026-08-16",
+   "material": "aac",
+   "qty": 1864,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3118",
+   "date": "2026-08-16",
+   "material": "aac",
+   "qty": 1904,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3119",
+   "date": "2026-08-17",
+   "material": "cement",
+   "qty": 77,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3120",
+   "date": "2026-08-17",
+   "material": "cement",
+   "qty": 168,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3121",
+   "date": "2026-08-23",
+   "material": "steel",
+   "qty": 10.2,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3122",
+   "date": "2026-08-23",
+   "material": "steel",
+   "qty": 6.4,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3123",
+   "date": "2026-08-23",
+   "material": "aac",
+   "qty": 2228,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3124",
+   "date": "2026-08-23",
+   "material": "aac",
+   "qty": 2020,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3125",
+   "date": "2026-08-26",
+   "material": "cement",
+   "qty": 64,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3126",
+   "date": "2026-08-26",
+   "material": "cement",
+   "qty": 119,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3127",
+   "date": "2026-08-27",
+   "material": "cement",
+   "qty": 166,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3128",
+   "date": "2026-08-27",
+   "material": "cement",
+   "qty": 110,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3129",
+   "date": "2026-08-28",
+   "material": "cement",
+   "qty": 81,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3130",
+   "date": "2026-08-28",
+   "material": "cement",
+   "qty": 203,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3131",
+   "date": "2026-08-30",
+   "material": "steel",
+   "qty": 9.3,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3132",
+   "date": "2026-09-01",
+   "material": "steel",
+   "qty": 7.4,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3133",
+   "date": "2026-09-02",
+   "material": "aac",
+   "qty": 1895,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3134",
+   "date": "2026-09-03",
+   "material": "aac",
+   "qty": 2730,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3135",
+   "date": "2026-09-05",
+   "material": "cement",
+   "qty": 47,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3136",
+   "date": "2026-09-05",
+   "material": "cement",
+   "qty": 125,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3137",
+   "date": "2026-09-06",
+   "material": "cement",
+   "qty": 61,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3138",
+   "date": "2026-09-06",
+   "material": "cement",
+   "qty": 135,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3139",
+   "date": "2026-09-06",
+   "material": "cement",
+   "qty": 227,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3140",
+   "date": "2026-09-07",
+   "material": "cement",
+   "qty": 164,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3141",
+   "date": "2026-09-07",
+   "material": "steel",
+   "qty": 9.5,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3142",
+   "date": "2026-09-08",
+   "material": "steel",
+   "qty": 9,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3143",
+   "date": "2026-09-12",
+   "material": "aac",
+   "qty": 2097,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3144",
+   "date": "2026-09-12",
+   "material": "aac",
+   "qty": 2623,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3145",
+   "date": "2026-09-16",
+   "material": "cement",
+   "qty": 75,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3146",
+   "date": "2026-09-16",
+   "material": "steel",
+   "qty": 5.9,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3147",
+   "date": "2026-09-17",
+   "material": "cement",
+   "qty": 244,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3148",
+   "date": "2026-09-18",
+   "material": "cement",
+   "qty": 72,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3149",
+   "date": "2026-09-18",
+   "material": "cement",
+   "qty": 210,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3150",
+   "date": "2026-09-18",
+   "material": "cement",
+   "qty": 91,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3151",
+   "date": "2026-09-18",
+   "material": "cement",
+   "qty": 172,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3152",
+   "date": "2026-09-18",
+   "material": "steel",
+   "qty": 8.3,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3153",
+   "date": "2026-09-21",
+   "material": "aac",
+   "qty": 3064,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3154",
+   "date": "2026-09-22",
+   "material": "aac",
+   "qty": 3081,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3155",
+   "date": "2026-09-24",
+   "material": "steel",
+   "qty": 9.6,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3156",
+   "date": "2026-09-24",
+   "material": "steel",
+   "qty": 8.7,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3157",
+   "date": "2026-09-26",
+   "material": "cement",
+   "qty": 152,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3158",
+   "date": "2026-09-27",
+   "material": "cement",
+   "qty": 50,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3159",
+   "date": "2026-09-27",
+   "material": "cement",
+   "qty": 107,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3160",
+   "date": "2026-09-27",
+   "material": "cement",
+   "qty": 47,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3161",
+   "date": "2026-09-28",
+   "material": "cement",
+   "qty": 152,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3162",
+   "date": "2026-09-28",
+   "material": "cement",
+   "qty": 118,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3163",
+   "date": "2026-09-30",
+   "material": "aac",
+   "qty": 1980,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3164",
+   "date": "2026-10-01",
+   "material": "aac",
+   "qty": 2559,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3165",
+   "date": "2026-10-02",
+   "material": "steel",
+   "qty": 7.9,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3166",
+   "date": "2026-10-03",
+   "material": "steel",
+   "qty": 5.9,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3167",
+   "date": "2026-10-07",
+   "material": "cement",
+   "qty": 224,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3168",
+   "date": "2026-10-07",
+   "material": "cement",
+   "qty": 112,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3169",
+   "date": "2026-10-07",
+   "material": "cement",
+   "qty": 216,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3170",
+   "date": "2026-10-08",
+   "material": "cement",
+   "qty": 67,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3171",
+   "date": "2026-10-09",
+   "material": "cement",
+   "qty": 62,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3172",
+   "date": "2026-10-09",
+   "material": "cement",
+   "qty": 151,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3173",
+   "date": "2026-10-09",
+   "material": "aac",
+   "qty": 2513,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3174",
+   "date": "2026-10-11",
+   "material": "aac",
+   "qty": 3043,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3175",
+   "date": "2026-10-12",
+   "material": "steel",
+   "qty": 7.5,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3176",
+   "date": "2026-10-12",
+   "material": "steel",
+   "qty": 6.3,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3177",
+   "date": "2026-10-17",
+   "material": "cement",
+   "qty": 51,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3178",
+   "date": "2026-10-17",
+   "material": "cement",
+   "qty": 170,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3179",
+   "date": "2026-10-18",
+   "material": "cement",
+   "qty": 58,
+   "unit": "bag",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3180",
+   "date": "2026-10-18",
+   "material": "cement",
+   "qty": 159,
+   "unit": "bag",
+   "activity": "Internal plaster",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3181",
+   "date": "2026-10-18",
+   "material": "cement",
+   "qty": 129,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3182",
+   "date": "2026-10-19",
+   "material": "cement",
+   "qty": 152,
+   "unit": "bag",
+   "activity": "PCC",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3183",
+   "date": "2026-10-19",
+   "material": "steel",
+   "qty": 8,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3184",
+   "date": "2026-10-19",
+   "material": "aac",
+   "qty": 2606,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "B",
+   "supervisor": "Sandeep Yadav"
+  },
+  {
+   "slip": "IS-3185",
+   "date": "2026-10-20",
+   "material": "steel",
+   "qty": 8.8,
+   "unit": "MT",
+   "activity": "RCC slabs & columns",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  },
+  {
+   "slip": "IS-3186",
+   "date": "2026-10-20",
+   "material": "aac",
+   "qty": 2889,
+   "unit": "nos",
+   "activity": "Blockwork",
+   "wing": "A",
+   "supervisor": "Vikas Patil"
+  }
+ ],
+ "boq": [
+  {
+   "item": "RCC M25 slabs & columns",
+   "wing": "A",
+   "unit": "cum",
+   "done": 720,
+   "next8w": 110,
+   "norms": {
+    "rmc": 1,
+    "steel": 0.11
+   }
+  },
+  {
+   "item": "RCC M25 slabs & columns",
+   "wing": "B",
+   "unit": "cum",
+   "done": 700,
+   "next8w": 100,
+   "norms": {
+    "rmc": 1,
+    "steel": 0.11
+   }
+  },
+  {
+   "item": "AAC blockwork 200 mm",
+   "wing": "A",
+   "unit": "cum",
+   "done": 520,
+   "next8w": 50,
+   "norms": {
+    "aac": 40,
+    "cement": 0.9
+   }
+  },
+  {
+   "item": "AAC blockwork 200 mm",
+   "wing": "B",
+   "unit": "cum",
+   "done": 480,
+   "next8w": 40,
+   "norms": {
+    "aac": 40,
+    "cement": 0.9
+   }
+  },
+  {
+   "item": "Internal plaster 12 mm",
+   "wing": "A",
+   "unit": "sqm",
+   "done": 21000,
+   "next8w": 6000,
+   "norms": {
+    "cement": 0.07
+   }
+  },
+  {
+   "item": "Internal plaster 12 mm",
+   "wing": "B",
+   "unit": "sqm",
+   "done": 19500,
+   "next8w": 6500,
+   "norms": {
+    "cement": 0.07
+   }
+  },
+  {
+   "item": "PCC M15",
+   "wing": "A",
+   "unit": "cum",
+   "done": 150,
+   "next8w": 40,
+   "norms": {
+    "cement": 6.3
+   }
+  },
+  {
+   "item": "PCC M15",
+   "wing": "B",
+   "unit": "cum",
+   "done": 160,
+   "next8w": 40,
+   "norms": {
+    "cement": 6.3
+   }
+  }
+ ]
+}
