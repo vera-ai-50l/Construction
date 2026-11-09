@@ -6,11 +6,6 @@ import { Bezel, Eyebrow, PillButton, Reveal, Words, formatINR } from "./ui";
 
 const STOP_SHARE = 1 / 3; // conservative: Vera stops a third of the leak
 
-// Starter pricing: ₹1.25 L setup + ₹50k/month for 3 sites, ₹12k/month per extra site.
-export function veraYearlyCost(sites: number) {
-  return 125000 + 12 * (50000 + Math.max(0, sites - 3) * 12000);
-}
-
 function Money({ value, className }: { value: number; className?: string }) {
   const mv = useSpring(value, { stiffness: 80, damping: 20 });
   useEffect(() => mv.set(value), [mv, value]);
@@ -78,10 +73,8 @@ export default function Savings() {
 
   const leak = crore * 1e7 * (rate / 100);
   const stopped = leak * STOP_SHARE;
-  const cost = veraYearlyCost(sites);
-  const net = stopped - cost;
-  const roi = stopped / cost;
-  const payback = Math.max(1, Math.ceil(cost / (stopped / 365)));
+  const perSite = stopped / sites;
+  const perDay = stopped / 365;
 
   return (
     <section id="savings" className="relative -mt-10 rounded-t-[2.5rem] bg-concrete px-4 py-28 text-ink md:px-10 md:py-40">
@@ -133,8 +126,8 @@ export default function Savings() {
                 format={(v) => `${v} site${v > 1 ? "s" : ""}`}
               />
               <p className="mt-auto border-t border-ink/10 pt-6 text-[12px] leading-relaxed text-ink/45">
-                Estimate. Assumes Vera stops one-third of the leak and uses Starter pricing for your site count
-                (₹1.25 L setup + ₹50k / month for 3 sites, ₹12k per extra site).
+                Estimate. Assumes Vera stops one-third of the leak. Pricing is quoted per firm, after the free leak
+                check.
               </p>
             </Bezel>
           </Reveal>
@@ -148,7 +141,7 @@ export default function Savings() {
                     You could keep, every year
                   </span>
                   <p className="mt-3 text-[clamp(3.4rem,8vw,7.5rem)] font-medium leading-[0.9] tracking-[-0.06em]">
-                    <Money value={net} />
+                    <Money value={stopped} />
                   </p>
                 </div>
 
@@ -156,7 +149,6 @@ export default function Savings() {
                   {[
                     { k: "Leaking today", v: leak, share: 1, cls: "bg-bone/30" },
                     { k: "Vera stops (one-third)", v: stopped, share: STOP_SHARE, cls: "bg-hivis" },
-                    { k: "Vera costs a year", v: cost, share: Math.min(1, cost / leak), cls: "bg-bone" },
                   ].map((r) => (
                     <div key={r.k}>
                       <div className="mb-2 flex items-baseline justify-between text-sm">
@@ -170,17 +162,15 @@ export default function Savings() {
 
                 <div className="relative mt-auto grid grid-cols-2 gap-4 border-t border-white/10 pt-6 md:grid-cols-3">
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">Return</p>
-                    <p className="mt-1 text-4xl font-medium tracking-[-0.04em] tabular-nums">
-                      {roi.toFixed(1)}
-                      <span className="font-serif font-normal italic text-hivis">×</span>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">Per site, a year</p>
+                    <p className="mt-1 text-4xl font-medium tracking-[-0.04em]">
+                      <Money value={perSite} />
                     </p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">Pays back in</p>
-                    <p className="mt-1 text-4xl font-medium tracking-[-0.04em] tabular-nums">
-                      {payback}
-                      <span className="ml-1 text-lg text-bone/50">days</span>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">Every day</p>
+                    <p className="mt-1 text-4xl font-medium tracking-[-0.04em]">
+                      <Money value={perDay} />
                     </p>
                   </div>
                   <div className="col-span-2 flex items-end md:col-span-1 md:justify-end">

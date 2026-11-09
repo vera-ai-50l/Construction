@@ -69,15 +69,6 @@ body {
   color: var(--color-coal);
 }
 
-@media (pointer: fine) {
-  html,
-  a,
-  button,
-  input {
-    cursor: none;
-  }
-}
-
 /* Film grain: fixed, never on a scrolling layer. */
 .grain {
   position: fixed;

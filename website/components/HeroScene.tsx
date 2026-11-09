@@ -856,8 +856,8 @@ export default function HeroScene({
     <Canvas
       flat
       shadows
-      frameloop={active ? "always" : "never"}
-      dpr={mobile ? [1, 1.5] : [1, 1.75]}
+      frameloop={active ? "always" : "demand"}
+      dpr={mobile ? [1, 1.5] : [1, 1.5]}
       camera={{ fov: mobile ? 36 : 32, position: [24, 14, 24], near: 0.1, far: 160 }}
       gl={{ antialias: false, powerPreference: "high-performance" }}
     >

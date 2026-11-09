@@ -10,6 +10,7 @@ const LINKS = [
   ["How we work", "#process"],
   ["Savings", "#savings"],
   ["Pricing", "#pricing"],
+  ["Team", "#team"],
 ] as const;
 
 export function Logo({ className = "size-7" }: { className?: string }) {

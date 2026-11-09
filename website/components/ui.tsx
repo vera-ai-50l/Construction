@@ -138,41 +138,46 @@ export function Providers({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Hover bubble. The system pointer stays visible (it never lags, however busy the 3D hero is);
+ * this bubble only grows over links, buttons and [data-cursor] targets. Its position is written
+ * straight to the DOM on every pointer event — no spring, no React render — so it keeps up.
+ */
 function Cursor() {
   const on = useMedia("(pointer: fine)");
+  const el = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState(false);
   const [label, setLabel] = useState("");
-  const x = useSpring(-100, { stiffness: 600, damping: 45, mass: 0.3 });
-  const y = useSpring(-100, { stiffness: 600, damping: 45, mass: 0.3 });
 
   useEffect(() => {
     if (!on) return;
     const move = (e: PointerEvent) => {
-      x.set(e.clientX);
-      y.set(e.clientY);
+      if (el.current) el.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
       const t = (e.target as Element | null)?.closest?.("a,button,input,[data-cursor]");
       setHover(!!t);
       setLabel(t?.getAttribute("data-cursor") ?? "");
     };
-    window.addEventListener("pointermove", move);
+    window.addEventListener("pointermove", move, { passive: true });
     return () => window.removeEventListener("pointermove", move);
-  }, [on, x, y]);
+  }, [on]);
 
   if (!on) return null;
   return (
-    <motion.div
+    <div
+      ref={el}
       aria-hidden
-      style={{ x, y }}
-      className="pointer-events-none fixed left-0 top-0 z-[90] mix-blend-difference"
+      style={{ transform: "translate3d(-200px, -200px, 0)" }}
+      className="pointer-events-none fixed left-0 top-0 z-[90] mix-blend-difference will-change-transform"
     >
       <motion.div
-        animate={{ scale: label ? 1 : hover ? 0.5 : 0.14 }}
+        initial={false}
+        animate={{ scale: label ? 1 : hover ? 0.5 : 0, opacity: label || hover ? 1 : 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 24 }}
         className="-ml-10 -mt-10 flex size-20 items-center justify-center rounded-full bg-[#fff] text-[10px] font-medium uppercase tracking-[0.2em] text-[#000]"
       >
         {label}
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
 

@@ -9,6 +9,7 @@ import Preloader from "@/components/Preloader";
 import Pricing from "@/components/Pricing";
 import Process from "@/components/Process";
 import Savings from "@/components/Savings";
+import Team from "@/components/Team";
 
 export default function Home() {
   return (
@@ -24,6 +25,7 @@ export default function Home() {
         <Savings />
         <Pricing />
         <Answers />
+        <Team />
       </main>
       <Closing />
     </>

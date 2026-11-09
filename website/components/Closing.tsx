@@ -65,6 +65,7 @@ export default function Closing() {
                 ["How we work", "#process"],
                 ["Savings", "#savings"],
                 ["Pricing", "#pricing"],
+                ["Team", "#team"],
                 ["Book a check", "#book"],
               ].map(([l, h]) => (
                 <a key={h} href={h} className="w-fit transition-colors duration-500 ease-vera hover:text-bone">

@@ -32,8 +32,8 @@ const FAQ = [
     "Two to three weeks. We map your formats, onboard your supervisors and test on one site before rolling out.",
   ],
   [
-    "How is the paid audit priced?",
-    "Your pick: ₹50,000 plus 15–20% of the money we help recover, or a fixed ₹1.5–3 lakh depending on the number of sites.",
+    "How is Vera priced?",
+    "Every firm gets its own quote, based on how many sites you run and which desks you need. The leak check on one site is always free, and you have the quote in writing before you commit to anything.",
   ],
 ];
 

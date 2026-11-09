@@ -24,7 +24,7 @@ import {
   type MotionValue,
 } from "motion/react";
 import dynamic from "next/dynamic";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SCREENS, STEPS, labels, stage, stepAt } from "./siteWalk";
 import { Clock, EASE, INTRO, PillButton, Words, formatINR, useTheme } from "./ui";
 
@@ -48,6 +48,13 @@ const clamp01 = (t: number) => Math.min(Math.max(t, 0), 1);
 export default function Hero() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref);
+  // Behind the preloader the scene draws one frame (enough to compile its shaders) and then waits,
+  // so the loading screen and the pointer stay smooth. It runs in full just before the scene's intro starts.
+  const [lifted, setLifted] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setLifted(true), 1400);
+    return () => clearTimeout(t);
+  }, []);
   const theme = useTheme();
   const { scrollYProgress: progress } = useScroll({ target: ref, offset: ["start start", "end end"] });
 
@@ -87,7 +94,7 @@ export default function Hero() {
     <section ref={ref} id="top" className="relative bg-ink" style={{ height: `${(SCREENS + 1) * 100}vh` }}>
       <div className="sticky top-0 h-[100dvh] overflow-hidden">
         <div className="absolute inset-0">
-          <HeroScene scan={scan} progress={progress} active={inView} theme={theme} />
+          <HeroScene scan={scan} progress={progress} active={inView && lifted} theme={theme} />
         </div>
         <motion.div style={{ opacity: vignetteO }} className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_68%_42%,transparent_25%,var(--ink)_88%)]" />

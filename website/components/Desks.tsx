@@ -21,7 +21,7 @@ const DESKS: Desk[] = [
     tag: "Free · Week 1",
     body: "One site, the last three months. We match purchase orders → delivery challans → material issued → material actually used per the BOQ, for cement, steel and two items you choose.",
     facts: ["A 1-page “money leaking” summary", "Surplus stock you can move or sell", "Gaps by site and by supervisor"],
-    price: "Free for one site · all-site audit ₹1.5–3 L, or ₹50k + 15–20% of what's recovered",
+    price: "Free for one site · all-site audit quoted for your firm",
     Visual: LeakSummary,
   },
   {
@@ -33,7 +33,7 @@ const DESKS: Desk[] = [
       "8 AM one-page summary across every site",
       "Weekly claim-ready PDF · monthly Tally / ERP import file",
     ],
-    price: "₹75k setup · ₹40–60k a month for 3 sites · ₹12k per extra site",
+    price: "Custom pricing · quoted after the free leak check",
     Visual: RecordDesk,
   },
   {
@@ -41,7 +41,7 @@ const DESKS: Desk[] = [
     tag: "Add-on · Month 2–3",
     body: "Builds every running bill pack from the record — measurements, photos, test certificates and your client's own checklist. Then chases every rupee.",
     facts: ["No bill goes out with missing papers", "Objections, ageing and retention tracked", "Automatic follow-ups"],
-    price: "₹1 L setup · ₹50k a month",
+    price: "Custom pricing · added when you need it",
     note: "Honest limit: it can't speed up a government treasury. It fixes your delays and missing papers.",
     Visual: BillDesk,
   },
@@ -49,8 +49,8 @@ const DESKS: Desk[] = [
     name: "Project Control",
     tag: "Add-on · Month 3+",
     body: "The experienced PM mid-size firms can't hire. Plan vs actual, cost to finish, a 13-week cash forecast and a risk list — reviewed every week by a senior PM from a large EPC firm.",
-    facts: ["Weekly 1-hour call with the owner", "Built from Site Record Desk data", "A senior PM costs ₹25–40 L a year. This is about ₹15 L."],
-    price: "₹1–1.5 L a month · up to 5 sites",
+    facts: ["Weekly 1-hour call with the owner", "Built from Site Record Desk data", "A senior PM costs ₹25–40 L a year. This costs a fraction of that."],
+    price: "Custom pricing · scoped to your sites",
     Visual: CashForecast,
   },
   {
@@ -58,7 +58,7 @@ const DESKS: Desk[] = [
     tag: "One-off · When a dispute starts",
     body: "We rebuild the timeline of a delay from WhatsApp chats, emails and drawings — delay register, change-order register and the money calculations, ready for your lawyer.",
     facts: ["Every entry traced to its source", "Delay and change-order registers", "Quantum worked out, not guessed"],
-    price: "₹3–10 L per claim, or a fee plus a share of the award",
+    price: "Custom pricing · quoted per claim",
     Visual: ClaimTimeline,
   },
 ];
