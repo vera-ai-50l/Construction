@@ -90,7 +90,6 @@ export default function Hero() {
               onClick={() => setDemo(true)}
               onPointerEnter={preload}
               onFocus={preload}
-              data-cursor="Play"
               className="group inline-flex items-center gap-3 rounded-full bg-hivis py-1.5 pl-1.5 pr-6 text-sm font-medium text-coal transition-transform duration-500 ease-vera hover:scale-[1.02] active:scale-[0.98]"
             >
               <span className="relative flex size-9 items-center justify-center rounded-full bg-coal/10">

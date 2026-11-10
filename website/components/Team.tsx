@@ -92,7 +92,6 @@ export default function Team() {
                   href={m.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  data-cursor="LinkedIn"
                   aria-label={`${m.name} on LinkedIn (opens in a new tab)`}
                   className="group block rounded-[2rem] bg-white/[0.035] p-1.5 ring-1 ring-white/10 transition-transform duration-700 ease-vera hover:-translate-y-1.5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-hivis"
                 >
