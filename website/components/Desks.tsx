@@ -23,9 +23,19 @@ const DESKS: Desk[] = [
       "A one-page summary of money leaking",
       "Inventory balancing across sites: move surplus to sites that are short",
       "Wastage check within each site, supervisor by supervisor",
-      "One-day mobilisation: a new site set up and reporting the same day",
     ],
     Visual: LeakSummary,
+  },
+  {
+    name: "One-Day Mobilisation",
+    tag: "New sites · Day 1",
+    body: "Once you are on Vera, every new site goes live the day it opens. Supervisors join one WhatsApp number, the BOQ and opening stock are loaded, and the first daily record goes out that evening.",
+    facts: [
+      "Supervisors on WhatsApp by mid-morning, no app to install",
+      "BOQ, rates and opening stock loaded the same day",
+      "First daily record and 8 AM summary from day two",
+    ],
+    Visual: MobilisationDay,
   },
   {
     name: "Site Record Desk",
@@ -61,7 +71,7 @@ export default function Desks() {
           <div className="md:col-span-8">
             <Eyebrow>What Vera does</Eyebrow>
             <Words
-              text="One WhatsApp number. | Three desks that *run on it.*"
+              text="One WhatsApp number. | Four desks that *run on it.*"
               className="mt-6 text-[clamp(2.5rem,6vw,6rem)] font-medium leading-[0.95] tracking-[-0.05em]"
             />
           </div>
@@ -241,17 +251,50 @@ function LeakSummary() {
           </p>
         </motion.div>
       </div>
-      {/* A new site goes live in one day: supervisors on WhatsApp, BOQ loaded, opening stock counted. */}
-      <motion.div
-        variants={rise}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hivis/10 px-4 py-3 ring-1 ring-hivis/25"
-      >
-        <div>
-          <Label>One-day mobilisation · Site 05, Pune</Label>
-          <p className="mt-1 text-[13px] text-bone/80">12 supervisors on WhatsApp, BOQ loaded, opening stock counted</p>
-        </div>
-        <span className="shrink-0 rounded-full bg-hivis px-2.5 py-1 text-[11px] font-medium text-coal">Live in 1 day</span>
+    </motion.div>
+  );
+}
+
+function MobilisationDay() {
+  const day = [
+    ["09:00", "Site 05 created", "Pune · residential, 2 towers"],
+    ["10:30", "12 supervisors on WhatsApp", "Hindi and Marathi voice notes"],
+    ["13:00", "BOQ and rates loaded", "418 lines from your Excel"],
+    ["16:00", "Opening stock counted", "Cement, steel, RMC, shuttering"],
+    ["18:30", "First daily record sent", "Progress, labour, materials"],
+  ] as const;
+  return (
+    <motion.div {...view} variants={stagger(0.12)} className="flex h-full flex-col justify-between gap-6 p-6 md:p-8">
+      <motion.div variants={rise} className="flex items-center justify-between">
+        <Label>Site 05 · Pune · day 1</Label>
+        <span className="rounded-full bg-hivis px-2.5 py-1 text-[11px] font-medium text-coal">Live in 1 day</span>
       </motion.div>
+      <ol className="relative space-y-5 pl-7">
+        <motion.span
+          aria-hidden
+          className="absolute bottom-2 left-[7px] top-2 w-px origin-top bg-gradient-to-b from-hivis to-hivis/20"
+          variants={{ hidden: { scaleY: 0 }, show: { scaleY: 1, transition: { duration: 1.6, ease: EASE } } }}
+        />
+        {day.map(([time, what, detail], i) => (
+          <motion.li key={time} variants={rise} className="relative">
+            <span
+              className={`absolute -left-7 top-0.5 flex size-[15px] items-center justify-center rounded-full ring-1 ${
+                i === day.length - 1 ? "bg-hivis ring-hivis" : "bg-ink-2 ring-hivis/60"
+              }`}
+            >
+              <Check size={9} weight="bold" className={i === day.length - 1 ? "text-coal" : "text-hivis"} />
+            </span>
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="text-[14px] text-bone/90">{what}</span>
+              <span className="text-[12px] tabular-nums text-bone/45">{time}</span>
+            </div>
+            <p className="mt-0.5 text-[12px] text-bone/45">{detail}</p>
+          </motion.li>
+        ))}
+      </ol>
+      <motion.p variants={rise} className="border-t border-white/[0.08] pt-4 text-[13px] text-bone/60">
+        Day 2, 08:00: the owner gets the first summary for Site 05 with the other sites.
+      </motion.p>
     </motion.div>
   );
 }
