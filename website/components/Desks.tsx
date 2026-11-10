@@ -28,12 +28,12 @@ const DESKS: Desk[] = [
   },
   {
     name: "One-Day Mobilisation",
-    tag: "New sites · Day 1",
-    body: "Once you are on Vera, every new site goes live the day it opens. Supervisors join one WhatsApp number, the BOQ and opening stock are loaded, and the first daily record goes out that evening.",
+    tag: "For developers · new sites",
+    body: "Before a contractor starts on a new site, your team inspects the set-up: labour camp, stores yard, batching plant or RMC, formwork, safety and a stack of certificates. It usually takes two to three days. With Vera it is done and written up in one.",
     facts: [
-      "Supervisors on WhatsApp by mid-morning, no app to install",
-      "BOQ, rates and opening stock loaded the same day",
-      "First daily record and 8 AM summary from day two",
+      "Contractor certificates checked on WhatsApp three days ahead, with a missing list that evening",
+      "Checklist on the phone: every photo tagged to a line, spoken remarks written up",
+      "Inspection report about 80% written by the end of the visit",
     ],
     Visual: MobilisationDay,
   },
@@ -256,18 +256,19 @@ function LeakSummary() {
 }
 
 function MobilisationDay() {
+  // [when, what, detail, needs attention?]
   const day = [
-    ["09:00", "Site 05 created", "Pune · residential, 2 towers"],
-    ["10:30", "12 supervisors on WhatsApp", "Hindi and Marathi voice notes"],
-    ["13:00", "BOQ and rates loaded", "418 lines from your Excel"],
-    ["16:00", "Opening stock counted", "Cement, steel, RMC, shuttering"],
-    ["18:30", "First daily record sent", "Progress, labour, materials"],
+    ["Day −3", "14 certificates in on WhatsApp", "BOCW, labour licence, CAR insurance, plant calibration", false],
+    ["Day −3", "2 flagged that evening", "CAR cover ₹42 Cr on a ₹58 Cr contract · labour licence lapses before start", true],
+    ["Day 1, 09:30", "Site walk, checklist on the phone", "86 lines: camp, stores, batching plant, formwork, safety", false],
+    ["Day 1, 13:00", "86 photos tagged to lines", "“Camp mein toilet 6 hai, chahiye 9” → line 14, open item", false],
+    ["Day 1, 18:00", "Inspection report drafted", "78 of 86 lines pass · 8 open, closed later on photos", false],
   ] as const;
   return (
     <motion.div {...view} variants={stagger(0.12)} className="flex h-full flex-col justify-between gap-6 p-6 md:p-8">
       <motion.div variants={rise} className="flex items-center justify-between">
-        <Label>Site 05 · Pune · day 1</Label>
-        <span className="rounded-full bg-hivis px-2.5 py-1 text-[11px] font-medium text-coal">Live in 1 day</span>
+        <Label>New site · first inspection</Label>
+        <span className="rounded-full bg-hivis px-2.5 py-1 text-[11px] font-medium text-coal">3 days → 1</span>
       </motion.div>
       <ol className="relative space-y-5 pl-7">
         <motion.span
@@ -275,8 +276,8 @@ function MobilisationDay() {
           className="absolute bottom-2 left-[7px] top-2 w-px origin-top bg-gradient-to-b from-hivis to-hivis/20"
           variants={{ hidden: { scaleY: 0 }, show: { scaleY: 1, transition: { duration: 1.6, ease: EASE } } }}
         />
-        {day.map(([time, what, detail], i) => (
-          <motion.li key={time} variants={rise} className="relative">
+        {day.map(([when, what, detail, hot], i) => (
+          <motion.li key={what} variants={rise} className="relative">
             <span
               className={`absolute -left-7 top-0.5 flex size-[15px] items-center justify-center rounded-full ring-1 ${
                 i === day.length - 1 ? "bg-hivis ring-hivis" : "bg-ink-2 ring-hivis/60"
@@ -285,15 +286,15 @@ function MobilisationDay() {
               <Check size={9} weight="bold" className={i === day.length - 1 ? "text-coal" : "text-hivis"} />
             </span>
             <div className="flex items-baseline justify-between gap-4">
-              <span className="text-[14px] text-bone/90">{what}</span>
-              <span className="text-[12px] tabular-nums text-bone/45">{time}</span>
+              <span className={`text-[14px] ${hot ? "text-hivis" : "text-bone/90"}`}>{what}</span>
+              <span className="shrink-0 text-[12px] tabular-nums text-bone/45">{when}</span>
             </div>
             <p className="mt-0.5 text-[12px] text-bone/45">{detail}</p>
           </motion.li>
         ))}
       </ol>
       <motion.p variants={rise} className="border-t border-white/[0.08] pt-4 text-[13px] text-bone/60">
-        Day 2, 08:00: the owner gets the first summary for Site 05 with the other sites.
+        The contractor starts two days sooner. About 16 hours of engineer time saved per new site.
       </motion.p>
     </motion.div>
   );
