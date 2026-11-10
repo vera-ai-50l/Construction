@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { Logo } from "./Nav";
 import { LinkedinLogo } from "@phosphor-icons/react";
-import { CONTACT, Clock, Eyebrow, PillButton, Reveal, Words, whatsappHref } from "./ui";
+import { CONTACT, Eyebrow, PillButton, Reveal, Words, whatsappHref } from "./ui";
 
 export default function Closing() {
   return (
@@ -84,9 +84,6 @@ export default function Closing() {
             <div className="text-[11px] uppercase leading-loose tracking-[0.2em] text-bone/40 md:col-span-3 md:text-right">
               <p>Made in India</p>
               <p>For India’s builders</p>
-              <p className="text-bone/70">
-                <Clock withSeconds={false} />
-              </p>
             </div>
           </div>
 
