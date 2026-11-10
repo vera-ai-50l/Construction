@@ -238,10 +238,10 @@ export default function Preloader() {
       el.style.transform = `translateX(${innerWidth / 2 - (r.left + r.width / 2)}px)`;
     });
 
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // The intro plays for everyone, including systems set to reduce motion (Windows turns animation
+    // effects off on many laptops): it is the opening of the site, it is short, and any click skips it.
     let raf = 0;
     let shown = 0;
-    const t0 = performance.now();
     const show = (n: number) => {
       if (n === shown) return;
       const prev = layers.current[shown];
@@ -251,13 +251,29 @@ export default function Preloader() {
       if (paperEl.current) paperEl.current.style.transform = paperAt(n);
       shown = n;
     };
+    // One clipping per step, never skipped: every page is on screen for at least one painted frame,
+    // so the cut is always visible. A slow device just runs a little longer (capped).
+    let last = 0;
+    let start = 0;
     const tick = (now: number) => {
-      const t = now - t0;
-      if (!still) show(Math.min(Math.floor(t / CUT_MS), CUTS - 1));
-      if (t >= INTRO_LIFT * 1000) setDone(true);
-      else raf = requestAnimationFrame(tick);
+      if (!start) start = last = now;
+      if (shown < CUTS - 1) {
+        if (now - last >= CUT_MS) {
+          show(shown + 1);
+          last = now;
+        }
+      } else if (now - last >= CUT_MS + HOLD_MS) {
+        setDone(true);
+        return;
+      }
+      if (now - start > 6000) {
+        setDone(true);
+        return;
+      }
+      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
+    // Start the clock only once the first page has actually been painted.
+    raf = requestAnimationFrame(() => (raf = requestAnimationFrame(tick)));
 
     // Any click or key skips straight to the site.
     const skip = () => setDone(true);
