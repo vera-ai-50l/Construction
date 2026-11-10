@@ -17,7 +17,7 @@ type Desk = {
 const DESKS: Desk[] = [
   {
     name: "Material Leak Check",
-    tag: "Free · Week 1",
+    tag: "Free · Day 1",
     body: "The last three months, matched line by line: purchase orders, delivery challans, material issued and material used per the BOQ. Then we balance stock across your sites and check wastage supervisor by supervisor.",
     facts: [
       "A one-page summary of money leaking",

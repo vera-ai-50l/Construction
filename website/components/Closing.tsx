@@ -19,13 +19,14 @@ export default function Closing() {
         <div className="relative mx-auto flex max-w-[1200px] flex-col items-center text-center">
           <Eyebrow>Start here</Eyebrow>
           <Words
-            text="Find the leak | in *four weeks.*"
+            text="Catch wastage | *from day one.*"
             className="mt-8 text-[clamp(2.75rem,7vw,7rem)] font-medium leading-[0.92] tracking-[-0.055em]"
           />
           <Reveal delay={0.3}>
             <p className="mx-auto mt-8 max-w-[50ch] text-bone/60 md:text-lg">
-              Start with one site, free. Send us the registers, in Excel or as photos, and get a rupee figure on the table
-              within a week. If it is small, you have lost nothing.
+              Vera is AI software set up around your sites. Send what you already keep, as WhatsApp texts, voice notes,
+              photos of registers, Excel or Google Sheets, or PDFs, and it starts flagging wastage from the first day.
+              Your first site is free.
             </p>
           </Reveal>
           <Reveal delay={0.45} className="mt-10 flex flex-wrap justify-center gap-3">
@@ -38,7 +39,7 @@ export default function Closing() {
           </Reveal>
           <Reveal delay={0.6}>
             <ul className="mt-14 flex flex-wrap justify-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-[0.2em] text-bone/45">
-              {["No new app", "Hindi and regional voice notes", "Works with Tally", "Live in 2–3 weeks"].map((t) => (
+              {["No new app", "Texts, photos, sheets, PDFs", "Works with Tally", "Wastage flagged from day one"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <span className="size-1 rotate-45 bg-hivis" />
                   {t}

@@ -4,15 +4,15 @@ import { Eyebrow, Reveal, Words } from "./ui";
 
 const STEPS = [
   {
-    when: "Week 1",
+    when: "Day 1",
     title: "Free leak check",
-    body: "Send POs, challans, the stock register and the BOQ for one site. Excel or photos of the paper registers both work.",
-    out: "A rupee figure within a week.",
+    body: "Send what you have for one site: POs, challans, the stock register and the BOQ, as texts, photos, Excel or Google Sheets.",
+    out: "Wastage flagged from the first day.",
   },
   {
-    when: "Weeks 2 to 3",
-    title: "Setup on one site",
-    body: "We map your formats, put supervisors on one WhatsApp number and test everything on a single site first.",
+    when: "Week 1",
+    title: "Built around your sites",
+    body: "We shape Vera to your formats, put supervisors on one WhatsApp number and test everything on a single site first.",
     out: "No new app. No training days.",
   },
   {
@@ -37,7 +37,7 @@ export default function Process() {
           <div className="md:col-span-7">
             <Eyebrow>How we work</Eyebrow>
             <Words
-              text="Free first. No new app. | *Live in three weeks.*"
+              text="Free first. No new app. | *Live from day one.*"
               className="mt-6 text-[clamp(2.25rem,4.5vw,4.5rem)] font-medium leading-[0.98] tracking-[-0.045em]"
             />
           </div>

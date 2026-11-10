@@ -148,7 +148,7 @@ export default function Leak() {
                     <p className="text-[clamp(2.75rem,4.6vw,4.5rem)] font-medium leading-[0.9] tracking-[-0.05em]">
                       ₹<Counter to={1} />–<Counter to={2.5} decimals={1} /> Cr
                     </p>
-                    <p className="mt-3 max-w-[32ch] text-bone/55">leaking every year. Vera finds it in four weeks, site by site.</p>
+                    <p className="mt-3 max-w-[32ch] text-bone/55">leaking every year. Vera starts flagging it from day one, site by site.</p>
                   </div>
                   <PillButton href="#book" variant="light" className="self-start">
                     Find your number
