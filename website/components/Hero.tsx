@@ -39,7 +39,6 @@ export default function Hero() {
           poster={`/hero/site-${theme}.webp`}
           className="size-full object-cover object-[30%_55%]"
         >
-          <source src={`/hero/site-${theme}.webm`} type="video/webm" />
           <source src={`/hero/site-${theme}.mp4`} type="video/mp4" />
         </video>
       </motion.div>
