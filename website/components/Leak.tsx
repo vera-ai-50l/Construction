@@ -6,10 +6,9 @@ import {
   useSpring,
   useTransform,
   useVelocity,
-  type MotionValue,
 } from "motion/react";
-import { Fragment, useRef } from "react";
-import { Bezel, Counter, EASE, Eyebrow, PillButton, Reveal, parse } from "./ui";
+import { Fragment } from "react";
+import { Bezel, Counter, EASE, Eyebrow, PillButton, Reveal, Words } from "./ui";
 
 const TICKER = [
   "Cement OPC 53",
@@ -43,9 +42,20 @@ export default function Leak() {
           </span>
         </div>
 
-        <ScrubText text="On ₹50 Cr of work, 2–5% walks off site as waste, theft and unmatched challans. That is *₹1–2.5 Cr a year,* and nobody can prove where it went." />
+        <div className="mt-6 grid gap-8 md:grid-cols-12 md:items-end">
+          <Words
+            text="On ₹50 Cr of work, | *₹1–2.5 Cr walks off site.*"
+            className="text-[clamp(2.25rem,4.5vw,4.5rem)] font-medium leading-[0.98] tracking-[-0.045em] md:col-span-8"
+          />
+          <Reveal className="md:col-span-4" delay={0.15}>
+            <p className="max-w-[40ch] text-ink/55 md:text-lg">
+              Waste, theft and challans nobody matched. Every register looks fine on its own, so nobody can prove where
+              the material went.
+            </p>
+          </Reveal>
+        </div>
 
-        <div className="mt-20 grid gap-4 md:mt-28 md:grid-cols-12 md:gap-5">
+        <div className="mt-14 grid gap-4 md:mt-20 md:grid-cols-12 md:gap-5">
           <Reveal className="md:col-span-7">
             <Bezel tone="light" className="h-full" inner="flex flex-col p-6 md:p-10">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -177,34 +187,5 @@ function Ticker() {
         </div>
       </motion.div>
     </div>
-  );
-}
-
-function ScrubText({ text }: { text: string }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.45"] });
-  const words = parse(text).filter((w) => w !== null);
-  return (
-    <p
-      ref={ref}
-      className="mt-10 max-w-[22ch] text-[clamp(2.1rem,5vw,5.2rem)] font-medium leading-[1.02] tracking-[-0.045em]"
-    >
-      {words.map((w, i) => (
-        <Word key={i} p={scrollYProgress} range={[i / words.length, (i + 1) / words.length]} em={w.em}>
-          {w.w}
-        </Word>
-      ))}
-    </p>
-  );
-}
-
-function Word({ p, range, em, children }: { p: MotionValue<number>; range: [number, number]; em: boolean; children: string }) {
-  const opacity = useTransform(p, range, [0.12, 1]);
-  return (
-    <>
-      <motion.span style={{ opacity }} className={em ? "text-hivis" : ""}>
-        {children}
-      </motion.span>{" "}
-    </>
   );
 }

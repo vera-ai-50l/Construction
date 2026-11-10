@@ -12,14 +12,24 @@ type Member = {
 };
 
 const TEAM: Member[] = [
-  { name: "Rishiraj Nath", college: "IIM Calcutta", linkedin: "https://www.linkedin.com/in/rishiraj-nath-964a29292/" },
+  {
+    name: "Rishiraj Nath",
+    college: "IIM Calcutta",
+    linkedin: "https://www.linkedin.com/in/rishiraj-nath-964a29292/",
+    photo: "/team/rishiraj-nath.webp",
+  },
   {
     name: "Shivam Vatkar",
     college: "IIM Calcutta",
     linkedin: "https://www.linkedin.com/in/shivam-vatkar-a29405281/",
     photo: "/team/shivam-vatkar.webp",
   },
-  { name: "Aditya Bhagat", college: "IIM Indore", linkedin: "https://www.linkedin.com/in/aditya-bhagat-3949073b1/" },
+  {
+    name: "Aditya Bhagat",
+    college: "IIM Indore",
+    linkedin: "https://www.linkedin.com/in/aditya-bhagat-3949073b1/",
+    photo: "/team/aditya-bhagat.webp",
+  },
 ];
 
 const BELIEFS = [

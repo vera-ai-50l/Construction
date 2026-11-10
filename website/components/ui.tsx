@@ -14,7 +14,7 @@ import {
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
-export const INTRO = 2.1; // seconds the preloader holds the stage
+export const INTRO = 2.95; // seconds the opening newspaper holds the stage (see Preloader)
 
 /**
  * Booking and contact details. An empty value hides that option on the site.
@@ -24,8 +24,8 @@ export const INTRO = 2.1; // seconds the preloader holds the stage
  */
 export const CONTACT = {
   calendar: "",
-  whatsapp: "",
-  email: "",
+  whatsapp: "919804142190",
+  email: "aditya@getveraai.com",
   linkedin: "",
 };
 
@@ -159,6 +159,7 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     lenis = new Lenis({ autoRaf: true, anchors: true, lerp: 0.09 });
+    if (locks) lenis.stop(); // the opening intro locked the page before the scroller existed
     return () => {
       lenis?.destroy();
       lenis = null;

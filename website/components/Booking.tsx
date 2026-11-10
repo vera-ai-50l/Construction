@@ -119,25 +119,33 @@ export default function Booking() {
               </div>
             ) : (
               <div className="space-y-3 p-6 md:p-8">
-                <Option
-                  icon={<VideoCamera size={20} weight="light" />}
-                  title="Schedule a Google Meet"
-                  note="Choose a time that suits you. The invite comes with a Meet link."
-                  primary
-                  onClick={CONTACT.calendar ? () => setView("calendar") : undefined}
-                />
-                <Option
-                  icon={<WhatsappLogo size={20} weight="light" />}
-                  title="Message us on WhatsApp"
-                  note="Opens WhatsApp with the message written. Just press send."
-                  href={wa}
-                />
-                <Option
-                  icon={<EnvelopeSimple size={20} weight="light" />}
-                  title="Write to us"
-                  note={CONTACT.email || "Email"}
-                  href={mail}
-                />
+                {/* Options without a link set in CONTACT are left out. */}
+                {CONTACT.calendar && (
+                  <Option
+                    icon={<VideoCamera size={20} weight="light" />}
+                    title="Schedule a Google Meet"
+                    note="Choose a time that suits you. The invite comes with a Meet link."
+                    primary
+                    onClick={() => setView("calendar")}
+                  />
+                )}
+                {wa && (
+                  <Option
+                    icon={<WhatsappLogo size={20} weight="light" />}
+                    title="Message us on WhatsApp"
+                    note="Opens WhatsApp with the message written. Just press send."
+                    href={wa}
+                    primary={!CONTACT.calendar}
+                  />
+                )}
+                {mail && (
+                  <Option
+                    icon={<EnvelopeSimple size={20} weight="light" />}
+                    title="Write to us"
+                    note={CONTACT.email}
+                    href={mail}
+                  />
+                )}
                 <p className="flex items-center gap-2 pt-2 text-xs text-white/40">
                   <CalendarBlank size={14} weight="light" /> We reply within one working day.
                 </p>
