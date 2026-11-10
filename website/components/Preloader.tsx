@@ -15,8 +15,8 @@ import { lockScroll } from "./ui";
  * freezing on one. Nothing moves between cuts, so the edge blur is only redrawn when the page changes.
  */
 
-export const CUTS = 25;
-export const CUT_MS = 48; // three frames on a 60 Hz screen
+export const CUTS = 20;
+export const CUT_MS = 60; // four frames on a 60 Hz screen: 20 clippings, then the zoom, about 2 s in all
 const HOLD_MS = 120;
 const ZOOM_S = 0.55; // the dive into the highlight that ends the intro
 /** Seconds from the start of the cuts until the paper lifts. */
