@@ -42,19 +42,19 @@ export default function Preloader() {
           transition={{ duration: 0.9, ease: [0.76, 0, 0.24, 1] }}
           className="fixed inset-0 z-[100] flex flex-col justify-between bg-ink p-5 text-bone md:p-10"
         >
-          <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-bone/45 md:text-[11px]">
+          <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-bone/45 md:text-[11px]">
             <span>Vera AI</span>
             <span>Site record infrastructure · India</span>
           </div>
 
           <div className="flex flex-col items-center gap-6">
             <Scramble text="VERA" className="text-[28vw] font-medium leading-[0.8] tracking-[-0.07em] md:text-[20vw]" />
-            <span className="font-serif text-xl italic text-bone/60 md:text-2xl">the true record of every site</span>
+            <span className="text-xl text-bone/60 md:text-2xl">the true record of every site</span>
           </div>
 
           <div className="flex items-end justify-between gap-6">
             <div className="flex flex-col gap-3">
-              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-bone/45">{STATUS[status]}…</span>
+              <span className="text-[11px] uppercase tracking-[0.2em] text-bone/45">{STATUS[status]}…</span>
               <div className="h-px w-40 overflow-hidden bg-white/10 md:w-64">
                 <motion.div
                   className="h-px origin-left bg-hivis"
@@ -64,7 +64,7 @@ export default function Preloader() {
                 />
               </div>
             </div>
-            <span ref={num} className="font-mono text-6xl tabular-nums tracking-[-0.04em] md:text-8xl">
+            <span ref={num} className="text-6xl tabular-nums tracking-[-0.04em] md:text-8xl">
               000
             </span>
           </div>

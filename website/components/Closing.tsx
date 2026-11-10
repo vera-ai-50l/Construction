@@ -2,7 +2,8 @@
 
 import { motion } from "motion/react";
 import { Logo } from "./Nav";
-import { CONTACT, Clock, EASE, Eyebrow, PillButton, Reveal, Words } from "./ui";
+import { LinkedinLogo } from "@phosphor-icons/react";
+import { CONTACT, Clock, EASE, Eyebrow, PillButton, Reveal, Words, whatsappHref } from "./ui";
 
 export default function Closing() {
   return (
@@ -19,23 +20,25 @@ export default function Closing() {
           <Eyebrow>Start here</Eyebrow>
           <Words
             text="Find the leak | in *four weeks.*"
-            className="mt-8 text-[clamp(3.2rem,10vw,10rem)] font-medium leading-[0.88] tracking-[-0.06em]"
+            className="mt-8 text-[clamp(2.75rem,7vw,7rem)] font-medium leading-[0.92] tracking-[-0.055em]"
           />
           <Reveal delay={0.3}>
             <p className="mx-auto mt-8 max-w-[50ch] text-bone/60 md:text-lg">
-              Start with one site, free. Send us the registers — Excel or photos — and get a rupee figure on the table
-              within a week. If it’s small, you’ve lost nothing.
+              Start with one site, free. Send us the registers, in Excel or as photos, and get a rupee figure on the table
+              within a week. If it is small, you have lost nothing.
             </p>
           </Reveal>
           <Reveal delay={0.45} className="mt-10 flex flex-wrap justify-center gap-3">
-            <PillButton href={CONTACT.whatsapp}>Book on WhatsApp</PillButton>
-            <PillButton href={CONTACT.email} variant="ghost">
-              Write to us
-            </PillButton>
+            <PillButton href="#book">Book a free leak check</PillButton>
+            {whatsappHref() && (
+              <PillButton href={whatsappHref()} variant="ghost">
+                WhatsApp us
+              </PillButton>
+            )}
           </Reveal>
           <Reveal delay={0.6}>
-            <ul className="mt-14 flex flex-wrap justify-center gap-x-8 gap-y-3 font-mono text-[11px] uppercase tracking-[0.2em] text-bone/45">
-              {["No new app", "Hindi + regional voice notes", "Works with Tally", "Live in 2–3 weeks"].map((t) => (
+            <ul className="mt-14 flex flex-wrap justify-center gap-x-8 gap-y-3 text-[11px] uppercase tracking-[0.2em] text-bone/45">
+              {["No new app", "Hindi and regional voice notes", "Works with Tally", "Live in 2–3 weeks"].map((t) => (
                 <li key={t} className="flex items-center gap-2">
                   <span className="size-1 rotate-45 bg-hivis" />
                   {t}
@@ -54,7 +57,7 @@ export default function Closing() {
                 <Logo />
                 <span className="text-lg font-semibold tracking-[-0.03em]">Vera AI</span>
               </div>
-              <p className="mt-4 max-w-[34ch] font-serif text-2xl italic leading-snug text-bone/70">
+              <p className="mt-4 max-w-[34ch] text-2xl leading-snug text-bone/70">
                 The true record of every site.
               </p>
             </div>
@@ -63,8 +66,6 @@ export default function Closing() {
                 ["The leak", "#leak"],
                 ["Desks", "#desks"],
                 ["How we work", "#process"],
-                ["Savings", "#savings"],
-                ["Pricing", "#pricing"],
                 ["Team", "#team"],
                 ["Book a check", "#book"],
               ].map(([l, h]) => (
@@ -72,8 +73,18 @@ export default function Closing() {
                   {l}
                 </a>
               ))}
+              {CONTACT.linkedin && (
+                <a
+                  href={CONTACT.linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex w-fit items-center gap-1.5 transition-colors duration-500 ease-vera hover:text-bone"
+                >
+                  <LinkedinLogo size={15} weight="fill" /> LinkedIn
+                </a>
+              )}
             </nav>
-            <div className="font-mono text-[11px] uppercase leading-loose tracking-[0.2em] text-bone/40 md:col-span-3 md:text-right">
+            <div className="text-[11px] uppercase leading-loose tracking-[0.2em] text-bone/40 md:col-span-3 md:text-right">
               <p>Made in India</p>
               <p>For India’s builders</p>
               <p className="text-bone/70">
@@ -97,9 +108,9 @@ export default function Closing() {
             ))}
           </div>
 
-          <div className="mt-6 flex flex-wrap justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/35">
+          <div className="mt-6 flex flex-wrap justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-bone/35">
             <span>© 2026 Vera AI</span>
-            <span>Vera — Latin for “true”</span>
+            <span>Vera is Latin for “true”</span>
           </div>
         </div>
       </footer>

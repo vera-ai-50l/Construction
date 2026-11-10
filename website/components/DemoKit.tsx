@@ -47,12 +47,12 @@ export function Pipeline({ nodes, step, workflow }: { nodes: string[]; step: num
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">n8n workflow</p>
+        <p className="text-[10px] uppercase tracking-[0.2em] text-bone/40">n8n workflow</p>
         <a
           href={`${N8N}/workflow/${workflow}`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40 transition-colors hover:text-hivis"
+          className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-bone/40 transition-colors hover:text-hivis"
         >
           Open canvas <ArrowSquareOut size={12} weight="light" />
         </a>

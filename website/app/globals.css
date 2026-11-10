@@ -38,8 +38,9 @@
   --color-hivis: #ff5b1f;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  /* One typeface across the site: anything still asking for mono or serif gets Geist too. */
+  --font-mono: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-deva: var(--font-noto-deva), var(--font-geist-sans), sans-serif;
 
   --ease-vera: cubic-bezier(0.32, 0.72, 0, 1);

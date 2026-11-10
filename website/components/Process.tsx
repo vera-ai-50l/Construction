@@ -1,138 +1,77 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "motion/react";
-import { useEffect, useRef, useState } from "react";
-import { Eyebrow, Words } from "./ui";
+import { Eyebrow, Reveal, Words } from "./ui";
 
 const STEPS = [
   {
     when: "Week 1",
-    code: "W1",
     title: "Free leak check",
-    body: "Send POs, challans, the stock register and BOQ for one site — Excel, or just photos of the paper registers.",
-    out: "A rupee figure on the table within a week.",
+    body: "Send POs, challans, the stock register and the BOQ for one site. Excel or photos of the paper registers both work.",
+    out: "A rupee figure within a week.",
   },
   {
-    when: "Weeks 2–3",
-    code: "W3",
-    title: "Setup, on one site",
-    body: "We map your formats, onboard supervisors to one WhatsApp number and test everything on a single site first.",
+    when: "Weeks 2 to 3",
+    title: "Setup on one site",
+    body: "We map your formats, put supervisors on one WhatsApp number and test everything on a single site first.",
     out: "No new app. No training days.",
   },
   {
     when: "Month 1",
-    code: "M1",
     title: "Site Record Desk live",
-    body: "Daily record, 8 AM owner summary, weekly claim-ready PDF and a monthly import file for Tally or your ERP.",
-    out: "Target: 90%+ supervisors reporting every day.",
+    body: "Daily record, an 8 AM owner summary, a weekly claim-ready PDF and a monthly file for Tally or your ERP.",
+    out: "Target: 90% of supervisors reporting daily.",
   },
   {
-    when: "Month 2–3",
-    code: "M2",
-    title: "Bill-to-Cash",
-    body: "Running bills built straight from the record, then tracked and chased until the money lands.",
-    out: "Fewer days from work done to bill submitted.",
-  },
-  {
-    when: "Month 3+",
-    code: "M3",
-    title: "Project Control",
-    body: "A senior PM from a large EPC firm reviews plan vs actual, cost to finish and cash — with you, every week.",
-    out: "A 13-week cash forecast you can take to the bank.",
-  },
-  {
-    when: "Whenever",
-    code: "∞",
-    title: "Claim File",
-    body: "When a dispute starts, the evidence already exists. We assemble it for your lawyer.",
-    out: "Your record becomes your case.",
+    when: "Month 2 onwards",
+    title: "Add what pays",
+    body: "Bill-to-Cash, project control or a claim file, each built on the record you already have.",
+    out: "One desk at a time.",
   },
 ];
 
 export default function Process() {
-  const ref = useRef<HTMLElement>(null);
-  const track = useRef<HTMLDivElement>(null);
-  const [dist, setDist] = useState(0);
-
-  useEffect(() => {
-    const el = track.current;
-    if (!el) return;
-    const measure = () => setDist(Math.max(0, el.scrollWidth - window.innerWidth));
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  const x = useTransform(scrollYProgress, (v) => -v * dist);
-
   return (
-    <section
-      ref={ref}
-      id="process"
-      className="relative -mt-10 rounded-t-[2.5rem] bg-ink"
-      style={{ height: `calc(100dvh + ${dist}px)` }}
-    >
-      <div className="sticky top-0 flex h-[100dvh] flex-col justify-center overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 blueprint [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
-        <motion.div ref={track} style={{ x }} className="relative flex w-max items-stretch gap-5 px-4 md:px-10">
-          <div className="flex w-[85vw] flex-col justify-center pr-6 md:w-[40vw] md:pr-16">
-            <Eyebrow>04 — How we work</Eyebrow>
+    <section id="process" className="relative -mt-10 rounded-t-[2.5rem] bg-ink px-4 py-24 md:px-10 md:py-32">
+      <div className="mx-auto max-w-[1440px]">
+        <div className="grid gap-8 md:grid-cols-12 md:items-end">
+          <div className="md:col-span-7">
+            <Eyebrow>How we work</Eyebrow>
             <Words
-              text="Free first. *No new app.* | Live in three weeks."
-              className="mt-6 text-[clamp(2.4rem,5vw,5.2rem)] font-medium leading-[0.95] tracking-[-0.05em]"
+              text="Free first. No new app. | *Live in three weeks.*"
+              className="mt-6 text-[clamp(2.25rem,4.5vw,4.5rem)] font-medium leading-[0.98] tracking-[-0.045em]"
             />
-            <p className="mt-6 max-w-[40ch] text-bone/55 md:text-lg">
-              We never put five products in front of you at once. One leak check, one rupee figure — then each desk
+          </div>
+          <Reveal className="md:col-span-5" delay={0.15}>
+            <p className="max-w-[42ch] text-bone/55 md:text-lg">
+              We never put every product in front of you at once. One leak check and one rupee figure, then each desk
               earns the next.
             </p>
-            <p className="mt-10 font-mono text-[11px] uppercase tracking-[0.2em] text-bone/35">Scroll →</p>
-          </div>
+          </Reveal>
+        </div>
 
+        <ol className="mt-14 grid gap-4 sm:grid-cols-2 md:mt-20 lg:grid-cols-4">
           {STEPS.map((s, i) => (
-            <article key={s.title} className="w-[80vw] shrink-0 sm:w-[60vw] md:w-[30vw] md:min-w-[360px]">
-              <div className="h-full rounded-[2rem] bg-white/[0.035] p-1.5 ring-1 ring-white/10">
-                <div className="flex h-full min-h-[440px] flex-col justify-between rounded-[calc(2rem-0.375rem)] bg-ink-2 p-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] md:min-h-[500px] md:p-9">
-                  <div className="flex items-start justify-between">
-                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.15em] text-bone/70 ring-1 ring-white/10">
+            <Reveal key={s.title} delay={i * 0.08}>
+              <li className="h-full rounded-[2rem] bg-white/[0.035] p-1.5 ring-1 ring-white/10">
+                <div className="flex h-full flex-col rounded-[calc(2rem-0.375rem)] bg-ink-2 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] md:p-7">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-bone/70 ring-1 ring-white/10">
                       {s.when}
                     </span>
-                    <span className="font-mono text-xs text-bone/30">0{i + 1}</span>
+                    <span className={`text-sm font-medium tabular-nums ${i === 0 ? "text-hivis" : "text-bone/30"}`}>
+                      0{i + 1}
+                    </span>
                   </div>
-                  <p
-                    className={`font-serif text-[clamp(5rem,9vw,8.5rem)] italic leading-none tracking-[-0.04em] ${i === 0 ? "text-hivis" : "text-transparent [-webkit-text-stroke:1px_color-mix(in_oklab,var(--bone)_35%,transparent)]"}`}
-                  >
-                    {s.code}
-                  </p>
-                  <div>
-                    <h3 className="text-[1.75rem] font-medium leading-tight tracking-[-0.035em]">{s.title}</h3>
-                    <p className="mt-3 leading-relaxed text-bone/55">{s.body}</p>
-                    <p className="mt-6 border-t border-white/[0.08] pt-4 text-sm text-bone/85">
-                      <span className="text-hivis">→ </span>
-                      {s.out}
-                    </p>
+                  <h3 className="mt-10 text-2xl font-medium leading-tight tracking-[-0.03em]">{s.title}</h3>
+                  <p className="mt-3 text-[15px] leading-relaxed text-bone/55">{s.body}</p>
+                  <div className="mt-auto pt-6">
+                    <p className="border-t border-white/[0.08] pt-4 text-sm text-bone/85">{s.out}</p>
                   </div>
                 </div>
-              </div>
-            </article>
+              </li>
+            </Reveal>
           ))}
-          <div className="w-[10vw] shrink-0" />
-        </motion.div>
-
-        <div className="relative mx-4 mt-10 md:mx-10">
-          <div className="h-px bg-white/10" />
-          <motion.div style={{ scaleX: scrollYProgress }} className="absolute inset-x-0 top-0 h-px origin-left bg-hivis" />
-          <div className="mt-4 hidden justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-bone/35 md:flex">
-            {STEPS.map((s) => (
-              <span key={s.when}>{s.when}</span>
-            ))}
-          </div>
-        </div>
+        </ol>
       </div>
     </section>
   );

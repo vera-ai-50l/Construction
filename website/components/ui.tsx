@@ -1,6 +1,7 @@
 "use client";
 
 import Lenis from "lenis";
+import Booking from "./Booking";
 import { ArrowUpRight, Moon, Sun } from "@phosphor-icons/react";
 import {
   AnimatePresence,
@@ -15,11 +16,41 @@ import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type Mouse
 export const EASE = [0.22, 1, 0.36, 1] as const;
 export const INTRO = 2.1; // seconds the preloader holds the stage
 
-// Swap these for the real booking links.
+/**
+ * Booking and contact details. An empty value hides that option on the site.
+ * - calendar: the Google Calendar appointment-schedule booking page (Calendar → Create → Appointment schedule → Share).
+ * - whatsapp: number in international format, digits only, e.g. "919876543210".
+ * - linkedin: the company page, shown in the footer.
+ */
 export const CONTACT = {
-  whatsapp: "https://wa.me/910000000000",
-  email: "mailto:hello@example.com",
+  calendar: "",
+  whatsapp: "",
+  email: "",
+  linkedin: "",
 };
+
+export const WHATSAPP_MESSAGE =
+  "Hi Vera team, I'd like to book the free Material Leak Check for one of our sites.\nCompany: \nCity: ";
+
+export const whatsappHref = () =>
+  CONTACT.whatsapp ? `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}` : "";
+
+export const emailHref = () =>
+  CONTACT.email
+    ? `mailto:${CONTACT.email}?subject=${encodeURIComponent("Free Material Leak Check")}&body=${encodeURIComponent(
+        "Hi Vera team,\n\nI'd like to book the free Material Leak Check for one of our sites.\n\nCompany:\nCity:\nPhone:\n",
+      )}`
+    : "";
+
+/** Lenis is the page's smooth scroller; dialogs pause it while they are open. */
+let lenis: Lenis | null = null;
+let locks = 0; // dialogs can stack (booking over the demo), so count them
+export function lockScroll(on: boolean) {
+  locks = Math.max(0, locks + (on ? 1 : -1));
+  document.documentElement.style.overflow = locks ? "hidden" : "";
+  if (locks) lenis?.stop();
+  else lenis?.start();
+}
 
 export function formatINR(n: number) {
   const sign = n < 0 ? "−" : "";
@@ -29,7 +60,7 @@ export function formatINR(n: number) {
   return `${sign}₹${Math.round(a).toLocaleString("en-IN")}`;
 }
 
-/** "Every *rupee answer.*" → words, with *…* spans flagged for the serif italic. "|" is a line break. */
+/** "Every *rupee answer.*" → words, with *…* spans flagged as the accent. "|" is a line break. */
 export function parse(text: string) {
   let em = false;
   return text.split(" ").map((raw) => {
@@ -127,12 +158,16 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
 export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const lenis = new Lenis({ autoRaf: true, anchors: true, lerp: 0.09 });
-    return () => lenis.destroy();
+    lenis = new Lenis({ autoRaf: true, anchors: true, lerp: 0.09 });
+    return () => {
+      lenis?.destroy();
+      lenis = null;
+    };
   }, []);
   return (
     <MotionConfig reducedMotion="user">
       {children}
+      <Booking />
       <Cursor />
     </MotionConfig>
   );
@@ -141,7 +176,7 @@ export function Providers({ children }: { children: ReactNode }) {
 /**
  * Hover bubble. The system pointer stays visible (it never lags, however busy the 3D hero is);
  * this bubble only grows over links, buttons and [data-cursor] targets. Its position is written
- * straight to the DOM on every pointer event — no spring, no React render — so it keeps up.
+ * straight to the DOM on every pointer event (no spring, no React render), so it keeps up.
  */
 function Cursor() {
   const on = useMedia("(pointer: fine)");
@@ -243,7 +278,7 @@ export function Words({
             <span className="-mb-[0.14em] inline-block overflow-hidden pb-[0.14em] align-bottom">
               <motion.span
                 variants={wordVariants}
-                className={`inline-block ${it.em ? "font-serif font-normal italic tracking-[-0.02em]" : ""}`}
+                className={`inline-block ${it.em ? "text-hivis" : ""}`}
               >
                 {it.w}
               </motion.span>

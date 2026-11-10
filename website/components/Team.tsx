@@ -5,17 +5,21 @@ import { Eyebrow, Reveal, Words } from "./ui";
 
 type Member = {
   name: string;
+  college: string;
   linkedin: string;
-  /** Role or title as written on LinkedIn. Hidden while empty. */
-  role?: string;
-  /** Photo in /public/team, e.g. "/team/rishiraj-nath.jpg". Initials show until it is added. */
+  /** Photo in /public/team. Initials show until it is added. */
   photo?: string;
 };
 
 const TEAM: Member[] = [
-  { name: "Rishiraj Nath", linkedin: "https://www.linkedin.com/in/rishiraj-nath-964a29292/" },
-  { name: "Aditya Bhagat", linkedin: "https://www.linkedin.com/in/aditya-bhagat-3949073b1/" },
-  { name: "Shivam Vatkar", linkedin: "https://www.linkedin.com/in/shivam-vatkar-a29405281/" },
+  { name: "Rishiraj Nath", college: "IIM Calcutta", linkedin: "https://www.linkedin.com/in/rishiraj-nath-964a29292/" },
+  {
+    name: "Shivam Vatkar",
+    college: "IIM Calcutta",
+    linkedin: "https://www.linkedin.com/in/shivam-vatkar-a29405281/",
+    photo: "/team/shivam-vatkar.webp",
+  },
+  { name: "Aditya Bhagat", college: "IIM Indore", linkedin: "https://www.linkedin.com/in/aditya-bhagat-3949073b1/" },
 ];
 
 const BELIEFS = [
@@ -38,7 +42,7 @@ export default function Team() {
       <div className="mx-auto max-w-[1440px]">
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-6">
-            <Eyebrow>08 — About us</Eyebrow>
+            <Eyebrow>About us</Eyebrow>
             <Words
               text="Built for the people | who *build India.*"
               className="mt-6 text-[clamp(2.5rem,5.5vw,5.5rem)] font-medium leading-[0.95] tracking-[-0.05em]"
@@ -46,9 +50,9 @@ export default function Team() {
           </div>
           <Reveal className="lg:col-span-6 lg:pt-14" delay={0.15}>
             <p className="max-w-[52ch] text-bone/60 md:text-lg">
-              Vera is Latin for <span className="font-serif text-xl italic text-bone">true</span>. We’re building the
-              true record of every site for India’s mid-size contractors — the ₹50–500 Cr firms whose numbers still live
-              in WhatsApp chats, paper registers and one overworked accounts team.
+              Vera is Latin for “true”. We are building the true record of every site for India’s mid-size
+              contractors: the ₹50–500 Cr firms whose numbers still live in WhatsApp chats, paper registers and one
+              overworked accounts team.
             </p>
             <ul className="mt-10 grid gap-6 border-t border-white/[0.08] pt-8 sm:grid-cols-3">
               {BELIEFS.map(([k, v]) => (
@@ -63,9 +67,9 @@ export default function Team() {
 
         <div className="mt-24 flex items-end justify-between gap-6 border-t border-white/[0.08] pt-10 md:mt-32">
           <h3 className="text-[clamp(2rem,3.6vw,3.25rem)] font-medium leading-none tracking-[-0.045em]">
-            Meet the <span className="font-serif font-normal italic text-hivis">team</span>
+            Meet the <span className="text-hivis">team</span>
           </h3>
-          <p className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-bone/40 md:block">
+          <p className="hidden text-[11px] uppercase tracking-[0.2em] text-bone/40 md:block">
             Tap a photo for LinkedIn
           </p>
         </div>
@@ -89,7 +93,7 @@ export default function Team() {
                         src={m.photo}
                         alt={m.name}
                         loading="lazy"
-                        className="size-full object-cover grayscale transition-[transform,filter] duration-700 ease-vera group-hover:scale-[1.04] group-hover:grayscale-0"
+                        className="size-full object-cover object-top transition-transform duration-700 ease-vera group-hover:scale-[1.04]"
                       />
                     ) : (
                       <div className="flex size-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(255,91,31,0.18),transparent_60%)] transition-transform duration-700 ease-vera group-hover:scale-[1.04]">
@@ -112,7 +116,7 @@ export default function Team() {
                   </div>
                   <div className="px-4 pb-4 pt-5">
                     <p className="text-xl font-medium tracking-[-0.03em]">{m.name}</p>
-                    {m.role && <p className="mt-1 text-sm text-bone/50">{m.role}</p>}
+                    <p className="mt-1 text-sm text-bone/50">{m.college}</p>
                   </div>
                 </a>
               </li>

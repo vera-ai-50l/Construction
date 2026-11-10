@@ -8,8 +8,6 @@ const LINKS = [
   ["The leak", "#leak"],
   ["Desks", "#desks"],
   ["How we work", "#process"],
-  ["Savings", "#savings"],
-  ["Pricing", "#pricing"],
   ["Team", "#team"],
 ] as const;
 
@@ -47,7 +45,7 @@ export default function Nav() {
           <a href="#top" className="flex items-center gap-2.5" aria-label="Vera AI home">
             <Logo />
             <span className="text-[15px] font-semibold tracking-[-0.03em]">Vera</span>
-            <span className="rounded-full bg-white/5 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.15em] text-bone/45">
+            <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.15em] text-bone/45">
               AI
             </span>
           </a>
@@ -113,7 +111,7 @@ export default function Nav() {
                     className="flex items-baseline justify-between py-3 text-[2.6rem] font-medium leading-tight tracking-[-0.045em]"
                   >
                     {label}
-                    <span className="font-mono text-xs text-bone/35">0{i + 1}</span>
+                    <span className="text-xs text-bone/35">0{i + 1}</span>
                   </motion.a>
                 </li>
               ))}

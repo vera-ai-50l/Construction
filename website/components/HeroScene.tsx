@@ -23,6 +23,7 @@ const PALETTE = {
     slab: "#36322c", col: "#4a453e", wall: "#2a2722", core: "#24211d",
     edge: "#f4f1ec", edgeA: 0.2, crane: "#f4f1ec", craneA: 0.32,
     body: "#9a9388", bag: "#4d4840", steel: "#7a7368", pile: "#302c26", cabin: "#2f2b26", truck: "#3d3933", cab: "#5a554d",
+    glass: "#33424a", glassA: 0.72, lit: "#ffcf8a", scaffold: "#8a8277", scaffoldA: 0.42,
     sky: "#fff1e0", earth: "#0a0a09", hemi: 1.1, sun: 2.4, additive: true,
     levels: 16, dither: 0.06, grain: 0.035,
   },
@@ -31,6 +32,7 @@ const PALETTE = {
     slab: "#f7f4ef", col: "#d2cbbf", wall: "#c9c1b4", core: "#bab2a5",
     edge: "#2a2620", edgeA: 0.38, crane: "#25221d", craneA: 0.62,
     body: "#3f3a33", bag: "#d8d0c2", steel: "#5f5950", pile: "#c2b8a8", cabin: "#d9d2c6", truck: "#4a453e", cab: "#ebe6de",
+    glass: "#8fa3ad", glassA: 0.6, lit: "#ffb35c", scaffold: "#6b645a", scaffoldA: 0.5,
     sky: "#ffffff", earth: "#b9b0a2", hemi: 1.9, sun: 2.2, additive: false,
     levels: 9, dither: 0.11, grain: 0.05,
   },
@@ -46,7 +48,28 @@ const smooth = (t: number) => {
 const scanY = (s: number) => -0.3 + s * (TOP + 0.9);
 
 // Per-frame shared state, written by the Director before anything else reads it.
-const S = { t: 0, intro: 0, c: -1, hold: 0, sweep: -99, vis: STEPS.map(() => 0) };
+const S = { t: 0, intro: 0, c: -1, hold: 0, sweep: -99, vis: STEPS.map(() => 0), build: 0 };
+
+// Construction schedule, as a share of the whole build (S.build, 0 to 1).
+// Foundation first, then floor by floor (slab lowered in, columns rise), walls two floors behind, glass last.
+const FLOOR0 = 0.1;
+const FLOOR_STEP = 0.062;
+const FLOOR_SPAN = 0.075;
+const foundP = () => clamp01(S.build / FLOOR0);
+const floorP = (i: number) => clamp01((S.build - (FLOOR0 + i * FLOOR_STEP)) / FLOOR_SPAN);
+const wallP = (i: number) => clamp01((S.build - (0.2 + i * FLOOR_STEP)) / 0.06);
+const glassP = (i: number) => clamp01((S.build - (0.86 + i * 0.009)) / 0.03);
+const roofP = () => clamp01((S.build - (FLOOR0 + FLOORS * FLOOR_STEP)) / 0.04);
+const litP = () => clamp01((S.build - 0.975) / 0.025);
+/** Floors whose slab and columns are both finished. */
+const floorsDone = () => {
+  let n = 0;
+  while (n < FLOORS && floorP(n) >= 1) n++;
+  return n;
+};
+/** Height of the deck the crew is working on: the newest slab, or the roof once it is poured. */
+const deckY = () => (roofP() > 0.5 ? TOP : Math.min(floorsDone(), FLOORS - 1) * H) + 0.045;
+const building = () => S.build > 0.02 && S.build < 0.9;
 const pointer = { x: 0, y: 0 };
 
 /** Scroll → camera path, view offset, fog, and the DOM labels pinned to 3D anchors. */
@@ -80,6 +103,12 @@ function Director({ progress, scan, mobile }: { progress: MotionValue<number>; s
     S.hold = scan.get() * (1 - intro); // the hold-to-scan belongs to the hero; scrolling clears it
     for (let k = 0; k < n; k++) S.vis[k] = clamp01((c - k) / 0.3) * (k === n - 1 ? 1 : clamp01((k + 1.08 - c) / 0.16));
     S.sweep = c >= 0 && c < 1.05 ? -8 + 16 * smooth((c - 0.05) / 0.85) : -99;
+
+    // The building grows through each step, from the last step's stage to this one's.
+    const ci = c < 0 ? -1 : Math.min(Math.floor(c), n - 1);
+    const b0 = ci <= 0 ? 0.02 : STEPS[ci - 1].build;
+    const target = ci < 0 ? 0.02 * clamp01(intro * 3) : b0 + (STEPS[ci].build - b0) * smooth(clamp01((c - ci) / 0.85));
+    S.build += (target - S.build) * (1 - Math.exp(-dt * 1.8));
 
     const k = 1 - Math.exp(-dt * 2.5);
     v.sm.x += (pointer.x - v.sm.x) * k;
@@ -254,8 +283,37 @@ function useTowerGeo() {
     for (let k = 0; k < 2; k++)
       [-W / 2, W / 2].forEach((x) => walls.push(box(0.08, sill, D / 2 - 0.13, x, 0.045 + sill / 2, zs[k] + D / 4)));
     const slab = new THREE.BoxGeometry(W + 0.14, 0.09, D + 0.14);
+    // Glazing band above the sill on all four faces.
+    const g0 = 0.045 + sill;
+    const gh = H - 0.09 - sill;
+    const glass = mergeGeometries([
+      box(W - 0.05, gh, 0.025, 0, g0 + gh / 2, D / 2 + 0.03),
+      box(W - 0.05, gh, 0.025, 0, g0 + gh / 2, -D / 2 - 0.03),
+      box(0.025, gh, D - 0.05, W / 2 + 0.03, g0 + gh / 2, 0),
+      box(0.025, gh, D - 0.05, -W / 2 - 0.03, g0 + gh / 2, 0),
+    ]);
+    // Mullions: thin vertical lines across the glass.
+    const mull: number[] = [];
+    for (let k = 1; k < 9; k++) {
+      const x = -W / 2 + (k * W) / 9;
+      mull.push(x, g0, D / 2 + 0.045, x, g0 + gh, D / 2 + 0.045, x, g0, -D / 2 - 0.045, x, g0 + gh, -D / 2 - 0.045);
+    }
+    for (let k = 1; k < 6; k++) {
+      const z = -D / 2 + (k * D) / 6;
+      mull.push(W / 2 + 0.045, g0, z, W / 2 + 0.045, g0 + gh, z, -W / 2 - 0.045, g0, z, -W / 2 - 0.045, g0 + gh, z);
+    }
+    const parapet = mergeGeometries([
+      box(W + 0.14, 0.22, 0.06, 0, 0.11, D / 2 + 0.04),
+      box(W + 0.14, 0.22, 0.06, 0, 0.11, -D / 2 - 0.04),
+      box(0.06, 0.22, D + 0.14, W / 2 + 0.04, 0.11, 0),
+      box(0.06, 0.22, D + 0.14, -W / 2 - 0.04, 0.11, 0),
+      box(0.9, 0.45, 0.7, -W / 2 + 0.6, 0.225, -D / 2 + 0.55),
+    ]);
     return {
       slab,
+      glass,
+      mullions: new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(mull, 3)),
+      parapet,
       slabEdges: new THREE.EdgesGeometry(slab),
       cols: mergeGeometries(cols),
       walls: mergeGeometries(walls),
@@ -276,20 +334,56 @@ function floorGlow(i: number) {
 
 function Tower({ P, geo }: { P: Pal; geo: TowerGeo }) {
   const core = useRef<THREE.Group>(null!);
+  const found = useRef<THREE.Group>(null!);
+  const roof = useRef<THREE.Group>(null!);
   const coreH = TOP - H * 0.5;
   useFrame(() => {
-    const p = ease((S.t - START) / (FLOORS * 0.12 + 1));
-    core.current.scale.y = Math.max(p, 0.001);
+    // Lift core climbs a little ahead of the slabs.
+    const work = Math.min(floorsDone() + 1.4, FLOORS) * H;
+    const target = S.build < FLOOR0 ? 0.001 : Math.min(work / coreH, 1);
+    core.current.scale.y += (Math.max(target, 0.001) - core.current.scale.y) * 0.08;
+    const f = ease(foundP());
+    found.current.position.y = -0.32 * (1 - f);
+    found.current.visible = f > 0.001;
+    const r = ease(roofP());
+    roof.current.visible = r > 0.001;
+    roof.current.position.y = TOP + (1 - r) * 1.6;
   });
   return (
     <group>
+      {/* Raft foundation and pile caps, pushed up out of the excavation. */}
+      <group ref={found}>
+        <mesh position-y={-0.02} receiveShadow castShadow>
+          <boxGeometry args={[W + 0.9, 0.12, D + 0.9]} />
+          <meshLambertMaterial color={P.core} />
+        </mesh>
+        {[-1, 1].map((sx) =>
+          [-1, 1].map((sz) => (
+            <mesh key={`${sx}${sz}`} position={[sx * (W / 2 + 0.2), 0.04, sz * (D / 2 + 0.2)]} castShadow>
+              <boxGeometry args={[0.5, 0.12, 0.5]} />
+              <meshLambertMaterial color={P.col} />
+            </mesh>
+          )),
+        )}
+      </group>
       {Array.from({ length: FLOORS }, (_, i) => (
         <Floor key={i} i={i} P={P} geo={geo} />
       ))}
-      <group ref={core} position={[-W / 2 + 0.55, 0, -D / 2 + 0.5]}>
+      <group ref={core} position={[-W / 2 + 0.55, 0, -D / 2 + 0.5]} scale-y={0.001}>
         <mesh position-y={coreH / 2} castShadow receiveShadow>
           <boxGeometry args={[0.9, coreH, 0.85]} />
           <meshLambertMaterial color={P.core} />
+        </mesh>
+      </group>
+      <group ref={roof}>
+        <mesh geometry={geo.slab} castShadow receiveShadow>
+          <meshLambertMaterial color={P.slab} />
+        </mesh>
+        <lineSegments geometry={geo.slabEdges}>
+          <lineBasicMaterial color={P.edge} transparent opacity={P.edgeA} />
+        </lineSegments>
+        <mesh geometry={geo.parapet} castShadow>
+          <meshLambertMaterial color={P.col} />
         </mesh>
       </group>
     </group>
@@ -298,66 +392,189 @@ function Tower({ P, geo }: { P: Pal; geo: TowerGeo }) {
 
 function Floor({ i, P, geo }: { i: number; P: Pal; geo: TowerGeo }) {
   const g = useRef<THREE.Group>(null!);
+  const slab = useRef<THREE.Group>(null!);
+  const cols = useRef<THREE.Mesh>(null!);
+  const bars = useRef<THREE.LineSegments>(null!);
+  const walls = useRef<THREE.Mesh>(null!);
+  const glass = useRef<THREE.Group>(null!);
   const m = useMemo(
-    () => ({ slab: new THREE.MeshLambertMaterial(), edge: new THREE.LineBasicMaterial({ transparent: true }) }),
+    () => ({
+      slab: new THREE.MeshLambertMaterial(),
+      edge: new THREE.LineBasicMaterial({ transparent: true }),
+      glass: new THREE.MeshLambertMaterial({ transparent: true, depthWrite: false }),
+      mull: new THREE.LineBasicMaterial({ transparent: true }),
+    }),
     [],
   );
-  useEffect(() => () => (m.slab.dispose(), m.edge.dispose()), [m]);
-  const top = i === FLOORS - 1;
+  useEffect(() => () => Object.values(m).forEach((x) => x.dispose()), [m]);
+  // Each floor's windows light up a touch differently once the building is handed over.
+  const warm = useMemo(() => 0.55 + ((i * 37) % 10) / 22, [i]);
 
   useFrame(() => {
-    const p = ease((S.t - START - i * 0.12) / 1);
-    g.current.visible = p > 0.001;
-    g.current.position.y = i * H + (1 - p) * 2.4;
+    const fp = floorP(i);
+    g.current.visible = fp > 0.001;
+    if (!g.current.visible) return;
+    // Slab is lowered into place by the crane, then the columns rise from it.
+    const sp = clamp01(fp / 0.5);
+    slab.current.position.y = (1 - ease(sp)) * 1.6;
+    const cp = clamp01((fp - 0.45) / 0.55);
+    cols.current.scale.y = Math.max(ease(cp), 0.001);
+    cols.current.visible = cp > 0.001;
+    bars.current.visible = fp > 0.35 && fp < 0.98 && S.build < 0.86;
+    const wp = wallP(i);
+    walls.current.visible = wp > 0.001;
+    walls.current.scale.y = Math.max(ease(wp), 0.001);
+    const gp = glassP(i);
+    glass.current.visible = gp > 0.001;
+    glass.current.scale.y = Math.max(ease(gp), 0.001);
+
     const glow = floorGlow(i);
     m.slab.color.set(P.slab);
     m.slab.emissive.copy(HIVIS).multiplyScalar(glow * 0.4);
     m.edge.color.set(P.edge).lerp(HIVIS, glow);
     m.edge.opacity = P.edgeA + glow * (1 - P.edgeA);
+    const lit = litP();
+    m.glass.color.set(P.glass);
+    m.glass.opacity = P.glassA * gp;
+    m.glass.emissive.set(P.lit).multiplyScalar(lit * warm * (P.additive ? 0.55 : 0.25));
+    m.mull.color.set(P.edge);
+    m.mull.opacity = P.edgeA * 1.2 * gp;
   });
 
   return (
-    <group ref={g}>
-      <mesh geometry={geo.slab} material={m.slab} castShadow receiveShadow />
-      <lineSegments geometry={geo.slabEdges} material={m.edge} />
-      {top ? (
-        <lineSegments geometry={geo.rebar}>
-          <lineBasicMaterial color={HIVIS} />
-        </lineSegments>
-      ) : (
-        <mesh geometry={geo.cols} castShadow receiveShadow>
-          <meshLambertMaterial color={P.col} />
-        </mesh>
-      )}
-      {i <= 7 && (
-        <mesh geometry={geo.walls} castShadow receiveShadow>
-          <meshLambertMaterial color={P.wall} />
-        </mesh>
-      )}
+    <group ref={g} position-y={i * H}>
+      <group ref={slab}>
+        <mesh geometry={geo.slab} material={m.slab} castShadow receiveShadow />
+        <lineSegments geometry={geo.slabEdges} material={m.edge} />
+      </group>
+      <lineSegments ref={bars} geometry={geo.rebar}>
+        <lineBasicMaterial color={HIVIS} />
+      </lineSegments>
+      <mesh ref={cols} geometry={geo.cols} castShadow receiveShadow>
+        <meshLambertMaterial color={P.col} />
+      </mesh>
+      <mesh ref={walls} geometry={geo.walls} castShadow receiveShadow>
+        <meshLambertMaterial color={P.wall} />
+      </mesh>
+      <group ref={glass}>
+        <mesh geometry={geo.glass} material={m.glass} />
+        <lineSegments geometry={geo.mullions} material={m.mull} />
+      </group>
     </group>
   );
 }
 
-/** Planned floors, drawn ahead of the pour: the 13-week view. */
+/** The plan: every floor still to be built, drawn as a faint outline that fills in as the work arrives. */
 function Ghosts({ geo }: { geo: TowerGeo }) {
   const refs = useRef<(THREE.Group | null)[]>([]);
-  const mats = useMemo(() => [0, 1, 2].map(() => new THREE.LineBasicMaterial({ color: HIVIS, transparent: true, opacity: 0 })), []);
-  const colLines = useMemo(() => new THREE.EdgesGeometry(geo.cols), [geo]);
+  const mats = useMemo(
+    () => Array.from({ length: FLOORS + 1 }, () => new THREE.LineBasicMaterial({ color: HIVIS, transparent: true, opacity: 0 })),
+    [],
+  );
+  const outline = useMemo(() => new THREE.EdgesGeometry(new THREE.BoxGeometry(W + 0.14, TOP, D + 0.14)), []);
   useFrame(() => {
+    const show = clamp01((S.intro - 0.2) / 0.5) + (S.c >= 0 ? 1 : 0);
     mats.forEach((mat, j) => {
-      const v = smooth(S.vis[5] * 1.6 - j * 0.25);
-      mat.opacity = v * (0.85 - j * 0.2);
+      const left = j < FLOORS ? 1 - floorP(j) : 1 - roofP();
+      mat.opacity = Math.min(show, 1) * left * 0.13;
       const g = refs.current[j];
-      if (g) g.position.y = TOP + j * H + (1 - v) * 0.9;
+      if (g) g.visible = mat.opacity > 0.003;
     });
   });
   return (
     <>
+      <lineSegments geometry={outline} material={mats[FLOORS]} position-y={TOP / 2} />
       {mats.map((mat, j) => (
-        <group key={j} ref={(el) => void (refs.current[j] = el)}>
+        <group key={j} ref={(el) => void (refs.current[j] = el)} position-y={j * H}>
           <lineSegments geometry={geo.slabEdges} material={mat} />
-          <lineSegments geometry={colLines} material={mat} />
         </group>
+      ))}
+    </>
+  );
+}
+
+/** Scaffold that climbs with the work: two storeys of tube around the floor being built. */
+function Scaffold({ P }: { P: Pal }) {
+  const g = useRef<THREE.Group>(null!);
+  const { geo, mat } = useMemo(() => {
+    const pts: number[] = [];
+    const o = 0.32;
+    const x0 = -W / 2 - o, x1 = W / 2 + o, z0 = -D / 2 - o, z1 = D / 2 + o;
+    const hgt = 2 * H;
+    const ring = (y: number) =>
+      pts.push(x0, y, z0, x1, y, z0, x1, y, z0, x1, y, z1, x1, y, z1, x0, y, z1, x0, y, z1, x0, y, z0);
+    for (let k = 0; k <= 4; k++) ring((k * hgt) / 4);
+    const nx = 9, nz = 6;
+    for (let k = 0; k <= nx; k++) {
+      const x = x0 + ((x1 - x0) * k) / nx;
+      pts.push(x, 0, z0, x, hgt, z0, x, 0, z1, x, hgt, z1);
+      if (k < nx) {
+        const xn = x0 + ((x1 - x0) * (k + 1)) / nx;
+        pts.push(x, 0, z1, xn, hgt / 2, z1, x, hgt / 2, z0, xn, hgt, z0);
+      }
+    }
+    for (let k = 0; k <= nz; k++) {
+      const z = z0 + ((z1 - z0) * k) / nz;
+      pts.push(x0, 0, z, x0, hgt, z, x1, 0, z, x1, hgt, z);
+    }
+    return {
+      geo: new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pts, 3)),
+      mat: new THREE.LineBasicMaterial({ transparent: true, opacity: 0 }),
+    };
+  }, []);
+  useFrame(() => {
+    const on = clamp01((S.build - FLOOR0) / 0.05) * (1 - clamp01((S.build - 0.84) / 0.05));
+    mat.color.set(P.scaffold);
+    mat.opacity = on * P.scaffoldA;
+    g.current.visible = on > 0.01;
+    const top = Math.min(floorsDone() + 1, FLOORS) * H;
+    const y = Math.max(top - 2 * H, 0);
+    g.current.position.y += (y - g.current.position.y) * 0.05;
+  });
+  return (
+    <group ref={g}>
+      <lineSegments geometry={geo} material={mat} />
+    </group>
+  );
+}
+
+/** Welding and grinding at the columns of the floor being built. */
+function Sparks() {
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const N = 7;
+  const mats = useMemo(
+    () =>
+      Array.from({ length: N }, () => {
+        const m = new THREE.MeshBasicMaterial({ color: "#ffb36b", transparent: true, opacity: 0, depthWrite: false });
+        m.blending = THREE.AdditiveBlending;
+        return m;
+      }),
+    [],
+  );
+  const geo = useMemo(() => new THREE.SphereGeometry(0.035, 8, 8), []);
+  const spots = useMemo(() => {
+    const out: [number, number][] = [];
+    [0, 1, 2, 3].forEach((k) => [-D / 2, 0, D / 2].forEach((z) => out.push([-W / 2 + (k * W) / 3, z])));
+    return out;
+  }, []);
+  useFrame(() => {
+    const on = building() && S.build > FLOOR0 ? 1 : 0;
+    const y = Math.min(floorsDone(), FLOORS - 1) * H + H * 0.55;
+    for (let k = 0; k < N; k++) {
+      const mesh = refs.current[k];
+      if (!mesh) continue;
+      const slot = Math.floor(S.t * 2.2 + k * 1.37);
+      const [x, z] = spots[(slot * 7 + k * 5) % spots.length];
+      const flick = Math.max(0, Math.sin(S.t * (23 + k * 3) + k)) * Math.max(0, Math.sin(S.t * 1.9 + k * 2.1));
+      mats[k].opacity = on * flick;
+      mesh.position.set(x + Math.sin(S.t * 31 + k) * 0.05, y + Math.cos(S.t * 27 + k) * 0.06, z);
+      mesh.scale.setScalar(0.6 + flick);
+    }
+  });
+  return (
+    <>
+      {mats.map((m, k) => (
+        <mesh key={k} ref={(el) => void (refs.current[k] = el)} geometry={geo} material={m} />
       ))}
     </>
   );
@@ -433,11 +650,12 @@ function Leaks({ P }: { P: Pal }) {
       const hold = !yard && S.hold > 0 && y >= py ? 1 : 0;
       // Step 1's sweep reveals the tower leaks; step 3 lights them all, yard included.
       const swept = !yard && S.c >= 0 && S.c < 1.2 && S.sweep > x ? 1 - S.vis[1] : 0;
-      const hit = Math.max(hold, swept, S.vis[2]);
+      const built = yard || floorP(LEAKS[k][1]) >= 1 ? 1 : 0;
+      const hit = Math.max(hold, swept, S.vis[2]) * built;
       const idle = yard ? 0 : ease((t - START - 2 - k * 0.2) / 1) * 0.4 * (1 - S.intro);
       const pulse = 0.5 + 0.5 * Math.sin(t * 3 + k * 1.7);
-      mats[k].core.opacity = Math.max(idle * pulse, hit);
-      mats[k].halo.opacity = hit * (0.1 + 0.12 * pulse) * (P.additive ? 1 : 0.9) + idle * 0.06 * pulse;
+      mats[k].core.opacity = Math.max(idle * pulse * built, hit);
+      mats[k].halo.opacity = hit * (0.1 + 0.12 * pulse) * (P.additive ? 1 : 0.9) + idle * 0.06 * pulse * built;
       refs.current[k]?.scale.setScalar(1 + hit * (yard ? 0.7 : 0.4) * pulse);
     });
   });
@@ -531,16 +749,30 @@ function lattice(len: number, w: number, axis: "x" | "y") {
   return new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
 }
 
+// Where the crane works, as slew angle and trolley distance from the mast.
+const angleTo = (x: number, z: number) => {
+  const dx = x - CRANE[0];
+  const dz = z - CRANE[2];
+  return { a: Math.atan2(dz, -dx), d: Math.hypot(dx, dz) };
+};
+const PICK = angleTo(TRUCK[0] + 0.15, TRUCK[2] - 0.1);
+const DROP = angleTo(0.4, 0.3);
+const CYCLE = 10; // seconds per lift
+const phase = (u: number, a: number, b: number) => smooth((u - a) / (b - a));
+
 function Crane({ P }: { P: Pal }) {
   const jibL = 6.4;
   const slew = useRef<THREE.Group>(null!);
   const trolley = useRef<THREE.Group>(null!);
+  const rope = useRef<THREE.Group>(null!);
+  const load = useRef<THREE.Mesh>(null!);
+  const hookBlock = useRef<THREE.Mesh>(null!);
   const parts = useMemo(() => {
     const ties = new THREE.BufferGeometry().setAttribute(
       "position",
       new THREE.Float32BufferAttribute([0, 1.4, 0, -jibL, 0.15, 0, 0, 1.4, 0, 2.2, 0.15, 0], 3),
     );
-    const hook = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, -2.4, 0], 3));
+    const hook = new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0, 0, -1, 0], 3));
     return {
       mast: lattice(CRANE_H, 0.38, "y"),
       head: lattice(1.4, 0.3, "y"),
@@ -551,13 +783,59 @@ function Crane({ P }: { P: Pal }) {
       line: new THREE.LineBasicMaterial({ transparent: true, opacity: 0 }),
     };
   }, []);
+  const st = useRef({ a: 0.6, d: 3.9, L: 1.2 });
 
-  useFrame(() => {
+  useFrame((_, dt) => {
     const t = S.t;
     parts.line.color.set(P.crane);
     parts.line.opacity = ease((t - START - 0.9) / 1.6) * P.craneA;
-    slew.current.rotation.y = 0.55 + Math.sin(t * 0.11) * 0.55;
-    trolley.current.position.x = -3.9 + Math.sin(t * 0.27) * 1.4;
+
+    // One lift: slew to the truck, lower, hook on, lift, slew to the deck, lower, unhook, raise.
+    const u = (((t - 2) % CYCLE) + CYCLE) % CYCLE / CYCLE;
+    const high = 1.2;
+    const toTruck = CRANE_H - 1.15;
+    const toDeck = Math.max(CRANE_H - deckY() - 0.5, high);
+    let a: number, d: number, L: number, carry: boolean;
+    if (u < 0.25) {
+      const k = phase(u, 0, 0.25);
+      a = DROP.a + (PICK.a - DROP.a) * k;
+      d = DROP.d + (PICK.d - DROP.d) * k;
+      L = high;
+      carry = false;
+    } else if (u < 0.45) {
+      a = PICK.a;
+      d = PICK.d;
+      L = u < 0.35 ? high + (toTruck - high) * phase(u, 0.25, 0.35) : toTruck + (high - toTruck) * phase(u, 0.35, 0.45);
+      carry = u >= 0.35;
+    } else if (u < 0.7) {
+      const k = phase(u, 0.45, 0.7);
+      a = PICK.a + (DROP.a - PICK.a) * k;
+      d = PICK.d + (DROP.d - PICK.d) * k;
+      L = high;
+      carry = true;
+    } else {
+      a = DROP.a;
+      d = DROP.d;
+      L = u < 0.8 ? high + (toDeck - high) * phase(u, 0.7, 0.8) : u < 0.9 ? toDeck + (high - toDeck) * phase(u, 0.8, 0.9) : high;
+      carry = u < 0.8;
+    }
+    if (!building()) {
+      // Frame finished: the crane parks and idles.
+      a = 0.55 + Math.sin(t * 0.11) * 0.25;
+      d = 3.9 + Math.sin(t * 0.27) * 0.6;
+      L = high;
+      carry = false;
+    }
+    const k = 1 - Math.exp(-dt * 6);
+    st.current.a += (a - st.current.a) * k;
+    st.current.d += (d - st.current.d) * k;
+    st.current.L += (L - st.current.L) * k;
+    slew.current.rotation.y = st.current.a;
+    trolley.current.position.x = -st.current.d;
+    rope.current.scale.y = st.current.L;
+    hookBlock.current.position.y = -st.current.L - 0.05;
+    load.current.position.y = -st.current.L - 0.22;
+    load.current.visible = carry;
   });
 
   return (
@@ -575,10 +853,21 @@ function Crane({ P }: { P: Pal }) {
           <meshLambertMaterial color={P.truck} />
         </mesh>
         <group ref={trolley}>
-          <lineSegments geometry={parts.hook} material={parts.line} />
-          <mesh position={[0, -2.5, 0]} castShadow>
-            <boxGeometry args={[0.5, 0.18, 0.3]} />
+          <mesh position-y={-0.12}>
+            <boxGeometry args={[0.32, 0.1, 0.3]} />
+            <meshLambertMaterial color={P.truck} />
+          </mesh>
+          <group ref={rope}>
+            <lineSegments geometry={parts.hook} material={parts.line} />
+          </group>
+          <mesh ref={hookBlock}>
+            <boxGeometry args={[0.14, 0.12, 0.14]} />
             <meshLambertMaterial color={HIVIS} />
+          </mesh>
+          {/* The load: a bundle of steel or a slab panel. */}
+          <mesh ref={load} castShadow>
+            <boxGeometry args={[0.9, 0.16, 0.45]} />
+            <meshLambertMaterial color={P.steel} />
           </mesh>
         </group>
       </group>
@@ -672,32 +961,46 @@ function Worker({ P }: { P: Pal }) {
 }
 
 // Supervisors and crew; the first stands on the 4th floor and sends the voice note.
-const CREW: [number, number, number][] = [
-  [1.25, 4 * H + 0.045, 1.05],
-  [-1.0, 10 * H + 0.045, 0.8],
-  [0.7, 10 * H + 0.045, -0.5],
-  [2.9, 0, 1.9],
-  [OFFICE[0] + 1.3, 0, OFFICE[2] + 0.9],
-  [TRUCK[0] - 1.2, 0, TRUCK[2] + 0.6],
-  [-0.4, 6 * H + 0.045, -0.9],
+// [x, floor, z]: floor is a storey index, -1 for the ground, or "deck" for the newest slab.
+const CREW: [number, number | "deck", number][] = [
+  [1.25, 4, 1.05],
+  [-1.0, "deck", 0.8],
+  [0.7, "deck", -0.5],
+  [2.9, -1, 1.9],
+  [OFFICE[0] + 1.3, -1, OFFICE[2] + 0.9],
+  [TRUCK[0] - 1.2, -1, TRUCK[2] + 0.6],
+  [-0.4, 6, -0.9],
 ];
 
 /** Each supervisor pings in when the 8 AM summary is being built. */
 function Crew({ P }: { P: Pal }) {
   const rings = useRef<(THREE.Mesh | null)[]>([]);
+  const people = useRef<(THREE.Group | null)[]>([]);
   const mats = useMemo(() => CREW.map(() => new THREE.MeshBasicMaterial({ color: HIVIS, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })), []);
   useFrame(() => {
-    CREW.forEach((_, k) => {
-      const f = (S.t * 0.55 + k * 0.17) % 1;
+    CREW.forEach(([x, f, z], k) => {
+      const g = people.current[k];
+      if (g) {
+        if (f === "deck") {
+          // Deck crew walk the newest slab while there is work on it.
+          g.visible = S.build > FLOOR0 + 0.04;
+          g.position.set(x + Math.sin(S.t * 0.5 + k * 2) * 0.9, deckY(), z + Math.cos(S.t * 0.37 + k) * 0.25);
+          g.rotation.y = Math.cos(S.t * 0.5 + k * 2) > 0 ? Math.PI / 2 : -Math.PI / 2;
+        } else {
+          g.visible = f < 0 || floorP(f) >= 1;
+          g.position.set(x, f < 0 ? 0 : f * H + 0.045, z);
+        }
+      }
+      const ph = (S.t * 0.55 + k * 0.17) % 1;
       const ring = rings.current[k];
-      if (ring) ring.scale.setScalar(1 + f * 4);
-      mats[k].opacity = S.vis[3] * (1 - f) * 0.9;
+      if (ring) ring.scale.setScalar(1 + ph * 4);
+      mats[k].opacity = S.vis[3] * (1 - ph) * 0.9;
     });
   });
   return (
     <>
-      {CREW.map(([x, y, z], k) => (
-        <group key={k} position={[x, y, z]} rotation-y={k * 1.3}>
+      {CREW.map((_, k) => (
+        <group key={k} ref={(el) => void (people.current[k] = el)} rotation-y={k * 1.3}>
           <Worker P={P} />
           <mesh ref={(el) => void (rings.current[k] = el)} rotation-x={-Math.PI / 2} position-y={0.02} material={mats[k]}>
             <ringGeometry args={[0.13, 0.16, 32]} />
@@ -737,33 +1040,56 @@ function Office({ P }: { P: Pal }) {
   );
 }
 
+const TRUCK_CYCLE = 20;
+const TRUCK_DIR = new THREE.Vector3(Math.cos(0.5), 0, -Math.sin(0.5));
+
 function Truck({ P }: { P: Pal }) {
+  const g = useRef<THREE.Group>(null!);
+  const wheels = useRef<(THREE.Mesh | null)[]>([]);
+  const prev = useRef(0);
+  useFrame(() => {
+    const u = ((S.t % TRUCK_CYCLE) + TRUCK_CYCLE) % TRUCK_CYCLE;
+    // In over 3 s, parked for the crane, out over 3 s; parked for good once the frame is up.
+    let off = 0;
+    if (building()) {
+      if (u < 3) off = 16 * Math.pow(1 - u / 3, 3);
+      else if (u > 17) off = -16 * Math.pow((u - 17) / 3, 3);
+    }
+    g.current.position.set(TRUCK[0] + TRUCK_DIR.x * off, 0, TRUCK[2] + TRUCK_DIR.z * off);
+    const roll = off - prev.current;
+    prev.current = off;
+    wheels.current.forEach((w) => w && (w.rotation.y -= roll / 0.18));
+  });
   return (
-    <group position={TRUCK} rotation-y={0.5}>
-      <mesh position={[0, 0.28, 0]} castShadow>
-        <boxGeometry args={[2.6, 0.12, 0.7]} />
-        <meshLambertMaterial color={P.truck} />
-      </mesh>
-      <mesh position={[-0.3, 0.58, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.9, 0.48, 0.86]} />
-        <meshLambertMaterial color={P.cabin} />
-      </mesh>
-      <mesh position={[0.98, 0.64, 0]} castShadow>
-        <boxGeometry args={[0.64, 0.6, 0.86]} />
-        <meshLambertMaterial color={P.cab} />
-      </mesh>
-      <mesh position={[-0.3, 0.86, 0]} castShadow>
-        <boxGeometry args={[1.6, 0.1, 0.6]} />
-        <meshLambertMaterial color={HIVIS} />
-      </mesh>
-      {[-0.9, -0.3, 0.95].map((x) =>
-        [-0.36, 0.36].map((z) => (
-          <mesh key={`${x}${z}`} position={[x, 0.18, z]} rotation-x={Math.PI / 2}>
-            <cylinderGeometry args={[0.18, 0.18, 0.12, 14]} />
-            <meshLambertMaterial color={P.truck} />
-          </mesh>
-        )),
-      )}
+    <group ref={g} position={TRUCK}>
+      <group rotation-y={0.5}>
+        <mesh position={[0, 0.28, 0]} castShadow>
+          <boxGeometry args={[2.6, 0.12, 0.7]} />
+          <meshLambertMaterial color={P.truck} />
+        </mesh>
+        <mesh position={[-0.3, 0.58, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.9, 0.48, 0.86]} />
+          <meshLambertMaterial color={P.cabin} />
+        </mesh>
+        <mesh position={[0.98, 0.64, 0]} castShadow>
+          <boxGeometry args={[0.64, 0.6, 0.86]} />
+          <meshLambertMaterial color={P.cab} />
+        </mesh>
+        <mesh position={[-0.3, 0.86, 0]} castShadow>
+          <boxGeometry args={[1.6, 0.1, 0.6]} />
+          <meshLambertMaterial color={HIVIS} />
+        </mesh>
+        {[-0.9, -0.3, 0.95].map((x, xi) =>
+          [-0.36, 0.36].map((z, zi) => (
+            <group key={`${x}${z}`} position={[x, 0.18, z]} rotation-x={Math.PI / 2}>
+              <mesh ref={(el) => void (wheels.current[xi * 2 + zi] = el)}>
+                <cylinderGeometry args={[0.18, 0.18, 0.12, 14]} />
+                <meshLambertMaterial color={P.truck} />
+              </mesh>
+            </group>
+          )),
+        )}
+      </group>
     </group>
   );
 }
@@ -817,6 +1143,8 @@ function Site({ P, mobile }: { P: Pal; mobile: boolean }) {
       <Ground P={P} />
       <Tower P={P} geo={geo} />
       <Ghosts geo={geo} />
+      <Scaffold P={P} />
+      <Sparks />
       <Measure />
       <Crane P={P} />
       <Yard P={P} />
@@ -829,13 +1157,15 @@ function Site({ P, mobile }: { P: Pal; mobile: boolean }) {
   );
 }
 
+const NO_SCAN = { get: () => 0 } as unknown as MotionValue<number>;
+
 export default function HeroScene({
-  scan,
+  scan = NO_SCAN,
   progress,
   active,
   theme,
 }: {
-  scan: MotionValue<number>;
+  scan?: MotionValue<number>;
   progress: MotionValue<number>;
   active: boolean;
   theme: Theme;

@@ -37,33 +37,33 @@ export default function Leak() {
       <Ticker />
       <div className="mx-auto max-w-[1440px] px-4 pb-28 pt-20 md:px-10 md:pb-40 md:pt-28">
         <div className="flex items-center justify-between">
-          <Eyebrow tone="light">01 — The leak</Eyebrow>
-          <span className="hidden font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40 md:inline">
+          <Eyebrow tone="light">The leak</Eyebrow>
+          <span className="hidden text-[11px] uppercase tracking-[0.2em] text-ink/40 md:inline">
             Material · Money · Proof
           </span>
         </div>
 
-        <ScrubText text="On ₹50 Cr of work, 2–5% walks off site as waste, theft and challans nobody matched. That's *₹1–2.5 Cr gone* — and today, nobody can prove where." />
+        <ScrubText text="On ₹50 Cr of work, 2–5% walks off site as waste, theft and unmatched challans. That is *₹1–2.5 Cr a year,* and nobody can prove where it went." />
 
         <div className="mt-20 grid gap-4 md:mt-28 md:grid-cols-12 md:gap-5">
-          <Reveal className="md:col-span-7 md:row-span-2">
-            <Bezel tone="light" inner="p-6 md:p-10">
+          <Reveal className="md:col-span-7">
+            <Bezel tone="light" className="h-full" inner="flex flex-col p-6 md:p-10">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-2xl font-medium tracking-[-0.03em] md:text-3xl">How a leak hides</h3>
-                <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink/45">
+                <span className="text-[11px] uppercase tracking-[0.15em] text-ink/45">
                   Cement · Site 03, Indore · September
                 </span>
               </div>
-              <ol className="mt-10 space-y-7">
+              <ol className="mb-10 mt-10 space-y-7">
                 {CHAIN.map((c, i) => (
                   <li key={c.label}>
                     <div className="flex items-baseline justify-between gap-4 text-sm">
                       <span className="flex items-baseline gap-3">
-                        <span className="font-mono text-[11px] text-ink/35">0{i + 1}</span>
+                        <span className="text-[11px] text-ink/35">0{i + 1}</span>
                         <span className="font-medium">{c.label}</span>
                         <span className="hidden text-ink/40 sm:inline">{c.note}</span>
                       </span>
-                      <span className="font-mono tabular-nums">{c.bags} bags</span>
+                      <span className="tabular-nums">{c.bags} bags</span>
                     </div>
                     <div className="relative mt-3 h-2.5 overflow-hidden rounded-full bg-ink/[0.07]">
                       <motion.div
@@ -102,49 +102,51 @@ export default function Leak() {
                   </li>
                 ))}
               </ol>
-              <div className="mt-10 flex flex-wrap items-end justify-between gap-4 border-t border-ink/10 pt-6">
+              <div className="mt-auto flex flex-wrap items-end justify-between gap-4 border-t border-ink/10 pt-6">
                 <p className="max-w-[34ch] text-sm leading-relaxed text-ink/55">
-                  One item, one site, one month. Every register looks fine on its own — the leak only shows when you
+                  One item, one site, one month. Every register looks fine on its own. The leak only shows when you
                   match them.
                 </p>
                 <p className="text-right">
-                  <span className="block font-mono text-[11px] uppercase tracking-[0.15em] text-ink/40">Unaccounted</span>
+                  <span className="block text-[11px] uppercase tracking-[0.15em] text-ink/40">Unaccounted</span>
                   <span className="text-3xl font-medium tracking-[-0.04em]">59 bags · ₹23,010</span>
                 </p>
               </div>
             </Bezel>
           </Reveal>
 
-          <Reveal className="md:col-span-5" delay={0.1}>
-            <Bezel tone="light" inner="flex h-full flex-col justify-between gap-10 p-6 md:p-10">
-              <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-ink/40">Material waste</span>
-              <div>
-                <p className="text-[clamp(4rem,9vw,8rem)] font-medium leading-[0.85] tracking-[-0.06em]">
-                  <Counter to={2} />–<Counter to={5} />
-                  <span className="font-serif font-normal italic text-hivis">%</span>
-                </p>
-                <p className="mt-4 max-w-[30ch] text-ink/55">of project cost. That’s what material waste usually runs on an Indian site.</p>
-              </div>
-            </Bezel>
-          </Reveal>
-
-          <Reveal className="md:col-span-5" delay={0.2}>
-            <div className="h-full rounded-[2rem] bg-ink/[0.04] p-1.5 ring-1 ring-ink/[0.07]">
-              <div className="flex h-full flex-col justify-between gap-10 rounded-[calc(2rem-0.375rem)] bg-ink p-6 text-bone shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-10">
-                <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-bone/40">On ₹50 Cr of work</span>
+          {/* Right column: two boxes that together span exactly the height of the left card. */}
+          <div className="flex flex-col gap-4 md:col-span-5 md:gap-5">
+            <Reveal className="md:flex-1" delay={0.1}>
+              <Bezel tone="light" className="h-full" inner="flex flex-col justify-between gap-8 p-6 md:p-9">
+                <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-ink/40">Material waste</span>
                 <div>
-                  <p className="text-[clamp(3.2rem,6.5vw,6rem)] font-medium leading-[0.9] tracking-[-0.055em]">
-                    ₹<Counter to={1} />–<Counter to={2.5} decimals={1} />
-                    <span className="font-serif font-normal italic"> Cr</span>
+                  <p className="text-[clamp(3.25rem,5.5vw,5.25rem)] font-medium leading-[0.9] tracking-[-0.055em]">
+                    <Counter to={2} />–<Counter to={5} />
+                    <span className="text-hivis">%</span>
                   </p>
-                  <p className="mt-4 max-w-[30ch] text-bone/55">leaking. Vera finds it in four weeks, site by site.</p>
+                  <p className="mt-3 max-w-[32ch] text-ink/55">of project cost. That is what material waste usually runs on an Indian site.</p>
                 </div>
-                <PillButton href="#savings" variant="light" className="self-start">
-                  Check your number
-                </PillButton>
+              </Bezel>
+            </Reveal>
+
+            <Reveal className="md:flex-1" delay={0.2}>
+              <div className="h-full rounded-[2rem] bg-ink/[0.04] p-1.5 ring-1 ring-ink/[0.07]">
+                <div className="flex h-full flex-col justify-between gap-8 rounded-[calc(2rem-0.375rem)] bg-ink p-6 text-bone shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] md:p-9">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-bone/40">On ₹50 Cr of work</span>
+                  <div>
+                    <p className="text-[clamp(2.75rem,4.6vw,4.5rem)] font-medium leading-[0.9] tracking-[-0.05em]">
+                      ₹<Counter to={1} />–<Counter to={2.5} decimals={1} /> Cr
+                    </p>
+                    <p className="mt-3 max-w-[32ch] text-bone/55">leaking every year. Vera finds it in four weeks, site by site.</p>
+                  </div>
+                  <PillButton href="#book" variant="light" className="self-start">
+                    Find your number
+                  </PillButton>
+                </div>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </div>
       </div>
     </section>
@@ -164,7 +166,7 @@ function Ticker() {
           <Fragment key={i}>
             <span
               className={`whitespace-nowrap px-6 text-[clamp(1.75rem,3.6vw,3.25rem)] tracking-[-0.04em] md:px-9 ${
-                i % 2 ? "font-serif italic text-ink/45" : "font-medium text-ink/85"
+                "font-medium text-ink/80"
               }`}
             >
               {t}
@@ -200,7 +202,7 @@ function Word({ p, range, em, children }: { p: MotionValue<number>; range: [numb
   const opacity = useTransform(p, range, [0.12, 1]);
   return (
     <>
-      <motion.span style={{ opacity }} className={em ? "font-serif font-normal italic tracking-[-0.02em] text-hivis" : ""}>
+      <motion.span style={{ opacity }} className={em ? "text-hivis" : ""}>
         {children}
       </motion.span>{" "}
     </>

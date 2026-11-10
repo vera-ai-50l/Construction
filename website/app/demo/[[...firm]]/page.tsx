@@ -6,7 +6,7 @@ import DemoLeak from "@/components/DemoLeak";
 import { Clock } from "@/components/ui";
 
 export const metadata: Metadata = {
-  title: "Vera AI — Live demo",
+  title: "Vera AI | Live demo",
   robots: { index: false, follow: false },
 };
 
@@ -28,10 +28,10 @@ export default function Demo({ params }: PageProps<"/demo/[[...firm]]">) {
           <Link href="/" className="text-sm font-semibold tracking-[0.3em]">
             VERA
           </Link>
-          <p className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-bone/45 sm:block">
+          <p className="hidden text-[10px] uppercase tracking-[0.2em] text-bone/45 sm:block">
             <Clock withSeconds={false} />
           </p>
-          <span className="inline-flex items-center gap-2 rounded-full bg-hivis/10 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-hivis">
+          <span className="inline-flex items-center gap-2 rounded-full bg-hivis/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.2em] text-hivis">
             <span className="size-1.5 animate-pulse rounded-full bg-hivis" /> Live on n8n
           </span>
         </div>
@@ -43,11 +43,11 @@ export default function Demo({ params }: PageProps<"/demo/[[...firm]]">) {
             <Suspense fallback={null}>
               {params.then(({ firm }) => {
                 const name = firmName(firm?.[0]);
-                return name ? <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-bone/50">Prepared for {name}</p> : null;
+                return name ? <p className="text-[11px] uppercase tracking-[0.2em] text-bone/50">Prepared for {name}</p> : null;
               })}
             </Suspense>
             <h1 className="mt-4 max-w-[16ch] text-[clamp(2.8rem,7vw,6.5rem)] font-medium leading-[0.92] tracking-[-0.05em]">
-              Find the leak. <span className="font-serif font-normal italic tracking-[-0.02em] text-hivis">Then stop it coming back.</span>
+              Find the leak. <span className="text-hivis">Then stop it coming back.</span>
             </h1>
             <p className="mt-6 max-w-[58ch] text-lg leading-relaxed text-bone/60">
               Two things Vera does, running live on our n8n server with sample data from a mid-size contractor. First the free

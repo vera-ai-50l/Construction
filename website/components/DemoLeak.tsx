@@ -46,7 +46,7 @@ export default function DemoLeak() {
   return (
     <section id="leak" className="px-4 py-24 md:px-10 md:py-32">
       <div className="mx-auto max-w-[1280px]">
-        <Eyebrow>01 — Material Leak Check · free, one site</Eyebrow>
+        <Eyebrow>Material Leak Check: free, one site</Eyebrow>
         <Words
           text="Three months of one site’s paperwork. | *Every rupee that leaked.*"
           className="mt-6 max-w-[18ch] text-[clamp(2.4rem,5vw,4.6rem)] font-medium leading-[0.98] tracking-[-0.045em] md:max-w-none"
@@ -65,7 +65,7 @@ export default function DemoLeak() {
               <p className="text-sm text-bone/70">
                 {sample.site} · <span className="text-bone/45">{sample.period.label}</span>
               </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">What the site gave us</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-bone/40">What the site gave us</p>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {REGISTERS.map((r) => (
@@ -81,14 +81,14 @@ export default function DemoLeak() {
                   <p className="text-3xl font-medium tracking-[-0.04em] tabular-nums">{sample[r.key].length}</p>
                   <p className="mt-1 text-sm">{r.label}</p>
                   <p className="mt-0.5 text-[12px] text-bone/40">{r.hint}</p>
-                  <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/40">{open === r.key ? "Hide" : "View rows"}</p>
+                  <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-bone/40">{open === r.key ? "Hide" : "View rows"}</p>
                 </button>
               ))}
             </div>
 
             {reg && (
               <div data-lenis-prevent className="mt-4 max-h-72 overflow-auto rounded-2xl bg-ink ring-1 ring-white/[0.08]">
-                <table className="w-full min-w-[640px] text-left font-mono text-[11px]">
+                <table className="w-full min-w-[640px] text-left text-[11px]">
                   <thead className="sticky top-0 bg-ink-3 text-bone/50">
                     <tr>
                       {reg.cols.map((c) => (
@@ -103,7 +103,7 @@ export default function DemoLeak() {
                       <tr key={i} className="border-t border-white/[0.05] text-bone/75">
                         {reg.cols.map((c) => (
                           <td key={c} className="whitespace-nowrap px-3 py-1.5">
-                            {row[c] === "" ? "—" : String(row[c] ?? "")}
+                            {row[c] === "" ? "–" : String(row[c] ?? "")}
                           </td>
                         ))}
                       </tr>
@@ -138,12 +138,12 @@ function Summary({ d }: { d: Leak }) {
       <Bezel tone="light" inner="p-6 text-ink md:p-12">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink/10 pb-5">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/50">Material Leak Check · 1-page summary</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-ink/50">Material Leak Check · 1-page summary</p>
             <p className="mt-1 text-sm text-ink/70">
               {d.site} · {d.period.label}
             </p>
           </div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink/40">Prepared by Vera</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-ink/40">Prepared by Vera</p>
         </div>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-12">
@@ -186,11 +186,11 @@ function Summary({ d }: { d: Leak }) {
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {g.rows.slice(0, 8).map((r) => (
-                      <span key={r.ref + r.kind} title={r.note} className="rounded-md bg-ink/[0.06] px-1.5 py-0.5 font-mono text-[10px] text-ink/70">
+                      <span key={r.ref + r.kind} title={r.note} className="rounded-md bg-ink/[0.06] px-1.5 py-0.5 text-[10px] text-ink/70">
                         {r.ref}
                       </span>
                     ))}
-                    {g.rows.length > 8 && <span className="px-1 font-mono text-[10px] text-ink/45">+{g.rows.length - 8}</span>}
+                    {g.rows.length > 8 && <span className="px-1 text-[10px] text-ink/45">+{g.rows.length - 8}</span>}
                   </div>
                 </li>
               ))}
@@ -268,7 +268,7 @@ function Summary({ d }: { d: Leak }) {
                       {qty(s.book, s.material)} in stock, {qty(s.qty, s.material)} more needed
                     </span>
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.15em]">Reorder</span>
+                  <span className="text-[10px] uppercase tracking-[0.15em]">Reorder</span>
                 </li>
               ))}
             </ul>
@@ -291,7 +291,7 @@ function Summary({ d }: { d: Leak }) {
 
         <div className="mt-12 flex flex-wrap items-end justify-between gap-6 rounded-2xl bg-ink p-6 text-bone md:p-8">
           <div className="max-w-[56ch]">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/45">Next: the paid audit, all sites, 4 weeks</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-bone/45">Next: the paid audit, all sites, 4 weeks</p>
             <p className="mt-3 text-xl leading-snug tracking-[-0.02em] md:text-2xl">
               ₹50,000 plus 15–20% of what we recover. On this site alone that is{" "}
               <span className="text-hivis">
@@ -320,7 +320,7 @@ function Split({ title, amount, body, hot }: { title: string; amount: number; bo
 function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink/50">{title}</p>
+      <p className="mb-3 text-[10px] uppercase tracking-[0.2em] text-ink/50">{title}</p>
       {children}
     </div>
   );

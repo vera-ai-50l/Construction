@@ -1,14 +1,10 @@
-import Answers from "@/components/Answers";
 import Closing from "@/components/Closing";
 import Desks from "@/components/Desks";
-import EightAM from "@/components/EightAM";
 import Hero from "@/components/Hero";
 import Leak from "@/components/Leak";
 import Nav from "@/components/Nav";
 import Preloader from "@/components/Preloader";
-import Pricing from "@/components/Pricing";
 import Process from "@/components/Process";
-import Savings from "@/components/Savings";
 import Team from "@/components/Team";
 
 export default function Home() {
@@ -20,11 +16,7 @@ export default function Home() {
         <Hero />
         <Leak />
         <Desks />
-        <EightAM />
         <Process />
-        <Savings />
-        <Pricing />
-        <Answers />
         <Team />
       </main>
       <Closing />

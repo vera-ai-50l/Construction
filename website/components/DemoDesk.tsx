@@ -67,7 +67,7 @@ export default function DemoDesk() {
   return (
     <section id="desk" className="relative rounded-t-[2.5rem] bg-ink-2 px-4 py-24 ring-1 ring-white/[0.06] md:px-10 md:py-32">
       <div className="mx-auto max-w-[1280px]">
-        <Eyebrow>02 — Site Record Desk · the monthly product</Eyebrow>
+        <Eyebrow>Site Record Desk: the monthly product</Eyebrow>
         <Words
           text="Your sites already talk on WhatsApp. | *Vera writes the record.*"
           className="mt-6 max-w-[18ch] text-[clamp(2.4rem,5vw,4.6rem)] font-medium leading-[0.98] tracking-[-0.045em] md:max-w-none"
@@ -194,17 +194,17 @@ function Feed({ msgs, tags, children }: { msgs: Msg[]; tags?: Record<string, str
                   <span className="font-medium text-bone/80">{s.supervisor}</span> · {s.place}
                 </p>
                 <Body m={m} />
-                <p className="mt-1 text-right font-mono text-[9px] text-bone/35">{m.time}</p>
+                <p className="mt-1 text-right text-[9px] text-bone/35">{m.time}</p>
                 {t && (
                   <div className="mt-1.5 flex flex-wrap gap-1 border-t border-white/[0.06] pt-2">
                     {t.length ? (
                       t.map((x) => (
-                        <span key={x} className="rounded-md bg-hivis/15 px-1.5 py-0.5 font-mono text-[10px] text-hivis">
+                        <span key={x} className="rounded-md bg-hivis/15 px-1.5 py-0.5 text-[10px] text-hivis">
                           {x}
                         </span>
                       ))
                     ) : (
-                      <span className="font-mono text-[10px] text-bone/40">{m.kind === "photo" ? "photo logged as evidence" : "kept as a note"}</span>
+                      <span className="text-[10px] text-bone/40">{m.kind === "photo" ? "photo logged as evidence" : "kept as a note"}</span>
                     )}
                   </div>
                 )}
@@ -231,7 +231,7 @@ function Body({ m }: { m: Msg }) {
               <span key={i} className="w-[3px] rounded-full bg-bone/40" style={{ height: `${25 + ((i * 37 + m.id.length * 11) % 70)}%` }} />
             ))}
           </span>
-          <span className="font-mono text-[10px] text-bone/50">{m.dur}</span>
+          <span className="text-[10px] text-bone/50">{m.dur}</span>
         </div>
         <p className="mt-2 font-deva text-[13px] leading-relaxed text-bone/90">{m.text}</p>
         {m.en && <p className="mt-1 text-[12px] leading-snug text-bone/45">{m.en}</p>}
@@ -242,7 +242,7 @@ function Body({ m }: { m: Msg }) {
     return (
       <div className="mt-2">
         <div className="flex aspect-[16/9] items-center justify-center rounded-xl bg-[repeating-linear-gradient(135deg,rgba(244,241,236,0.05)_0_8px,rgba(244,241,236,0.02)_8px_16px)] ring-1 ring-white/[0.06]">
-          <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-bone/45">
+          <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-bone/45">
             <Icon size={16} weight="light" /> {m.kind === "photo" ? "Site photo" : "Challan photo"}
           </span>
         </div>
@@ -281,7 +281,7 @@ function Phone({ brief }: { brief: string | null }) {
                   )}
                 </p>
               ))}
-              <p className="mt-1 text-right font-mono text-[9px] text-bone/35">08:00</p>
+              <p className="mt-1 text-right text-[9px] text-bone/35">08:00</p>
             </Arrive>
           ) : (
             <p className="mt-40 text-center text-[12px] text-bone/35">The 8 AM brief lands here.</p>
@@ -304,7 +304,7 @@ function Stat({ k, v, hot }: { k: string; v: string; hot?: boolean }) {
 function Risks({ risks }: { risks: Desk["risks"] }) {
   return (
     <div className="rounded-2xl bg-white/[0.035] p-4 ring-1 ring-white/[0.08]">
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/45">Money at risk · do today</p>
+      <p className="text-[10px] uppercase tracking-[0.2em] text-bone/45">Money at risk · do today</p>
       <ul data-lenis-prevent className="mt-2 max-h-[300px] divide-y divide-white/[0.06] overflow-y-auto">
         {risks.map((r) => (
           <li key={r.title} className="py-2.5">
@@ -313,7 +313,7 @@ function Risks({ risks }: { risks: Desk["risks"] }) {
                 <span className="text-bone/45">{r.short} · </span>
                 {r.title}
               </p>
-              <p className="shrink-0 text-[13px] font-medium tabular-nums text-hivis">{r.amount ? formatINR(r.amount) : "—"}</p>
+              <p className="shrink-0 text-[13px] font-medium tabular-nums text-hivis">{r.amount ? formatINR(r.amount) : "–"}</p>
             </div>
             <p className="mt-0.5 text-[12px] text-bone/45">→ {r.action}</p>
           </li>
@@ -336,7 +336,7 @@ function Reports({ d }: { d: Desk }) {
     <Arrive delay={0.15} className="mt-14">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/45">Daily site record · {d.date}</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-bone/45">Daily site record · {d.date}</p>
           <p className="mt-2 text-2xl font-medium tracking-[-0.03em]">What each site did, who was there, what stopped work</p>
         </div>
         <a
@@ -372,7 +372,7 @@ function Reports({ d }: { d: Desk }) {
                     <div className="flex justify-between">
                       <span>{p.activity}</span>
                       <span className="tabular-nums text-bone/60">
-                        {p.done ?? "—"} / {p.plan} {p.unit}
+                        {p.done ?? "–"} / {p.plan} {p.unit}
                       </span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
@@ -401,11 +401,11 @@ function Reports({ d }: { d: Desk }) {
                 ))}
                 {s.hindrances.length > 0 && (
                   <div>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone/40">Hindrance register</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-bone/40">Hindrance register</p>
                     <ul className="mt-1.5 space-y-1.5">
                       {s.hindrances.map((h) => (
                         <li key={h.key} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="font-mono text-[11px] text-bone/45">{h.time}</span>
+                          <span className="text-[11px] text-bone/45">{h.time}</span>
                           <span>{h.cause}</span>
                           {h.hours && <span className="text-bone/50">{h.hours} h</span>}
                           {h.idle && <span className="text-bone/50">{h.idle} idle</span>}
@@ -430,7 +430,7 @@ function Reports({ d }: { d: Desk }) {
 function Line({ label, children }: { label: string; children: ReactNode }) {
   return (
     <p className="flex gap-3">
-      <span className="w-16 shrink-0 font-mono text-[10px] uppercase leading-5 tracking-[0.15em] text-bone/40">{label}</span>
+      <span className="w-16 shrink-0 text-[10px] uppercase leading-5 tracking-[0.15em] text-bone/40">{label}</span>
       <span className="text-bone/80">{children}</span>
     </p>
   );
