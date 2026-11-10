@@ -26,7 +26,7 @@ export const CONTACT = {
   calendar: "",
   whatsapp: "919804142190",
   email: "aditya@getveraai.com",
-  linkedin: "",
+  linkedin: "https://www.linkedin.com/company/getveraai/",
 };
 
 export const WHATSAPP_MESSAGE =
