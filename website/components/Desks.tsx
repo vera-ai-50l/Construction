@@ -23,6 +23,7 @@ const DESKS: Desk[] = [
       "A one-page summary of money leaking",
       "Inventory balancing across sites: move surplus to sites that are short",
       "Wastage check within each site, supervisor by supervisor",
+      "One-day mobilisation: a new site set up and reporting the same day",
     ],
     Visual: LeakSummary,
   },
@@ -171,7 +172,7 @@ function LeakSummary() {
     ["A. Desai", 2.2],
   ] as const;
   return (
-    <motion.div {...view} variants={stagger(0.08)} className="flex h-full flex-col justify-between gap-6 p-6 md:p-8">
+    <motion.div {...view} variants={stagger(0.08)} className="flex h-full flex-col justify-between gap-5 p-6 md:p-8">
       <motion.div variants={rise} className="flex items-center justify-between">
         <Label>Money leaking · 1-page summary</Label>
         <Label>Jul–Sep 2026</Label>
@@ -180,7 +181,7 @@ function LeakSummary() {
         <p className="text-[clamp(2.6rem,4.8vw,4.25rem)] font-medium leading-none tracking-[-0.055em] text-hivis">₹1.18 Cr</p>
         <p className="mt-2 text-sm text-bone/50">across 4 sites, cement + steel + RMC + shuttering</p>
       </motion.div>
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
         {sites.map(([site, v], i) => (
           <motion.div key={site} variants={rise}>
             <div className="flex justify-between text-[13px]">
@@ -240,6 +241,17 @@ function LeakSummary() {
           </p>
         </motion.div>
       </div>
+      {/* A new site goes live in one day: supervisors on WhatsApp, BOQ loaded, opening stock counted. */}
+      <motion.div
+        variants={rise}
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hivis/10 px-4 py-3 ring-1 ring-hivis/25"
+      >
+        <div>
+          <Label>One-day mobilisation · Site 05, Pune</Label>
+          <p className="mt-1 text-[13px] text-bone/80">12 supervisors on WhatsApp, BOQ loaded, opening stock counted</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-hivis px-2.5 py-1 text-[11px] font-medium text-coal">Live in 1 day</span>
+      </motion.div>
     </motion.div>
   );
 }
