@@ -26,7 +26,6 @@ export default function Closing() {
             <p className="mx-auto mt-8 max-w-[50ch] text-bone/60 md:text-lg">
               Vera is AI software set up around your sites. Send what you already keep, as WhatsApp texts, voice notes,
               photos of registers, Excel or Google Sheets, or PDFs, and it starts flagging wastage from the first day.
-              Your first site is free.
             </p>
           </Reveal>
           <Reveal delay={0.45} className="mt-10 flex flex-wrap justify-center gap-3">
