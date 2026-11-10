@@ -436,7 +436,10 @@ function Floor({ i, P, geo }: { i: number; P: Pal; geo: TowerGeo }) {
     const lit = litP();
     m.glass.color.set(P.glass);
     m.glass.opacity = P.glassA * gp;
-    m.glass.emissive.set(P.lit).multiplyScalar(lit * warm * (P.additive ? 0.55 : 0.25));
+    // Once handed over, floors light up and go dark at their own times: people at work inside.
+    // Period of 8 s (0.785 rad/s), so the looping video of the finished site joins up cleanly.
+    const busy = smooth(clamp01(0.5 + 1.6 * Math.sin(S.t * 0.785 + i * 2.4)));
+    m.glass.emissive.set(P.lit).multiplyScalar(lit * warm * (0.3 + 0.7 * busy) * (P.additive ? 0.6 : 0.28));
     m.mull.color.set(P.edge);
     m.mull.opacity = P.edgeA * 1.2 * gp;
   });

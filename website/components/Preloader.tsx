@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { preload } from "react-dom";
 import { lockScroll } from "./ui";
@@ -15,9 +15,10 @@ import { lockScroll } from "./ui";
  * freezing on one. Nothing moves between cuts, so the edge blur is only redrawn when the page changes.
  */
 
-export const CUTS = 30;
-export const CUT_MS = 90;
-const HOLD_MS = 300;
+export const CUTS = 25;
+export const CUT_MS = 48; // three frames on a 60 Hz screen
+const HOLD_MS = 120;
+const ZOOM_S = 0.55; // the dive into the highlight that ends the intro
 /** Seconds from the start of the cuts until the paper lifts. */
 export const INTRO_LIFT = (CUTS * CUT_MS + HOLD_MS) / 1000;
 
@@ -223,6 +224,7 @@ export default function Preloader() {
   const [done, setDone] = useState(false);
   const layers = useRef<(HTMLDivElement | null)[]>([]);
   const paperEl = useRef<HTMLDivElement>(null);
+  const blurEl = useRef<HTMLDivElement>(null);
   preload(PAPER, { as: "image", fetchPriority: "high" });
 
   useEffect(() => lockScroll(true), []);
@@ -263,6 +265,7 @@ export default function Preloader() {
           last = now;
         }
       } else if (now - last >= CUT_MS + HOLD_MS) {
+        if (blurEl.current) blurEl.current.style.display = "none";
         setDone(true);
         return;
       }
@@ -291,49 +294,54 @@ export default function Preloader() {
   }, [done]);
 
   return (
-    <AnimatePresence>
-      {!done && (
-        <motion.div
-          key="intro"
-          aria-label="Vera AI"
-          role="img"
-          initial={{ clipPath: "inset(0% 0% 0% 0%)" }}
-          exit={{ clipPath: "inset(0% 0% 100% 0%)" }}
-          transition={{ duration: 0.85, ease: [0.76, 0, 0.24, 1] }}
-          className="fixed inset-0 z-[100] select-none overflow-hidden bg-[#ece6d9] [--cw:17em] [--g:1.6em] [--lh:calc(1em*1.5)]"
-          style={{
-            fontFamily: 'Georgia, "Times New Roman", Times, serif',
-            fontSize: "clamp(18px, 1.75vw, 32px)",
-            lineHeight: 1.5,
-          }}
-        >
-          <div className="absolute inset-0">
-            <div
-              ref={paperEl}
-              aria-hidden
-              className="absolute -inset-[6%]"
-              style={{ backgroundImage: `url(${PAPER})`, backgroundSize: "cover", transform: paperAt(0) }}
-            />
-            {(all ? CUTS_DATA : CUTS_DATA.slice(0, 1)).map((cut, n) => (
-              <Clipping key={n} cut={cut} hidden={n !== 0} setRef={(el) => void (layers.current[n] = el)} />
-            ))}
-          </div>
-          {/* Sharp around the highlight, soft towards the edges, like a close-up shot of a page. */}
-          <div
-            aria-hidden
-            className="absolute inset-0 [backdrop-filter:blur(2.2px)] [-webkit-backdrop-filter:blur(2.2px)]"
+    // The intro is the opening of the site, so it always animates, whatever the system motion setting.
+    <MotionConfig reducedMotion="never">
+      <AnimatePresence>
+        {!done && (
+          <motion.div
+            key="intro"
+            aria-label="Vera AI"
+            role="img"
+            // Ends by diving into the highlight: the page scales up around "Vera AI" and fades onto the site.
+            exit={{ scale: 26, opacity: [1, 1, 0] }}
+            transition={{ duration: ZOOM_S, ease: [0.6, 0, 0.9, 0.4], opacity: { duration: ZOOM_S, times: [0, 0.55, 1] } }}
+            className="fixed inset-0 z-[100] select-none overflow-hidden bg-[#ece6d9] [--cw:17em] [--g:1.6em] [--lh:calc(1em*1.5)]"
             style={{
-              maskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
-              WebkitMaskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
+              fontFamily: 'Georgia, "Times New Roman", Times, serif',
+              fontSize: "clamp(18px, 1.75vw, 32px)",
+              lineHeight: 1.5,
+              transformOrigin: `50% calc(${AY} + 1.0875em)`,
             }}
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0"
-            style={{ background: `radial-gradient(ellipse 75% 70% at 50% ${AY}, transparent 55%, rgba(60,45,25,0.22) 100%)` }}
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
+          >
+            <div className="absolute inset-0">
+              <div
+                ref={paperEl}
+                aria-hidden
+                className="absolute -inset-[6%]"
+                style={{ backgroundImage: `url(${PAPER})`, backgroundSize: "cover", transform: paperAt(0) }}
+              />
+              {(all ? CUTS_DATA : CUTS_DATA.slice(0, 1)).map((cut, n) => (
+                <Clipping key={n} cut={cut} hidden={n !== 0} setRef={(el) => void (layers.current[n] = el)} />
+              ))}
+            </div>
+            {/* Sharp around the highlight, soft towards the edges, like a close-up shot of a page. */}
+            <div
+              aria-hidden
+              ref={blurEl}
+              className="absolute inset-0 [backdrop-filter:blur(2.2px)] [-webkit-backdrop-filter:blur(2.2px)]"
+              style={{
+                maskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
+                WebkitMaskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
+              }}
+            />
+            <div
+              aria-hidden
+              className="absolute inset-0"
+              style={{ background: `radial-gradient(ellipse 75% 70% at 50% ${AY}, transparent 55%, rgba(60,45,25,0.22) 100%)` }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </MotionConfig>
   );
 }

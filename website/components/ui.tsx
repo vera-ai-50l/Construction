@@ -14,7 +14,7 @@ import {
 import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
-export const INTRO = 3.1; // seconds the opening newspaper holds the stage (see Preloader)
+export const INTRO = 1.55; // seconds the opening newspaper holds the stage (see Preloader)
 
 /**
  * Booking and contact details. An empty value hides that option on the site.

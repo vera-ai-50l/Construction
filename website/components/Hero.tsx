@@ -4,7 +4,7 @@ import { Play } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { EASE, INTRO, PillButton, Words } from "./ui";
+import { EASE, INTRO, PillButton, Words, useTheme } from "./ui";
 
 const Demo = dynamic(() => import("./Demo"), { ssr: false });
 const preload = () => void import("./Demo").then((m) => m.preloadDemo());
@@ -15,6 +15,7 @@ const preload = () => void import("./Demo").then((m) => m.preloadDemo());
  */
 export default function Hero() {
   const [demo, setDemo] = useState(false);
+  const theme = useTheme();
 
   return (
     <section id="top" className="relative flex min-h-[640px] items-end overflow-hidden bg-ink [height:100svh]">
@@ -25,18 +26,22 @@ export default function Hero() {
         transition={{ delay: INTRO - 0.3, duration: 2.2, ease: EASE }}
         className="absolute inset-0 md:left-[28%]"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/hero/site-dark.webp"
-          alt=""
-          className="size-full object-cover object-[30%_55%] [[data-theme=light]_&]:hidden"
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/hero/site-light.webp"
-          alt=""
-          className="hidden size-full object-cover object-[30%_55%] [[data-theme=light]_&]:block"
-        />
+        {/* A short silent loop of the finished site (lights going on and off, the crane idling), so the
+            opening screen feels alive without loading the 3D scene. The still is its first frame. */}
+        <video
+          key={theme}
+          aria-hidden
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster={`/hero/site-${theme}.webp`}
+          className="size-full object-cover object-[30%_55%]"
+        >
+          <source src={`/hero/site-${theme}.webm`} type="video/webm" />
+          <source src={`/hero/site-${theme}.mp4`} type="video/mp4" />
+        </video>
       </motion.div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink via-ink/70 to-transparent md:via-ink/40" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink to-transparent" />
