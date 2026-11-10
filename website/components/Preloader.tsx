@@ -1,45 +1,60 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { preload } from "react-dom";
 import { lockScroll } from "./ui";
 
 /*
  * Opening: "Vera AI", highlighted, holds still in the middle of the screen while newspaper clippings
- * flash behind it, eight a second, then the paper lifts off the site. Everything is drawn in the
- * page (no video), so it fills any screen and carries no watermark.
+ * cut behind it, then the paper lifts off the site. Drawn in the page (no video), so it fills any
+ * screen and carries no watermark.
+ *
+ * Smoothness: every clipping is laid out once, up front, and the cuts only flip visibility. The cut
+ * shown is picked from the clock on each animation frame, so a slow moment skips a cut instead of
+ * freezing on one. Nothing moves between cuts, so the edge blur is only redrawn when the page changes.
  */
 
-export const CUTS = 20;
-export const CUT_MS = 125;
-const HOLD_MS = 250;
-/** Seconds until the paper starts to lift; the hero times its entrance from here. */
+export const CUTS = 30;
+export const CUT_MS = 90;
+const HOLD_MS = 300;
+/** Seconds from the start of the cuts until the paper lifts. */
 export const INTRO_LIFT = (CUTS * CUT_MS + HOLD_MS) / 1000;
 
 const MARK = "Vera AI";
 
-// The line the highlight sits in, per cut: [words before, words after, headline?]
+// The line the highlight sits in, per cut: [before, after, headline?]. Short, so the line fits one column.
 const ANCHORS: [string, string, boolean?][] = [
-  ["contractors using", "found the cement"],
-  ["Builders Adopt", "on Sites", true],
-  ["supervisors report to", "by voice"],
-  ["records kept by", "held up in court"],
-  ["Investors Eye", "as Waste Falls", true],
-  ["the audit by", "traced 59 bags"],
-  ["promoters say", "caught the gap"],
-  ["Leaders Discuss", "and Site Data", true],
-  ["the pilot with", "ran on four sites"],
-  ["a report on", "found 2 to 5%"],
-  ["mid-size firms pick", "for the record"],
-  ["Pune Firm Credits", "for Savings", true],
-  ["engineers praised", "at 8 AM daily"],
-  ["the board reviewed", "on steel issues"],
-  ["officials cited the", "record in court"],
-  ["Builders Back", "on Bills", true],
-  ["a supervisor said", "logged the slab"],
-  ["in Indore the", "check found steel"],
-  ["Lenders Ask for", "Site Records", true],
-  ["by the quarter end", "was on every site"],
+  ["firms now using", "save"],
+  ["Why Builders Adopt", "", true],
+  ["supervisors use", "daily"],
+  ["records kept by", "hold"],
+  ["Investors Now Eye", "", true],
+  ["an audit by", "found it"],
+  ["the owners say", "works"],
+  ["Inside the", "Rollout", true],
+  ["the pilot of", "ran well"],
+  ["a new report on", "said"],
+  ["mid-size firms pick", ""],
+  ["Pune Builder Backs", "", true],
+  ["site engineers like", ""],
+  ["the board reviewed", ""],
+  ["officials cited", "logs"],
+  ["Lenders Now Want", "", true],
+  ["a supervisor said", ""],
+  ["in Indore,", "found more"],
+  ["The Steady Rise of", "", true],
+  ["four sites on", "grew"],
+  ["site teams now trust", ""],
+  ["More Contractors Try", "", true],
+  ["the data from", "showed"],
+  ["the bill from", "cleared"],
+  ["Why Builders Choose", "", true],
+  ["project managers cite", ""],
+  ["checks by", "cut waste"],
+  ["A Steel Audit by", "", true],
+  ["soon after", "went live"],
+  ["Every Site Now on", "", true],
 ];
 
 const HEADLINES = [
@@ -103,37 +118,37 @@ function prose(r: () => number, n: number) {
 }
 
 type Block = { h?: string; p?: string };
-type Cut = { anchor: (typeof ANCHORS)[number]; above: Block[]; below: Block[]; cols: { off: number; blocks: Block[] }[]; paper: number };
+type Cut = { anchor: (typeof ANCHORS)[number]; above: Block[]; below: Block[]; cols: { k: number; off: number; blocks: Block[] }[] };
 
-function makeCut(k: number): Cut {
-  const r = rng(k * 7919 + 13);
+function makeCut(n: number): Cut {
+  const r = rng(n * 7919 + 13);
+  let hi = Math.floor(r() * HEADLINES.length);
+  const head = () => HEADLINES[hi++ % HEADLINES.length]; // walk the list so a column never repeats a headline
   const col = () => {
     const blocks: Block[] = [];
-    for (let j = 0; j < 4; j++) {
-      if (r() < 0.45) blocks.push({ h: HEADLINES[Math.floor(r() * HEADLINES.length)] });
-      blocks.push({ p: prose(r, 3 + Math.floor(r() * 4)) });
+    for (let j = 0; j < 3; j++) {
+      if (r() < 0.45) blocks.push({ h: head() });
+      blocks.push({ p: prose(r, 2 + Math.floor(r() * 3)) });
     }
     return blocks;
   };
   return {
-    anchor: ANCHORS[k % ANCHORS.length],
-    above: r() < 0.35 ? [{ p: prose(r, 2) }, { h: HEADLINES[Math.floor(r() * HEADLINES.length)] }] : [{ p: prose(r, 5) }],
-    below: [{ p: prose(r, 4) }, { h: HEADLINES[Math.floor(r() * HEADLINES.length)] }, { p: prose(r, 6) }],
-    cols: [-3, -2, -1, 1, 2, 3].map(() => ({ off: 4 + Math.floor(r() * 18), blocks: col() })),
-    paper: k % 3,
+    anchor: ANCHORS[n % ANCHORS.length],
+    above: r() < 0.35 ? [{ p: prose(r, 2) }, { h: head() }] : [{ p: prose(r, 4) }],
+    below: [{ p: prose(r, 3) }, { h: head() }, { p: prose(r, 4) }],
+    cols: [-2, -1, 1, 2].map((k) => ({ k, off: 3 + Math.floor(r() * 14), blocks: col() })),
   };
 }
 
-const CUTS_DATA = Array.from({ length: CUTS }, (_, k) => makeCut(k));
+const CUTS_DATA = Array.from({ length: CUTS }, (_, n) => makeCut(n));
 
-// Crumpled paper: turbulence lit from the top left, three crumples to cut between.
-const paper = (seed: number) =>
-  `url("data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='1400' height='900'><filter id='p' x='0' y='0'><feTurbulence type='fractalNoise' baseFrequency='0.0035 0.006' numOctaves='5' seed='${seed}'/><feDiffuseLighting lighting-color='#efe9dc' surfaceScale='2.4' diffuseConstant='1.05'><feDistantLight azimuth='225' elevation='52'/></feDiffuseLighting></filter><rect width='100%' height='100%' fill='#ece6d9'/><rect width='100%' height='100%' filter='url(#p)' opacity='0.9'/></svg>`,
-  )}")`;
-const PAPERS = [paper(3), paper(11), paper(29)];
+// Crumpled paper: one small image, flipped and shifted on each cut so every clipping looks like a new page.
+const PAPER = "/hero/paper.webp";
+const paperAt = (n: number) =>
+  `translate(${(n % 4) - 1.5}%, ${((n * 3) % 5) - 2}%) scale(${n % 2 ? -1.08 : 1.08}, ${n % 3 ? 1.08 : -1.08}) rotate(${((n % 3) - 1) * 0.6}deg)`;
 
 const AY = "42vh"; // where the highlight sits, from the top
+const MARK_LH = "calc(var(--lh) * 1.45)"; // the highlight line is taller: the mark is set larger
 
 function Blocks({ blocks }: { blocks: Block[] }) {
   return (
@@ -153,53 +168,45 @@ function Blocks({ blocks }: { blocks: Block[] }) {
   );
 }
 
-function Clipping({ cut }: { cut: Cut }) {
+const column = (k: number): CSSProperties => ({
+  left: `calc(50% - var(--cw) / 2 + ${k} * (var(--cw) + var(--g)))`,
+  width: "var(--cw)",
+});
+
+function Clipping({ cut, hidden, setRef }: { cut: Cut; hidden: boolean; setRef: (el: HTMLDivElement | null) => void }) {
   const [before, after, headline] = cut.anchor;
-  const layer = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = layer.current;
-    const mark = el?.querySelector<HTMLElement>("[data-mark]");
-    if (!el || !mark) return;
-    el.style.transform = "";
-    const r = mark.getBoundingClientRect();
-    el.style.transform = `translateX(${innerWidth / 2 - (r.left + r.width / 2)}px)`;
-  }, [cut]);
-  const column = (k: number): CSSProperties => ({
-    left: `calc(50% - var(--cw) / 2 + ${k} * (var(--cw) + var(--g)))`,
-    width: "var(--cw)",
-  });
   return (
-    <div ref={layer} className="absolute inset-0 text-[#1d1a16]">
-      {cut.cols.map((c, i) => {
-        const k = [-3, -2, -1, 1, 2, 3][i];
-        return (
-          <div key={i} className="absolute" style={{ ...column(k), top: `calc(${AY} - ${c.off} * var(--lh))` }}>
-            <Blocks blocks={c.blocks} />
-          </div>
-        );
-      })}
+    <div ref={setRef} className="absolute inset-0 text-[#1d1a16]" style={{ visibility: hidden ? "hidden" : "visible" }}>
+      {cut.cols.map((c) => (
+        <div key={c.k} className="absolute" style={{ ...column(c.k), top: `calc(${AY} - ${c.off} * var(--lh))` }}>
+          <Blocks blocks={c.blocks} />
+        </div>
+      ))}
       {/* Centre column: text above ends on the highlight line, text below starts after it. */}
       <div className="absolute flex flex-col justify-end overflow-hidden" style={{ ...column(0), bottom: `calc(100% - ${AY})`, top: 0 }}>
         <Blocks blocks={cut.above} />
       </div>
       <div
-        className={`absolute flex items-center justify-between gap-x-[0.3em] whitespace-nowrap ${headline ? "font-bold" : ""}`}
-        style={{ ...column(0), top: AY, height: "var(--lh)" }}
+        className={`absolute flex items-center gap-x-[0.3em] overflow-hidden whitespace-nowrap ${headline ? "font-bold" : ""}`}
+        style={{ ...column(0), top: AY, height: MARK_LH }}
       >
         {before.split(" ").map((w, i) => (
           <span key={`b${i}`}>{w}</span>
         ))}
         <span
           data-mark
-          className="relative rounded-[2px] bg-[#ffd84a] px-[0.14em] font-bold text-[#111] shadow-[0_0_0_1px_rgba(255,216,74,0.6)]"
+          className="shrink-0 rounded-[3px] bg-[#ffd84a] px-[0.16em] text-[1.42em] font-bold leading-[1.15] text-[#111] shadow-[0_0_0_1px_rgba(255,216,74,0.6)]"
         >
           {MARK}
         </span>
-        {after.split(" ").map((w, i) => (
-          <span key={`a${i}`}>{w}</span>
-        ))}
+        {after
+          .split(" ")
+          .filter(Boolean)
+          .map((w, i) => (
+            <span key={`a${i}`}>{w}</span>
+          ))}
       </div>
-      <div className="absolute" style={{ ...column(0), top: `calc(${AY} + var(--lh))` }}>
+      <div className="absolute" style={{ ...column(0), top: `calc(${AY} + ${MARK_LH})` }}>
         <Blocks blocks={cut.below} />
       </div>
     </div>
@@ -207,31 +214,65 @@ function Clipping({ cut }: { cut: Cut }) {
 }
 
 export default function Preloader() {
-  const [cut, setCut] = useState(0);
+  // The server draws the first cut; once hydrated, the browser adds the rest.
+  const all = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [done, setDone] = useState(false);
+  const layers = useRef<(HTMLDivElement | null)[]>([]);
+  const paperEl = useRef<HTMLDivElement>(null);
+  preload(PAPER, { as: "image", fetchPriority: "high" });
 
-  useEffect(() => {
-    lockScroll(true);
+  useEffect(() => lockScroll(true), []);
+
+  // Once every cut is laid out: put each cut's highlight dead centre, then run the cuts off the clock.
+  useLayoutEffect(() => {
+    if (!all) return;
+    layers.current.forEach((el) => {
+      const mark = el?.querySelector<HTMLElement>("[data-mark]");
+      if (!el || !mark) return;
+      el.style.transform = "";
+      const r = mark.getBoundingClientRect();
+      el.style.transform = `translateX(${innerWidth / 2 - (r.left + r.width / 2)}px)`;
+    });
+
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    if (!still) for (let k = 1; k < CUTS; k++) timers.push(setTimeout(() => setCut(k), k * CUT_MS));
-    const finish = () => setDone(true);
-    timers.push(setTimeout(finish, INTRO_LIFT * 1000));
-    // Any click or key skips straight to the site.
-    window.addEventListener("pointerdown", finish, { once: true });
-    window.addEventListener("keydown", finish, { once: true });
-    return () => {
-      timers.forEach(clearTimeout);
-      window.removeEventListener("pointerdown", finish);
-      window.removeEventListener("keydown", finish);
+    let raf = 0;
+    let shown = 0;
+    const t0 = performance.now();
+    const show = (n: number) => {
+      if (n === shown) return;
+      const prev = layers.current[shown];
+      const next = layers.current[n];
+      if (prev) prev.style.visibility = "hidden";
+      if (next) next.style.visibility = "visible";
+      if (paperEl.current) paperEl.current.style.transform = paperAt(n);
+      shown = n;
     };
-  }, []);
+    const tick = (now: number) => {
+      const t = now - t0;
+      if (!still) show(Math.min(Math.floor(t / CUT_MS), CUTS - 1));
+      if (t >= INTRO_LIFT * 1000) setDone(true);
+      else raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    // Any click or key skips straight to the site.
+    const skip = () => setDone(true);
+    window.addEventListener("pointerdown", skip, { once: true });
+    window.addEventListener("keydown", skip, { once: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointerdown", skip);
+      window.removeEventListener("keydown", skip);
+    };
+  }, [all]);
 
   useEffect(() => {
     if (done) lockScroll(false);
   }, [done]);
-
-  const c = CUTS_DATA[cut];
 
   return (
     <AnimatePresence>
@@ -246,28 +287,28 @@ export default function Preloader() {
           className="fixed inset-0 z-[100] select-none overflow-hidden bg-[#ece6d9] [--cw:17em] [--g:1.6em] [--lh:calc(1em*1.5)]"
           style={{
             fontFamily: 'Georgia, "Times New Roman", Times, serif',
-            fontSize: "clamp(19px, 1.85vw, 34px)",
+            fontSize: "clamp(18px, 1.75vw, 32px)",
             lineHeight: 1.5,
           }}
         >
-          {/* Paper: a different crumple, nudged, on every cut. */}
-          <div
-            aria-hidden
-            className="absolute -inset-[4%]"
-            style={{
-              backgroundImage: PAPERS[c.paper],
-              backgroundSize: "cover",
-              transform: `translate(${(cut % 4) - 1.5}%, ${((cut * 3) % 5) - 2}%) rotate(${((cut % 3) - 1) * 0.6}deg)`,
-            }}
-          />
-          <Clipping cut={c} />
+          <div className="absolute inset-0">
+            <div
+              ref={paperEl}
+              aria-hidden
+              className="absolute -inset-[6%]"
+              style={{ backgroundImage: `url(${PAPER})`, backgroundSize: "cover", transform: paperAt(0) }}
+            />
+            {(all ? CUTS_DATA : CUTS_DATA.slice(0, 1)).map((cut, n) => (
+              <Clipping key={n} cut={cut} hidden={n !== 0} setRef={(el) => void (layers.current[n] = el)} />
+            ))}
+          </div>
           {/* Sharp around the highlight, soft towards the edges, like a close-up shot of a page. */}
           <div
             aria-hidden
             className="absolute inset-0 [backdrop-filter:blur(2.2px)] [-webkit-backdrop-filter:blur(2.2px)]"
             style={{
-              maskImage: `radial-gradient(ellipse 30vw 16vh at 50% ${AY}, transparent 35%, black 100%)`,
-              WebkitMaskImage: `radial-gradient(ellipse 30vw 16vh at 50% ${AY}, transparent 35%, black 100%)`,
+              maskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
+              WebkitMaskImage: `radial-gradient(ellipse 32vw 17vh at 50% ${AY}, transparent 35%, black 100%)`,
             }}
           />
           <div

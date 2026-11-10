@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { Logo } from "./Nav";
 import { LinkedinLogo } from "@phosphor-icons/react";
-import { CONTACT, Clock, EASE, Eyebrow, PillButton, Reveal, Words, whatsappHref } from "./ui";
+import { CONTACT, Clock, Eyebrow, PillButton, Reveal, Words, whatsappHref } from "./ui";
 
 export default function Closing() {
   return (
@@ -93,22 +93,7 @@ export default function Closing() {
             </div>
           </div>
 
-          <div aria-hidden className="mt-16 flex select-none justify-between overflow-hidden leading-[0.78]">
-            {"VERA".split("").map((ch, i) => (
-              <motion.span
-                key={i}
-                initial={{ y: "100%" }}
-                whileInView={{ y: "0%" }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 1.2, ease: EASE }}
-                className={`text-[29vw] font-semibold ${i === 3 ? "text-hivis" : "text-bone"}`}
-              >
-                {ch}
-              </motion.span>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap justify-between gap-3 text-[10px] uppercase tracking-[0.2em] text-bone/35">
+          <div className="mt-14 flex flex-wrap justify-between gap-3 border-t border-white/10 pt-6 text-[10px] uppercase tracking-[0.2em] text-bone/35">
             <span>© 2026 Vera AI</span>
             <span>Vera is Latin for “true”</span>
           </div>
