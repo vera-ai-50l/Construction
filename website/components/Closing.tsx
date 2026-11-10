@@ -53,10 +53,7 @@ export default function Closing() {
         <div className="mx-auto max-w-[1440px]">
           <div className="grid gap-10 border-t border-white/10 pt-10 md:grid-cols-12">
             <div className="md:col-span-5">
-              <div className="flex items-center gap-2.5">
-                <Logo />
-                <span className="text-lg font-semibold tracking-[-0.03em]">Vera AI</span>
-              </div>
+              <Logo className="h-8 text-bone" />
               <p className="mt-4 max-w-[34ch] text-2xl leading-snug text-bone/70">
                 The true record of every site.
               </p>

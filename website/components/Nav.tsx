@@ -11,13 +11,26 @@ const LINKS = [
   ["Team", "#team"],
 ] as const;
 
-export function Logo({ className = "size-7" }: { className?: string }) {
+const WORDMARK = "url(/brand/vera-wordmark.png)";
+
+/** The Vera AI wordmark. Drawn as a mask, so it takes the text colour: light on dark, dark on light. */
+export function Logo({ className = "h-5" }: { className?: string }) {
   return (
-    <svg viewBox="0 0 28 28" className={className} aria-hidden>
-      <rect width="28" height="28" rx="8.5" fill="#FF5B1F" />
-      <path d="M7.5 8.5 14 20l6.5-11.5" fill="none" stroke="#0A0A09" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M10.6 8.5h6.8" stroke="#0A0A09" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <span
+      role="img"
+      aria-label="Vera AI"
+      className={`inline-block aspect-[881/178] bg-current ${className}`}
+      style={{
+        maskImage: WORDMARK,
+        WebkitMaskImage: WORDMARK,
+        maskSize: "contain",
+        WebkitMaskSize: "contain",
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+        maskPosition: "left center",
+        WebkitMaskPosition: "left center",
+      }}
+    />
   );
 }
 
@@ -42,12 +55,8 @@ export default function Nav() {
         className="fixed inset-x-0 top-3 z-40 flex justify-center px-3 md:top-5"
       >
         <nav className="flex w-full max-w-[940px] items-center justify-between gap-4 rounded-full bg-ink/65 py-1.5 pl-4 pr-1.5 shadow-[0_20px_50px_-20px_rgba(20,14,8,0.45)] ring-1 ring-white/10 backdrop-blur-2xl">
-          <a href="#top" className="flex items-center gap-2.5" aria-label="Vera AI home">
-            <Logo />
-            <span className="text-[15px] font-semibold tracking-[-0.03em]">Vera</span>
-            <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.15em] text-bone/45">
-              AI
-            </span>
+          <a href="#top" className="flex items-center py-1.5 pl-1" aria-label="Vera AI home">
+            <Logo className="h-[19px] text-bone" />
           </a>
 
           <ul className="hidden items-center md:flex">
