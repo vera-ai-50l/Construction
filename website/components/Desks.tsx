@@ -18,8 +18,12 @@ const DESKS: Desk[] = [
   {
     name: "Material Leak Check",
     tag: "Free · Week 1",
-    body: "One site, the last three months. We match purchase orders, delivery challans, material issued and material used per the BOQ, for cement, steel and two items you choose.",
-    facts: ["A one-page summary of money leaking", "Surplus stock you can move or sell", "Gaps by site and by supervisor"],
+    body: "The last three months, matched line by line: purchase orders, delivery challans, material issued and material used per the BOQ. Then we balance stock across your sites and check wastage supervisor by supervisor.",
+    facts: [
+      "A one-page summary of money leaking",
+      "Inventory balancing across sites: move surplus to sites that are short",
+      "Wastage check within each site, supervisor by supervisor",
+    ],
     Visual: LeakSummary,
   },
   {
@@ -155,24 +159,35 @@ function LeakSummary() {
     ["Site 04 · Surat", 19.3],
     ["Site 02 · Wakad", 18.6],
   ] as const;
+  // Across sites: surplus at one site sent to a site that would otherwise buy again.
+  const moves = [
+    ["Nagpur", "Indore", "420 bags cement"],
+    ["Surat", "Wakad", "6 MT Fe500"],
+  ] as const;
+  // Within a site: wastage per supervisor against the BOQ allowance (2.5%).
+  const supervisors = [
+    ["R. Patil", 6.8],
+    ["S. Khan", 4.1],
+    ["A. Desai", 2.2],
+  ] as const;
   return (
-    <motion.div {...view} variants={stagger(0.1)} className="flex h-full flex-col justify-between gap-8 p-6 md:p-8">
+    <motion.div {...view} variants={stagger(0.08)} className="flex h-full flex-col justify-between gap-6 p-6 md:p-8">
       <motion.div variants={rise} className="flex items-center justify-between">
         <Label>Money leaking · 1-page summary</Label>
         <Label>Jul–Sep 2026</Label>
       </motion.div>
       <motion.div variants={rise}>
-        <p className="text-[clamp(3rem,6vw,5rem)] font-medium leading-none tracking-[-0.055em] text-hivis">₹1.18 Cr</p>
+        <p className="text-[clamp(2.6rem,4.8vw,4.25rem)] font-medium leading-none tracking-[-0.055em] text-hivis">₹1.18 Cr</p>
         <p className="mt-2 text-sm text-bone/50">across 4 sites, cement + steel + RMC + shuttering</p>
       </motion.div>
-      <div className="space-y-4">
-        {sites.map(([s, v], i) => (
-          <motion.div key={s} variants={rise}>
+      <div className="space-y-3">
+        {sites.map(([site, v], i) => (
+          <motion.div key={site} variants={rise}>
             <div className="flex justify-between text-[13px]">
-              <span className="text-bone/70">{s}</span>
+              <span className="text-bone/70">{site}</span>
               <span className="tabular-nums">₹{v} L</span>
             </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
               <motion.div
                 className="h-full origin-left rounded-full bg-hivis"
                 style={{ width: `${(v / 41.2) * 100}%` }}
@@ -182,13 +197,49 @@ function LeakSummary() {
           </motion.div>
         ))}
       </div>
-      <motion.div variants={rise} className="flex flex-wrap gap-2">
-        {["Surplus: 1,240 bags · 18 MT Fe500", "7 supervisors flagged", "Ready in 7 days"].map((c) => (
-          <span key={c} className="rounded-full bg-white/[0.05] px-3 py-1.5 text-[11px] text-bone/65 ring-1 ring-white/[0.08]">
-            {c}
-          </span>
-        ))}
-      </motion.div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <motion.div variants={rise} className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.07]">
+          <Label>Inventory balancing · across sites</Label>
+          <ul className="mt-3 space-y-2.5">
+            {moves.map(([from, to, what]) => (
+              <li key={from} className="text-[13px]">
+                <span className="flex items-center gap-1.5 text-bone/85">
+                  {from} <span className="text-hivis">→</span> {to}
+                </span>
+                <span className="text-[12px] text-bone/45">{what}, not bought again</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 border-t border-white/[0.07] pt-2.5 text-[12px] text-bone/60">
+            <span className="tabular-nums text-bone">₹14.6 L</span> saved on new orders
+          </p>
+        </motion.div>
+        <motion.div variants={rise} className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.07]">
+          <Label>Wastage by supervisor · Site 03</Label>
+          <ul className="mt-3 space-y-2.5">
+            {supervisors.map(([name, pct], i) => (
+              <li key={name} className="text-[13px]">
+                <div className="flex justify-between">
+                  <span className="text-bone/80">{name}</span>
+                  <span className={`tabular-nums ${pct > 2.5 ? "text-hivis" : "text-bone/60"}`}>{pct}%</span>
+                </div>
+                <div className="relative mt-1 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+                  <motion.div
+                    className={`h-full origin-left rounded-full ${pct > 2.5 ? "bg-hivis" : "bg-bone/40"}`}
+                    style={{ width: `${(pct / 7) * 100}%` }}
+                    variants={grow(0.5 + i * 0.1)}
+                  />
+                  {/* BOQ wastage allowance */}
+                  <span className="absolute inset-y-0 w-px bg-bone/60" style={{ left: `${(2.5 / 7) * 100}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 border-t border-white/[0.07] pt-2.5 text-[12px] text-bone/60">
+            Allowance 2.5% · <span className="text-bone">2 supervisors over</span>
+          </p>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
