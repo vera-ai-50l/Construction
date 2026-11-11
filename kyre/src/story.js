@@ -1,28 +1,43 @@
-// Kyre's story: one month of outreach, told by 1,200 company tiles.
-// Each tile is a tiny company card (avatar + two lines); hiring ones turn solid blue.
-// Hero: a globe of tiles you can steer, with a "signal lens" under the pointer.
-// Scrolling the pinned stage morphs the same tiles through five steps:
-// market → signals → outreach (envelopes out) → replies (envelopes back) → leads,
-// where the interested tiles grow into the lead cards.
+// Kyre's story: one month of outreach, told by the companies in your market.
+// Hero: a globe of companies you can steer, with a "signal lens" under the pointer.
+// Scrolling the pinned stage morphs the same companies through five steps:
+// market → signals → outreach → replies → interested leads, which grow into the lead cards.
+//
+// Five looks for "a company", picked with ?style= (tiles is the default):
+//   tiles      tiny company cards (avatar + two lines); hiring ones turn solid blue
+//   network    a wireframe globe of glowing nodes; outreach and replies travel along arcs
+//   names      a globe of company names; hiring ones turn blue and read "· hiring"
+//   people     contact avatars with initials
+//   envelopes  simple dots, with envelopes going out and chat bubbles coming back
+// Add ?compare (or any ?style=) to show a switcher bar.
 // Source for kyre/story.js (bundled and minified with esbuild; see kyre/README.md).
 
 import {
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   Color,
+  LinearFilter,
   LineBasicMaterial,
   LineSegments,
   PerspectiveCamera,
   Points,
   Scene,
   ShaderMaterial,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
 
+const STYLES = ["tiles", "network", "names", "people", "envelopes"];
+const LABELS = { tiles: "Company tiles", network: "Network globe", names: "Company names", people: "People", envelopes: "Envelopes" };
+const params = new URLSearchParams(location.search);
+const STYLE = STYLES.includes(params.get("style")) ? params.get("style") : "tiles";
+
 const story = document.getElementById("story");
 const canvas = document.getElementById("world");
 if (story && canvas) main();
+if (params.has("style") || params.has("compare")) switcher();
 
 function main() {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -36,13 +51,23 @@ function main() {
   }
   renderer.setClearColor(0x000000, 0);
 
+  // Per-look settings: grid size, a size multiplier for every stage, the lead size, plain alpha, lens growth.
+  const CFG = {
+    tiles: { cols: 40, rows: 30, mult: 1, lead: 34, plainA: 1, lens: 0.7 },
+    network: { cols: 40, rows: 30, mult: 0.42, lead: 14, plainA: 1, lens: 0.9 },
+    names: { cols: 20, rows: 15, mult: 7.2, lead: 120, plainA: 0.6, lens: 0.22 },
+    people: { cols: 30, rows: 20, mult: 1.6, lead: 42, plainA: 1, lens: 0.6 },
+    envelopes: { cols: 65, rows: 40, mult: 0.3, lead: 11, plainA: 1, lens: 1.1 },
+  }[STYLE];
+
   // ---------- the market ----------
-  const COLS = 40, ROWS = 30, N = COLS * ROWS; // 1,200 companies
+  const COLS = CFG.cols, ROWS = CFG.rows, N = COLS * ROWS;
   const STAGES = 5;
   const rnd = mulberry32(11);
   const order = shuffle([...Array(N).keys()], rnd);
-  const SIG = order.slice(0, 96); // ~8% hiring right now
-  const REP = SIG.slice(0, 24); // ~25% of those reply
+  const nSig = Math.round(N * 0.08);
+  const SIG = order.slice(0, nSig); // ~8% hiring right now
+  const REP = SIG.slice(0, Math.max(6, Math.round(nSig * 0.25))); // ~25% of those reply
   const LEAD = REP.slice(0, 6); // the interested few
   const role = new Uint8Array(N); // 0 market, 1 signal, 2 replied, 3 lead
   SIG.forEach((i) => (role[i] = 1));
@@ -70,7 +95,6 @@ function main() {
   const camera = new PerspectiveCamera(40, 1, 0.1, 100);
   camera.position.set(0, 0, 9);
 
-  // Rounded-box signed distance, shared by the tile and envelope shaders.
   const SD = /* glsl */ `
     float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
     float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }`;
@@ -78,10 +102,12 @@ function main() {
     attribute float aSize;
     attribute vec4 aColor;
     attribute float aTag;
+    attribute vec2 aCell;
     uniform float uPx;
     varying vec4 vColor;
     varying float vTag;
     varying float vPx;
+    varying vec2 vCell;
     void main() {
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
       gl_Position = projectionMatrix * mv;
@@ -89,42 +115,113 @@ function main() {
       vPx = gl_PointSize;
       vColor = aColor;
       vTag = aTag;
+      vCell = aCell;
     }`;
-  // A company tile: white card with an avatar and two text lines; vTag fills it with the accent.
-  const tileFrag = /* glsl */ `
+  const HEAD = /* glsl */ `
     varying vec4 vColor;
     varying float vTag;
     varying float vPx;
+    varying vec2 vCell;
+    uniform sampler2D uAtlas;
+    uniform vec2 uGrid;
     ${SD}
-    void main() {
-      vec2 p = gl_PointCoord - 0.5;
-      float aa = 1.4 / max(vPx, 1.0);
-      float d = sdBox(p, vec2(0.46, 0.31), 0.1);
-      float body = 1.0 - smoothstep(-aa, aa, d);
-      float a = vColor.a * body;
-      if (a < 0.02) discard;
-      vec3 accent = vColor.rgb;
-      vec3 fill = mix(vec3(1.0), accent, vTag);
-      vec3 ink = mix(accent, vec3(1.0), vTag);
-      float detail = smoothstep(6.0, 13.0, vPx);
-      float av = 1.0 - smoothstep(0.085, 0.085 + aa, length(p - vec2(-0.24, 0.0)));
-      float l1 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y + 0.075))) * step(-0.1, p.x) * step(p.x, 0.32);
-      float l2 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y - 0.075))) * step(-0.1, p.x) * step(p.x, 0.17);
-      vec3 col = mix(fill, ink, max(av, max(l1 * 0.75, l2 * 0.5)) * mix(0.35, 0.85, vTag) * detail);
-      float edge = smoothstep(-0.06, -0.06 + aa * 1.5, d);
-      col = mix(col, accent, edge * (0.5 * (1.0 - vTag)));
-      gl_FragColor = vec4(col, a);
+    // Alpha of atlas cell c at cell-local coords q (0..1, y down).
+    float cellA(float c, vec2 q) {
+      float cx = mod(c, uGrid.x), cy = floor(c / uGrid.x);
+      return texture2D(uAtlas, vec2((cx + q.x) / uGrid.x, 1.0 - (cy + q.y) / uGrid.y)).a;
     }`;
-  // Envelopes (aTag 0 = outgoing, white; 1 = reply, blue) and the Kyre core (aTag 2: blue app tile with a "k").
-  const pkFrag = /* glsl */ `
-    varying vec4 vColor;
-    varying float vTag;
-    varying float vPx;
-    ${SD}
+
+  const FRAG = {
+    // A company tile: white card with an avatar and two text lines; vTag fills it with the accent.
+    tiles: /* glsl */ `${HEAD}
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float aa = 1.4 / max(vPx, 1.0);
+        float d = sdBox(p, vec2(0.46, 0.31), 0.1);
+        float a = vColor.a * (1.0 - smoothstep(-aa, aa, d));
+        if (a < 0.02) discard;
+        vec3 accent = vColor.rgb;
+        vec3 fill = mix(vec3(1.0), accent, vTag);
+        vec3 ink = mix(accent, vec3(1.0), vTag);
+        float detail = smoothstep(6.0, 13.0, vPx);
+        float av = 1.0 - smoothstep(0.085, 0.085 + aa, length(p - vec2(-0.24, 0.0)));
+        float l1 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y + 0.075))) * step(-0.1, p.x) * step(p.x, 0.32);
+        float l2 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y - 0.075))) * step(-0.1, p.x) * step(p.x, 0.17);
+        vec3 col = mix(fill, ink, max(av, max(l1 * 0.75, l2 * 0.5)) * mix(0.35, 0.85, vTag) * detail);
+        col = mix(col, accent, smoothstep(-0.06, -0.06 + aa * 1.5, d) * (0.5 * (1.0 - vTag)));
+        gl_FragColor = vec4(col, a);
+      }`,
+    // A node: a crisp core with a soft halo that grows when it lights up.
+    network: /* glsl */ `${HEAD}
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        float core = 1.0 - smoothstep(0.17, 0.21, d);
+        float halo = exp(-d * d * 22.0) * 0.45 * vTag;
+        float a = vColor.a * clamp(core + halo, 0.0, 1.0);
+        if (a < 0.02) discard;
+        gl_FragColor = vec4(vColor.rgb, a);
+      }`,
+    // A company name from the atlas; hiring ones blend to their "· hiring" label.
+    names: /* glsl */ `${HEAD}
+      void main() {
+        vec2 pc = gl_PointCoord;
+        float y = (pc.y - 0.5) * 8.0 + 0.5;
+        if (y < 0.0 || y > 1.0) discard;
+        vec2 q = vec2(pc.x, y);
+        float m1 = cellA(vCell.x, q);
+        float m2 = vCell.y >= 0.0 ? cellA(vCell.y, q) : m1;
+        float a = vColor.a * mix(m1, m2, vTag);
+        if (a < 0.02) discard;
+        gl_FragColor = vec4(vColor.rgb, a);
+      }`,
+    // A contact avatar: a disc with initials from the atlas.
+    people: /* glsl */ `${HEAD}
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float aa = 1.4 / max(vPx, 1.0);
+        float d = length(p);
+        float a = vColor.a * (1.0 - smoothstep(0.46 - aa, 0.46 + aa, d));
+        if (a < 0.02) discard;
+        vec3 accent = vColor.rgb;
+        vec3 fill = mix(vec3(0.93, 0.925, 0.91), accent, vTag);
+        vec3 ink = mix(vec3(0.07, 0.075, 0.085), vec3(1.0), vTag);
+        float g = cellA(vCell.x, gl_PointCoord) * smoothstep(7.0, 14.0, vPx);
+        vec3 col = mix(fill, ink, g);
+        col = mix(col, accent, smoothstep(0.4, 0.44, d) * 0.5 * (1.0 - vTag));
+        gl_FragColor = vec4(col, a);
+      }`,
+    // A plain dot.
+    envelopes: /* glsl */ `${HEAD}
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        float a = vColor.a * smoothstep(0.5, 0.36, d);
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(vColor.rgb, a);
+      }`,
+  };
+
+  // Things in flight. aTag: 0 envelope (white), 1 envelope (blue), 2 Kyre core, 3 glowing dot, 4 chat bubble.
+  const pkFrag = /* glsl */ `${HEAD}
     void main() {
       vec2 p = gl_PointCoord - 0.5;
       float aa = 1.4 / max(vPx, 1.0);
       vec3 accent = vColor.rgb;
+      if (vTag > 3.5) {
+        float d = min(sdBox(p - vec2(0.0, -0.05), vec2(0.42, 0.27), 0.12), sdSeg(p, vec2(-0.22, 0.18), vec2(-0.3, 0.38)) - 0.05);
+        float body = 1.0 - smoothstep(-aa, aa, d);
+        if (body * vColor.a < 0.02) discard;
+        float dots = 0.0;
+        for (int k = -1; k <= 1; k++) dots = max(dots, 1.0 - smoothstep(0.05, 0.05 + aa, length(p - vec2(float(k) * 0.16, -0.05))));
+        gl_FragColor = vec4(mix(accent, vec3(1.0), dots), vColor.a * body);
+        return;
+      }
+      if (vTag > 2.5) {
+        float d = length(p);
+        float a = vColor.a * clamp(1.0 - smoothstep(0.16, 0.22, d) + exp(-d * d * 18.0) * 0.5, 0.0, 1.0);
+        if (a < 0.02) discard;
+        gl_FragColor = vec4(accent, a);
+        return;
+      }
       if (vTag > 1.5) {
         float d = sdBox(p, vec2(0.42), 0.13);
         float body = 1.0 - smoothstep(-aa, aa, d);
@@ -143,34 +240,42 @@ function main() {
       vec3 ink = mix(accent, vec3(1.0), vTag);
       gl_FragColor = vec4(mix(fill, ink, line), vColor.a * body);
     }`;
+
+  // ---------- atlas (names and people) ----------
+  const atlas = buildAtlas(STYLE, N, role, rnd);
+  const uniforms = {
+    uPx: { value: 1 },
+    uAtlas: { value: atlas ? atlas.texture : null },
+    uGrid: { value: atlas ? new Vector2(atlas.cols, atlas.rows) : new Vector2(1, 1) },
+  };
   const mat = new ShaderMaterial({
-    uniforms: { uPx: { value: 1 } },
+    uniforms,
     vertexShader: vert,
-    fragmentShader: tileFrag,
+    fragmentShader: FRAG[STYLE],
     transparent: true,
-    depthWrite: true,
+    depthWrite: STYLE === "tiles" || STYLE === "people",
   });
-  const pkMat = new ShaderMaterial({
-    uniforms: mat.uniforms,
-    vertexShader: vert,
-    fragmentShader: pkFrag,
-    transparent: true,
-    depthWrite: false,
-  });
+  const pkMat = new ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: pkFrag, transparent: true, depthWrite: false });
 
   const pos = new Float32Array(N * 3);
   const col = new Float32Array(N * 4);
   const size = new Float32Array(N);
   const tag = new Float32Array(N);
+  const cell = new Float32Array(N * 2);
+  for (let i = 0; i < N; i++) {
+    cell[i * 2] = atlas ? atlas.cellOf[i] : 0;
+    cell[i * 2 + 1] = atlas ? atlas.cell2Of[i] : -1;
+  }
   const geo = new BufferGeometry();
   geo.setAttribute("position", new BufferAttribute(pos, 3));
   geo.setAttribute("aColor", new BufferAttribute(col, 4));
   geo.setAttribute("aSize", new BufferAttribute(size, 1));
   geo.setAttribute("aTag", new BufferAttribute(tag, 1));
+  geo.setAttribute("aCell", new BufferAttribute(cell, 2));
   scene.add(new Points(geo, mat));
 
-  // Email packets (out to signals, back from replies) plus the Kyre core at the centre.
-  const P = 90;
+  // Packets (out to signals, back from replies) plus the Kyre core at the centre.
+  const P = STYLE === "envelopes" ? 140 : 90;
   const pk = new Float32Array((P + 1) * 3);
   const pkCol = new Float32Array((P + 1) * 4);
   const pkSize = new Float32Array(P + 1);
@@ -180,6 +285,7 @@ function main() {
   pkGeo.setAttribute("aColor", new BufferAttribute(pkCol, 4));
   pkGeo.setAttribute("aSize", new BufferAttribute(pkSize, 1));
   pkGeo.setAttribute("aTag", new BufferAttribute(pkTag, 1));
+  pkGeo.setAttribute("aCell", new BufferAttribute(new Float32Array((P + 1) * 2), 2));
   const packets = new Points(pkGeo, pkMat);
   packets.renderOrder = 2;
   scene.add(packets);
@@ -191,13 +297,47 @@ function main() {
     pkTarget[p] = pkBack[p] ? REP[Math.floor(rnd() * REP.length)] : SIG[Math.floor(rnd() * SIG.length)];
     pkOff[p] = rnd();
   }
+  const PK = {
+    tiles: { out: [0, 13], back: [1, 15] },
+    network: { out: [3, 7], back: [3, 9] },
+    names: { out: [0, 14], back: [1, 16] },
+    people: { out: [0, 14], back: [1, 16] },
+    envelopes: { out: [0, 15], back: [4, 18] },
+  }[STYLE];
 
-  // Faint lines from the core to every signal company while emails go out.
-  const linePos = new Float32Array(SIG.length * 6);
+  // Lines from the core to every signal company while emails go out (arcs for the network look).
+  const SEGS = STYLE === "network" ? 12 : 1;
+  const linePos = new Float32Array(SIG.length * SEGS * 6);
   const lineGeo = new BufferGeometry();
   lineGeo.setAttribute("position", new BufferAttribute(linePos, 3));
   const lineMat = new LineBasicMaterial({ color: 0x2f4cff, transparent: true, opacity: 0, depthWrite: false });
   scene.add(new LineSegments(lineGeo, lineMat));
+
+  // Network look: each node joined to its two nearest neighbours on the globe.
+  let edges = null, edgePos = null, edgeGeo = null, edgeMat = null;
+  if (STYLE === "network") {
+    const set2 = new Set();
+    const list = [];
+    for (let i = 0; i < N; i++) {
+      let b1 = -1, b2 = -1, d1 = 9, d2 = 9;
+      for (let j = 0; j < N; j++) {
+        if (j === i) continue;
+        const dx = SPH[i * 3] - SPH[j * 3], dy = SPH[i * 3 + 1] - SPH[j * 3 + 1], dz = SPH[i * 3 + 2] - SPH[j * 3 + 2];
+        const d = dx * dx + dy * dy + dz * dz;
+        if (d < d1) { d2 = d1; b2 = b1; d1 = d; b1 = j; } else if (d < d2) { d2 = d; b2 = j; }
+      }
+      for (const j of [b1, b2]) {
+        const k = i < j ? i * N + j : j * N + i;
+        if (!set2.has(k)) { set2.add(k); list.push(i, j); }
+      }
+    }
+    edges = new Int32Array(list);
+    edgePos = new Float32Array(edges.length * 3);
+    edgeGeo = new BufferGeometry();
+    edgeGeo.setAttribute("position", new BufferAttribute(edgePos, 3));
+    edgeMat = new LineBasicMaterial({ color: 0x121315, transparent: true, opacity: 0, depthWrite: false });
+    scene.add(new LineSegments(edgeGeo, edgeMat));
+  }
 
   const INK = new Color("#121315");
   const BLUE = new Color("#2f4cff");
@@ -207,7 +347,7 @@ function main() {
   const L = [null, new Float32Array(N * 3), new Float32Array(N * 3), new Float32Array(N * 3), new Float32Array(N * 3), new Float32Array(N * 3)];
   let halfW = 4, halfH = 3, wide = true, R = 2.4;
   const heroOff = new Vector3();
-  const leadX = { v: 2 };
+  const core = new Vector3();
 
   function layout() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -215,7 +355,7 @@ function main() {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    mat.uniforms.uPx.value = renderer.getPixelRatio() * Math.min(1, Math.max(0.65, h / 900));
+    uniforms.uPx.value = renderer.getPixelRatio() * Math.min(1, Math.max(0.65, h / 900));
     halfH = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z;
     halfW = halfH * camera.aspect;
     wide = camera.aspect > 1.05;
@@ -260,11 +400,11 @@ function main() {
     core.set(ringX, ringY, 0);
 
     // 5 · interested: a neat column of leads; everything else drifts back
-    leadX.v = wide ? halfW * 0.3 : 0;
+    const leadX = wide ? halfW * 0.3 : 0;
     const top = wide ? halfH * 0.52 : halfH * 0.66, step = wide ? halfH * 0.205 : halfH * 0.148;
     for (let i = 0; i < N; i++) {
       const k = leadSlot[i];
-      if (k >= 0) set(L[5], i, leadX.v, top - k * step, 0.6);
+      if (k >= 0) set(L[5], i, leadX, top - k * step, 0.6);
       else {
         const j = i * 3;
         const s = role[i] ? 0.55 : 1.4;
@@ -272,26 +412,26 @@ function main() {
       }
     }
   }
-  const core = new Vector3();
 
   // ---------- styles per stage: [r, g, b, alpha, size, tag] ----------
+  const M = CFG.mult, PA = CFG.plainA;
   const tmpA = [0, 0, 0, 0, 0, 0], tmpB = [0, 0, 0, 0, 0, 0];
   function style(k, i, t, out) {
     const r = role[i];
     const pulse = reduce ? 1 : 1 + 0.12 * Math.sin(t * 3 + seed[i] * 4);
     switch (k) {
       case 0:
-        return r ? put(out, BLUE, 1, 12.5 * pulse, 1) : put(out, INK, 0.85, 10.5, 0);
+        return r ? put(out, BLUE, 1, 12.5 * M * pulse, 1) : put(out, INK, 0.85 * PA, 10.5 * M, 0);
       case 1:
-        return put(out, INK, 0.95, 11, 0);
+        return put(out, INK, 0.95 * PA, 11 * M, 0);
       case 2:
-        return r ? put(out, BLUE, 1, 15 * pulse, 1) : put(out, INK, 0.28, 10, 0);
+        return r ? put(out, BLUE, 1, 15 * M * pulse, 1) : put(out, INK, 0.28 * PA, 10 * M, 0);
       case 3:
-        return r ? put(out, BLUE, 1, 13, 1) : put(out, INK, 0.08, 9, 0);
+        return r ? put(out, BLUE, 1, 13 * M, 1) : put(out, INK, 0.08 * PA, 9 * M, 0);
       case 4:
-        return r >= 2 ? put(out, BLUE, 1, 16 * pulse, 1) : r ? put(out, GREY, 0.75, 11, 0) : put(out, INK, 0.04, 8, 0);
+        return r >= 2 ? put(out, BLUE, 1, 16 * M * pulse, 1) : r ? put(out, GREY, 0.75, 11 * M, 0) : put(out, INK, 0.04, 8 * M, 0);
       default:
-        return r === 3 ? put(out, BLUE, 1, 34, 1) : r === 2 ? put(out, GREY, 0.45, 10, 0) : r ? put(out, GREY, 0.2, 9, 0) : put(out, INK, 0, 8, 0);
+        return r === 3 ? put(out, BLUE, 1, CFG.lead, 1) : r === 2 ? put(out, GREY, 0.45, 10 * M, 0) : r ? put(out, GREY, 0.2, 9 * M, 0) : put(out, INK, 0, 8 * M, 0);
     }
   }
 
@@ -361,6 +501,20 @@ function main() {
   let cs = 0, last = performance.now(), camX = 0, camY = 0;
   let tipIdx = -1, autoAt = 0, autoIdx = -1, autoSig = 0;
 
+  // Point on the arc (or straight line) between the core and a company.
+  const arcOut = [0, 0, 0];
+  function along(tx, ty, tz, u, out) {
+    if (SEGS === 1) {
+      out[0] = core.x + (tx - core.x) * u; out[1] = core.y + (ty - core.y) * u; out[2] = core.z + (tz - core.z) * u;
+      return out;
+    }
+    const mx = (core.x + tx) / 2, my = (core.y + ty) / 2, dx = tx - core.x, dy = ty - core.y;
+    const cx = mx - dy * 0.28, cy = my + dx * 0.28, cz = (core.z + tz) / 2 + 1.2;
+    const a = (1 - u) * (1 - u), b = 2 * (1 - u) * u, c = u * u;
+    out[0] = a * core.x + b * cx + c * tx; out[1] = a * core.y + b * cy + c * ty; out[2] = a * core.z + b * cz + c * tz;
+    return out;
+  }
+
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min((now - last) / 1000, 0.05);
@@ -391,13 +545,13 @@ function main() {
 
     const W = canvas.clientWidth, H = canvas.clientHeight;
     const lensR = 150, lensOn = heroW > 0.02 && pointer.inside && now - pointer.moved < 4000;
-    let near = -1, nearD = 36;
+    let near = -1, nearD = STYLE === "names" ? 26 : 36;
 
     for (let i = 0; i < N; i++) {
       const j = i * 3;
       // stage 0 position: rotated globe
       const sx0 = SPH[j], sy0 = SPH[j + 1], sz0 = SPH[j + 2];
-      let x = sx0 * cr + sz0 * sr, z = -sx0 * sr + sz0 * cr, y = sy0;
+      const x = sx0 * cr + sz0 * sr, z = -sx0 * sr + sz0 * cr, y = sy0;
       const y2 = y * cx - z * sx, z2 = y * sx + z * cx;
       const gx = x * R + heroOff.x, gy = y2 * R + heroOff.y, gz = z2 * R;
       const depth = (z2 + 1) / 2; // 0 back, 1 front
@@ -417,7 +571,7 @@ function main() {
       let a = tmpA[3] + (tmpB[3] - tmpA[3]) * f, s = tmpA[4] + (tmpB[4] - tmpA[4]) * f;
       let tg = tmpA[5] + (tmpB[5] - tmpA[5]) * f;
       if (k0 === 0) a *= 1 - (1 - f) * (1 - (0.28 + depth * 0.72)); // the far side of the globe is dimmer
-      if (leadSlot[i] >= 0) a *= 1 - smooth((cs - 4.55 - leadSlot[i] * 0.04) / 0.35); // the tile hands over to its card
+      if (leadSlot[i] >= 0) a *= 1 - smooth((cs - 4.55 - leadSlot[i] * 0.04) / 0.35); // the company hands over to its card
 
       if (lensOn) {
         proj.set(px, py, pz).project(camera);
@@ -426,9 +580,9 @@ function main() {
         if (d < lensR) {
           const q = Math.pow(1 - d / lensR, 2) * heroW;
           a = Math.min(1, a + q * 0.4);
-          s *= 1 + q * 0.7;
+          s *= 1 + q * CFG.lens;
           r += (BLUE.r - r) * q; g += (BLUE.g - g) * q; b += (BLUE.b - b) * q;
-          tg = Math.max(tg, q * 0.35);
+          if (STYLE !== "names") tg = Math.max(tg, q * 0.35);
         }
         if (role[i] && depth > 0.5 && d < nearD) { nearD = d; near = i; }
       }
@@ -442,20 +596,24 @@ function main() {
     geo.attributes.aSize.needsUpdate = true;
     geo.attributes.aTag.needsUpdate = true;
 
+    if (edges) {
+      for (let e = 0; e < edges.length; e++) edgePos.set([cur[edges[e] * 3], cur[edges[e] * 3 + 1], cur[edges[e] * 3 + 2]], e * 3);
+      edgeGeo.attributes.position.needsUpdate = true;
+      edgeMat.opacity = 0.2 * (1 - smooth(cs / 0.9));
+    }
+
     // emails out (stage 3) and replies back (stage 4)
     const wOut = bump(cs, 2.3, 2.95, 3.85, 4.3), wBack = bump(cs, 3.45, 3.95, 4.6, 5.0), wCore = bump(cs, 2.2, 2.85, 4.5, 4.95);
     for (let q = 0; q < P; q++) {
       const ti = pkTarget[q] * 3, back = pkBack[q];
       const u = reduce ? 0.5 : (t * (back ? 0.32 : 0.42) + pkOff[q]) % 1;
-      const from = back ? [cur[ti], cur[ti + 1], cur[ti + 2]] : [core.x, core.y, core.z];
-      const to = back ? [core.x, core.y, core.z] : [cur[ti], cur[ti + 1], cur[ti + 2]];
-      pk[q * 3] = from[0] + (to[0] - from[0]) * u;
-      pk[q * 3 + 1] = from[1] + (to[1] - from[1]) * u;
-      pk[q * 3 + 2] = from[2] + (to[2] - from[2]) * u;
+      along(cur[ti], cur[ti + 1], cur[ti + 2], back ? 1 - u : u, arcOut);
+      pk[q * 3] = arcOut[0]; pk[q * 3 + 1] = arcOut[1]; pk[q * 3 + 2] = arcOut[2];
       const w = (back ? wBack : wOut) * Math.min(1, Math.sin(u * Math.PI) * 2.5) * (reduce ? 0 : 1);
       pkCol[q * 4] = BLUE.r; pkCol[q * 4 + 1] = BLUE.g; pkCol[q * 4 + 2] = BLUE.b; pkCol[q * 4 + 3] = w;
-      pkSize[q] = back ? 15 : 13;
-      pkTag[q] = back ? 1 : 0;
+      const kind = back ? PK.back : PK.out;
+      pkTag[q] = kind[0];
+      pkSize[q] = kind[1];
     }
     pk[P * 3] = core.x; pk[P * 3 + 1] = core.y; pk[P * 3 + 2] = core.z;
     pkCol[P * 4] = BLUE.r; pkCol[P * 4 + 1] = BLUE.g; pkCol[P * 4 + 2] = BLUE.b;
@@ -467,11 +625,18 @@ function main() {
     pkGeo.attributes.aSize.needsUpdate = true;
     pkGeo.attributes.aTag.needsUpdate = true;
 
-    SIG.forEach((i, k) => {
-      linePos.set([core.x, core.y, core.z, cur[i * 3], cur[i * 3 + 1], cur[i * 3 + 2]], k * 6);
-    });
+    for (let k = 0; k < SIG.length; k++) {
+      const i = SIG[k] * 3;
+      for (let sgi = 0; sgi < SEGS; sgi++) {
+        const o = (k * SEGS + sgi) * 6;
+        along(cur[i], cur[i + 1], cur[i + 2], sgi / SEGS, arcOut);
+        linePos[o] = arcOut[0]; linePos[o + 1] = arcOut[1]; linePos[o + 2] = arcOut[2];
+        along(cur[i], cur[i + 1], cur[i + 2], (sgi + 1) / SEGS, arcOut);
+        linePos[o + 3] = arcOut[0]; linePos[o + 4] = arcOut[1]; linePos[o + 5] = arcOut[2];
+      }
+    }
     lineGeo.attributes.position.needsUpdate = true;
-    lineMat.opacity = wOut * 0.1 + wBack * 0.04;
+    lineMat.opacity = (wOut * 0.1 + wBack * 0.04) * (SEGS > 1 ? 1.8 : 1);
 
     renderer.render(scene, camera);
 
@@ -485,7 +650,7 @@ function main() {
     showCap(Math.max(1, Math.min(STAGES, Math.round(cs))));
     segs.forEach((el, k) => el.style.setProperty("--f", Math.min(Math.max(cs - k, 0), 1).toFixed(3)));
 
-    // the interested tiles grow into the lead cards
+    // the interested companies grow into the lead cards
     cards.forEach((card, k) => {
       const i = LEAD[k] * 3;
       proj.set(cur[i], cur[i + 1], cur[i + 2]).project(camera);
@@ -520,7 +685,7 @@ function main() {
       const sxp = (proj.x * 0.5 + 0.5) * W, syp = (-proj.y * 0.5 + 0.5) * H;
       if (show !== tipIdx) {
         const sgl = SIGNALS[near >= 0 ? sigSlot[show] % SIGNALS.length : autoSig];
-        tipName.textContent = sgl[0];
+        tipName.textContent = atlas && atlas.names ? atlas.names[show] : sgl[0];
         tipWhat.textContent = sgl[1];
         tipWhen.textContent = sgl[2];
         tipIdx = show;
@@ -534,7 +699,7 @@ function main() {
   }
   requestAnimationFrame(frame);
 
-  // a signal dot on the front of the globe, for the idle tour
+  // a signal company on the front of the globe, for the idle tour
   function pickFront(cr, sr, sx, cx) {
     for (let tries = 0; tries < 40; tries++) {
       const i = SIG[Math.floor(Math.random() * SIG.length)];
@@ -545,6 +710,87 @@ function main() {
     }
     return SIG[0];
   }
+}
+
+// ---------- atlases ----------
+// names: one cell per company name, plus a "· hiring" cell for each hiring company.
+// people: 64 initials in white, drawn over a coloured disc by the shader.
+function buildAtlas(style, N, role, rnd) {
+  if (style !== "names" && style !== "people") return null;
+  const cvs = document.createElement("canvas");
+  const ctx = cvs.getContext("2d");
+  const cellOf = new Float32Array(N), cell2Of = new Float32Array(N).fill(-1);
+  let cols, rows, names = null;
+  const font = '"Inter Tight", "Helvetica Neue", Arial, sans-serif';
+
+  if (style === "names") {
+    const A = ["Northwind", "Brightwave", "Halden", "Mapleford", "Arden", "Cobalt", "Fernhill", "Quarry Lane", "Kestrel", "Ashby", "Lumen", "Harbor", "Silverline", "Oakridge", "Redfern", "Bluestone", "Westbrook", "Pinecrest", "Larkspur", "Granite", "Elmwood", "Summit", "Riverside", "Copperleaf"];
+    const B = ["Logistics", "Health", "Software", "Care", "Foods", "Freight", "Legal", "Staffing", "Talent", "Group", "Partners", "Labs", "Retail", "Energy", "Build"];
+    names = [];
+    for (let i = 0; i < N; i++) names.push(`${A[Math.floor(rnd() * A.length)]} ${B[Math.floor(rnd() * B.length)]}`);
+    const extra = [];
+    for (let i = 0; i < N; i++) if (role[i]) extra.push(i);
+    const total = N + extra.length;
+    const cw = 384, ch = 48;
+    cols = 5;
+    rows = Math.ceil(total / cols);
+    cvs.width = cw * cols;
+    cvs.height = ch * rows;
+    const draw = () => {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const put = (c, text, weight, size) => {
+        ctx.font = `${weight} ${size}px ${font}`;
+        ctx.fillText(text, (c % cols) * cw + cw / 2, Math.floor(c / cols) * ch + ch / 2, cw - 8);
+      };
+      for (let i = 0; i < N; i++) put(i, names[i], 500, 24);
+      extra.forEach((i, k) => put(N + k, `${names[i]} · hiring`, 600, 24));
+    };
+    draw();
+    for (let i = 0; i < N; i++) cellOf[i] = i;
+    extra.forEach((i, k) => (cell2Of[i] = N + k));
+    if (document.fonts) document.fonts.ready.then(() => { draw(); texture.needsUpdate = true; });
+  } else {
+    const L = "ABCDEFGHJKLMNPRSTW";
+    const c = 64;
+    cols = 8;
+    rows = 8;
+    cvs.width = c * cols;
+    cvs.height = c * rows;
+    const inits = [];
+    for (let k = 0; k < 64; k++) inits.push(L[Math.floor(rnd() * L.length)] + L[Math.floor(rnd() * L.length)]);
+    const draw = () => {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `600 24px ${font}`;
+      inits.forEach((s, k) => ctx.fillText(s, (k % cols) * c + c / 2, Math.floor(k / cols) * c + c / 2 + 1));
+    };
+    draw();
+    for (let i = 0; i < N; i++) cellOf[i] = Math.floor(rnd() * 64);
+    if (document.fonts) document.fonts.ready.then(() => { draw(); texture.needsUpdate = true; });
+  }
+  const texture = new CanvasTexture(cvs);
+  texture.minFilter = LinearFilter;
+  texture.generateMipmaps = false;
+  return { texture, cols, rows, cellOf, cell2Of, names };
+}
+
+// ---------- the look switcher (?compare or ?style=) ----------
+function switcher() {
+  const bar = document.createElement("nav");
+  bar.className = "look-switch";
+  bar.setAttribute("aria-label", "Compare looks");
+  bar.innerHTML = `<span>Look</span>` + STYLES.map((s) => {
+    const u = new URL(location.href);
+    u.searchParams.set("style", s);
+    u.searchParams.delete("compare");
+    return `<a href="${u.pathname}${u.search}"${s === STYLE ? ' aria-current="true"' : ""}>${LABELS[s]}</a>`;
+  }).join("");
+  document.body.appendChild(bar);
 }
 
 // ---------- helpers ----------

@@ -7,6 +7,8 @@ Static one-page site (no build step for the page itself). Deployed on Vercel as 
 - `src/story.js`: the hero globe of company tiles and the scroll story (three.js). Edit this, not `story.js`.
 - `story.js`: the bundled, minified build of `src/story.js` that the page loads.
 
+The story has five looks for a company, chosen with `?style=`: `tiles` (default), `network`, `names`, `people`, `envelopes`. Adding `?compare` or any `?style=` shows a switcher bar at the bottom of the page.
+
 Rebuild `story.js` after editing `src/story.js` (three.js is resolved from `website/node_modules`):
 
 ```bash

@@ -291,3 +291,15 @@ h3 { font-size: 1.2rem; letter-spacing: -0.02em; font-weight: 600; }
 @keyframes book-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (max-width: 560px) { .book { align-items: flex-end; } .book-panel { border-radius: 24px 24px 18px 18px; } }
 @media (prefers-reduced-motion: reduce) { .book-panel { animation: none; } }
+
+/* ---------- look switcher (only with ?compare or ?style=) ---------- */
+.look-switch {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 40;
+  display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
+  background: rgba(18,19,21,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 18px 40px -16px rgba(0,0,0,.5); max-width: calc(100vw - 24px); overflow-x: auto;
+}
+.look-switch span { color: rgba(255,255,255,.5); font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 0 8px 0 10px; }
+.look-switch a { white-space: nowrap; color: rgba(255,255,255,.8); font-size: .85rem; font-weight: 500; padding: 8px 14px; border-radius: 999px; }
+.look-switch a:hover { color: #fff; background: rgba(255,255,255,.08); }
+.look-switch a[aria-current] { background: #fff; color: #121315; }
