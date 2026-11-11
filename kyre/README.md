@@ -4,7 +4,7 @@ Static one-page site (no build step for the page itself). Deployed on Vercel as 
 
 - `index.html`, `styles.css`: the page.
 - `contact.js`: contact details (WhatsApp, email, booking link) and the booking window.
-- `src/story.js`: the hero globe and the scroll story (three.js). Edit this, not `story.js`.
+- `src/story.js`: the hero globe of company tiles and the scroll story (three.js). Edit this, not `story.js`.
 - `story.js`: the bundled, minified build of `src/story.js` that the page loads.
 
 Rebuild `story.js` after editing `src/story.js` (three.js is resolved from `website/node_modules`):

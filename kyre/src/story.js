@@ -1,7 +1,9 @@
-// Kyre's story: one month of outreach, told by 2,600 dots.
-// Hero: a globe of companies you can steer, with a "signal lens" under the pointer.
-// Scrolling the pinned stage morphs the same dots through five steps:
-// market → signals → outreach → replies → interested leads handed over.
+// Kyre's story: one month of outreach, told by 1,200 company tiles.
+// Each tile is a tiny company card (avatar + two lines); hiring ones turn solid blue.
+// Hero: a globe of tiles you can steer, with a "signal lens" under the pointer.
+// Scrolling the pinned stage morphs the same tiles through five steps:
+// market → signals → outreach (envelopes out) → replies (envelopes back) → leads,
+// where the interested tiles grow into the lead cards.
 // Source for kyre/story.js (bundled and minified with esbuild; see kyre/README.md).
 
 import {
@@ -35,12 +37,12 @@ function main() {
   renderer.setClearColor(0x000000, 0);
 
   // ---------- the market ----------
-  const COLS = 65, ROWS = 40, N = COLS * ROWS; // 2,600 companies
+  const COLS = 40, ROWS = 30, N = COLS * ROWS; // 1,200 companies
   const STAGES = 5;
   const rnd = mulberry32(11);
   const order = shuffle([...Array(N).keys()], rnd);
-  const SIG = order.slice(0, 208); // ~8% hiring right now
-  const REP = SIG.slice(0, 52); // ~25% of those reply
+  const SIG = order.slice(0, 96); // ~8% hiring right now
+  const REP = SIG.slice(0, 24); // ~25% of those reply
   const LEAD = REP.slice(0, 6); // the interested few
   const role = new Uint8Array(N); // 0 market, 1 signal, 2 replied, 3 lead
   SIG.forEach((i) => (role[i] = 1));
@@ -68,29 +70,90 @@ function main() {
   const camera = new PerspectiveCamera(40, 1, 0.1, 100);
   camera.position.set(0, 0, 9);
 
+  // Rounded-box signed distance, shared by the tile and envelope shaders.
+  const SD = /* glsl */ `
+    float sdBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+    float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }`;
   const vert = /* glsl */ `
     attribute float aSize;
     attribute vec4 aColor;
+    attribute float aTag;
     uniform float uPx;
     varying vec4 vColor;
+    varying float vTag;
+    varying float vPx;
     void main() {
       vec4 mv = modelViewMatrix * vec4(position, 1.0);
       gl_Position = projectionMatrix * mv;
       gl_PointSize = aSize * uPx * (9.0 / -mv.z);
+      vPx = gl_PointSize;
       vColor = aColor;
+      vTag = aTag;
     }`;
-  const frag = /* glsl */ `
+  // A company tile: white card with an avatar and two text lines; vTag fills it with the accent.
+  const tileFrag = /* glsl */ `
     varying vec4 vColor;
+    varying float vTag;
+    varying float vPx;
+    ${SD}
     void main() {
-      float d = length(gl_PointCoord - 0.5);
-      float a = vColor.a * smoothstep(0.5, 0.36, d);
-      if (a < 0.01) discard;
-      gl_FragColor = vec4(vColor.rgb, a);
+      vec2 p = gl_PointCoord - 0.5;
+      float aa = 1.4 / max(vPx, 1.0);
+      float d = sdBox(p, vec2(0.46, 0.31), 0.1);
+      float body = 1.0 - smoothstep(-aa, aa, d);
+      float a = vColor.a * body;
+      if (a < 0.02) discard;
+      vec3 accent = vColor.rgb;
+      vec3 fill = mix(vec3(1.0), accent, vTag);
+      vec3 ink = mix(accent, vec3(1.0), vTag);
+      float detail = smoothstep(6.0, 13.0, vPx);
+      float av = 1.0 - smoothstep(0.085, 0.085 + aa, length(p - vec2(-0.24, 0.0)));
+      float l1 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y + 0.075))) * step(-0.1, p.x) * step(p.x, 0.32);
+      float l2 = (1.0 - smoothstep(0.032, 0.032 + aa, abs(p.y - 0.075))) * step(-0.1, p.x) * step(p.x, 0.17);
+      vec3 col = mix(fill, ink, max(av, max(l1 * 0.75, l2 * 0.5)) * mix(0.35, 0.85, vTag) * detail);
+      float edge = smoothstep(-0.06, -0.06 + aa * 1.5, d);
+      col = mix(col, accent, edge * (0.5 * (1.0 - vTag)));
+      gl_FragColor = vec4(col, a);
+    }`;
+  // Envelopes (aTag 0 = outgoing, white; 1 = reply, blue) and the Kyre core (aTag 2: blue app tile with a "k").
+  const pkFrag = /* glsl */ `
+    varying vec4 vColor;
+    varying float vTag;
+    varying float vPx;
+    ${SD}
+    void main() {
+      vec2 p = gl_PointCoord - 0.5;
+      float aa = 1.4 / max(vPx, 1.0);
+      vec3 accent = vColor.rgb;
+      if (vTag > 1.5) {
+        float d = sdBox(p, vec2(0.42), 0.13);
+        float body = 1.0 - smoothstep(-aa, aa, d);
+        if (body * vColor.a < 0.02) discard;
+        float k = min(sdSeg(p, vec2(-0.14, -0.22), vec2(-0.14, 0.22)), min(sdSeg(p, vec2(-0.12, 0.05), vec2(0.14, -0.12)), sdSeg(p, vec2(-0.05, -0.01), vec2(0.15, 0.22))));
+        float glyph = 1.0 - smoothstep(0.045, 0.045 + aa, k);
+        gl_FragColor = vec4(mix(accent, vec3(1.0), glyph), vColor.a * body);
+        return;
+      }
+      float d = sdBox(p, vec2(0.44, 0.3), 0.06);
+      float body = 1.0 - smoothstep(-aa, aa, d);
+      if (body * vColor.a < 0.02) discard;
+      float flap = min(sdSeg(p, vec2(-0.42, -0.27), vec2(0.0, 0.04)), sdSeg(p, vec2(0.42, -0.27), vec2(0.0, 0.04)));
+      float line = max(1.0 - smoothstep(0.035, 0.035 + aa, flap), smoothstep(-0.06, -0.06 + aa, d));
+      vec3 fill = mix(vec3(1.0), accent, vTag);
+      vec3 ink = mix(accent, vec3(1.0), vTag);
+      gl_FragColor = vec4(mix(fill, ink, line), vColor.a * body);
     }`;
   const mat = new ShaderMaterial({
     uniforms: { uPx: { value: 1 } },
     vertexShader: vert,
-    fragmentShader: frag,
+    fragmentShader: tileFrag,
+    transparent: true,
+    depthWrite: true,
+  });
+  const pkMat = new ShaderMaterial({
+    uniforms: mat.uniforms,
+    vertexShader: vert,
+    fragmentShader: pkFrag,
     transparent: true,
     depthWrite: false,
   });
@@ -98,22 +161,27 @@ function main() {
   const pos = new Float32Array(N * 3);
   const col = new Float32Array(N * 4);
   const size = new Float32Array(N);
+  const tag = new Float32Array(N);
   const geo = new BufferGeometry();
   geo.setAttribute("position", new BufferAttribute(pos, 3));
   geo.setAttribute("aColor", new BufferAttribute(col, 4));
   geo.setAttribute("aSize", new BufferAttribute(size, 1));
+  geo.setAttribute("aTag", new BufferAttribute(tag, 1));
   scene.add(new Points(geo, mat));
 
   // Email packets (out to signals, back from replies) plus the Kyre core at the centre.
-  const P = 140;
+  const P = 90;
   const pk = new Float32Array((P + 1) * 3);
   const pkCol = new Float32Array((P + 1) * 4);
   const pkSize = new Float32Array(P + 1);
+  const pkTag = new Float32Array(P + 1);
   const pkGeo = new BufferGeometry();
   pkGeo.setAttribute("position", new BufferAttribute(pk, 3));
   pkGeo.setAttribute("aColor", new BufferAttribute(pkCol, 4));
   pkGeo.setAttribute("aSize", new BufferAttribute(pkSize, 1));
-  const packets = new Points(pkGeo, mat);
+  pkGeo.setAttribute("aTag", new BufferAttribute(pkTag, 1));
+  const packets = new Points(pkGeo, pkMat);
+  packets.renderOrder = 2;
   scene.add(packets);
   const pkTarget = new Int32Array(P);
   const pkOff = new Float32Array(P);
@@ -192,8 +260,8 @@ function main() {
     core.set(ringX, ringY, 0);
 
     // 5 · interested: a neat column of leads; everything else drifts back
-    leadX.v = wide ? halfW * 0.08 : -halfW * 0.78;
-    const top = wide ? halfH * 0.52 : halfH * 0.66, step = wide ? halfH * 0.205 : halfH * 0.13;
+    leadX.v = wide ? halfW * 0.3 : 0;
+    const top = wide ? halfH * 0.52 : halfH * 0.66, step = wide ? halfH * 0.205 : halfH * 0.148;
     for (let i = 0; i < N; i++) {
       const k = leadSlot[i];
       if (k >= 0) set(L[5], i, leadX.v, top - k * step, 0.6);
@@ -206,24 +274,24 @@ function main() {
   }
   const core = new Vector3();
 
-  // ---------- styles per stage: [r, g, b, alpha, size] ----------
-  const tmpA = [0, 0, 0, 0, 0], tmpB = [0, 0, 0, 0, 0];
+  // ---------- styles per stage: [r, g, b, alpha, size, tag] ----------
+  const tmpA = [0, 0, 0, 0, 0, 0], tmpB = [0, 0, 0, 0, 0, 0];
   function style(k, i, t, out) {
     const r = role[i];
-    const pulse = reduce ? 1 : 1 + 0.22 * Math.sin(t * 3 + seed[i] * 4);
+    const pulse = reduce ? 1 : 1 + 0.12 * Math.sin(t * 3 + seed[i] * 4);
     switch (k) {
       case 0:
-        return r ? put(out, BLUE, 0.95, 5.2 * pulse) : put(out, INK, 0.34, 3.1);
+        return r ? put(out, BLUE, 1, 12.5 * pulse, 1) : put(out, INK, 0.85, 10.5, 0);
       case 1:
-        return put(out, INK, 0.42, 2.9);
+        return put(out, INK, 0.95, 11, 0);
       case 2:
-        return r ? put(out, BLUE, 0.95, 5 * pulse) : put(out, INK, 0.1, 2.4);
+        return r ? put(out, BLUE, 1, 15 * pulse, 1) : put(out, INK, 0.28, 10, 0);
       case 3:
-        return r ? put(out, BLUE, 0.9, 4.4) : put(out, INK, 0.05, 2.2);
+        return r ? put(out, BLUE, 1, 13, 1) : put(out, INK, 0.08, 9, 0);
       case 4:
-        return r >= 2 ? put(out, BLUE, 1, 6 * pulse) : r ? put(out, GREY, 0.45, 3.6) : put(out, INK, 0.03, 2);
+        return r >= 2 ? put(out, BLUE, 1, 16 * pulse, 1) : r ? put(out, GREY, 0.75, 11, 0) : put(out, INK, 0.04, 8, 0);
       default:
-        return r === 3 ? put(out, BLUE, 1, 11) : r === 2 ? put(out, GREY, 0.35, 3.4) : r ? put(out, GREY, 0.14, 3) : put(out, INK, 0.0, 2);
+        return r === 3 ? put(out, BLUE, 1, 34, 1) : r === 2 ? put(out, GREY, 0.45, 10, 0) : r ? put(out, GREY, 0.2, 9, 0) : put(out, INK, 0, 8, 0);
     }
   }
 
@@ -347,7 +415,9 @@ function main() {
       style(k1, i, t, tmpB);
       let r = tmpA[0] + (tmpB[0] - tmpA[0]) * f, g = tmpA[1] + (tmpB[1] - tmpA[1]) * f, b = tmpA[2] + (tmpB[2] - tmpA[2]) * f;
       let a = tmpA[3] + (tmpB[3] - tmpA[3]) * f, s = tmpA[4] + (tmpB[4] - tmpA[4]) * f;
+      let tg = tmpA[5] + (tmpB[5] - tmpA[5]) * f;
       if (k0 === 0) a *= 1 - (1 - f) * (1 - (0.28 + depth * 0.72)); // the far side of the globe is dimmer
+      if (leadSlot[i] >= 0) a *= 1 - smooth((cs - 4.55 - leadSlot[i] * 0.04) / 0.35); // the tile hands over to its card
 
       if (lensOn) {
         proj.set(px, py, pz).project(camera);
@@ -355,19 +425,22 @@ function main() {
         const d = Math.hypot(sxp - pointer.x, syp - pointer.y);
         if (d < lensR) {
           const q = Math.pow(1 - d / lensR, 2) * heroW;
-          a = Math.min(1, a + q * 0.55);
-          s *= 1 + q * 1.1;
-          r += (BLUE.r - r) * q * 0.55; g += (BLUE.g - g) * q * 0.55; b += (BLUE.b - b) * q * 0.55;
+          a = Math.min(1, a + q * 0.4);
+          s *= 1 + q * 0.7;
+          r += (BLUE.r - r) * q; g += (BLUE.g - g) * q; b += (BLUE.b - b) * q;
+          tg = Math.max(tg, q * 0.35);
         }
         if (role[i] && depth > 0.5 && d < nearD) { nearD = d; near = i; }
       }
       const c4 = i * 4;
       col[c4] = r; col[c4 + 1] = g; col[c4 + 2] = b; col[c4 + 3] = a;
       size[i] = s;
+      tag[i] = tg;
     }
     geo.attributes.position.needsUpdate = true;
     geo.attributes.aColor.needsUpdate = true;
     geo.attributes.aSize.needsUpdate = true;
+    geo.attributes.aTag.needsUpdate = true;
 
     // emails out (stage 3) and replies back (stage 4)
     const wOut = bump(cs, 2.3, 2.95, 3.85, 4.3), wBack = bump(cs, 3.45, 3.95, 4.6, 5.0), wCore = bump(cs, 2.2, 2.85, 4.5, 4.95);
@@ -379,23 +452,26 @@ function main() {
       pk[q * 3] = from[0] + (to[0] - from[0]) * u;
       pk[q * 3 + 1] = from[1] + (to[1] - from[1]) * u;
       pk[q * 3 + 2] = from[2] + (to[2] - from[2]) * u;
-      const w = (back ? wBack : wOut) * Math.sin(u * Math.PI) * (reduce ? 0 : 1);
-      pkCol[q * 4] = BLUE.r; pkCol[q * 4 + 1] = BLUE.g; pkCol[q * 4 + 2] = BLUE.b; pkCol[q * 4 + 3] = w * 0.9;
-      pkSize[q] = back ? 4.2 : 3.4;
+      const w = (back ? wBack : wOut) * Math.min(1, Math.sin(u * Math.PI) * 2.5) * (reduce ? 0 : 1);
+      pkCol[q * 4] = BLUE.r; pkCol[q * 4 + 1] = BLUE.g; pkCol[q * 4 + 2] = BLUE.b; pkCol[q * 4 + 3] = w;
+      pkSize[q] = back ? 15 : 13;
+      pkTag[q] = back ? 1 : 0;
     }
     pk[P * 3] = core.x; pk[P * 3 + 1] = core.y; pk[P * 3 + 2] = core.z;
     pkCol[P * 4] = BLUE.r; pkCol[P * 4 + 1] = BLUE.g; pkCol[P * 4 + 2] = BLUE.b;
     pkCol[P * 4 + 3] = wCore;
-    pkSize[P] = 16 * (reduce ? 1 : 1 + 0.08 * Math.sin(t * 4));
+    pkSize[P] = 46 * (reduce ? 1 : 1 + 0.04 * Math.sin(t * 3));
+    pkTag[P] = 2;
     pkGeo.attributes.position.needsUpdate = true;
     pkGeo.attributes.aColor.needsUpdate = true;
     pkGeo.attributes.aSize.needsUpdate = true;
+    pkGeo.attributes.aTag.needsUpdate = true;
 
     SIG.forEach((i, k) => {
       linePos.set([core.x, core.y, core.z, cur[i * 3], cur[i * 3 + 1], cur[i * 3 + 2]], k * 6);
     });
     lineGeo.attributes.position.needsUpdate = true;
-    lineMat.opacity = wOut * 0.16 + wBack * 0.06;
+    lineMat.opacity = wOut * 0.1 + wBack * 0.04;
 
     renderer.render(scene, camera);
 
@@ -409,20 +485,20 @@ function main() {
     showCap(Math.max(1, Math.min(STAGES, Math.round(cs))));
     segs.forEach((el, k) => el.style.setProperty("--f", Math.min(Math.max(cs - k, 0), 1).toFixed(3)));
 
-    // lead cards ride on their dots in the last stage
-    const leadW = smooth((cs - 4.35) / 0.5);
+    // the interested tiles grow into the lead cards
     cards.forEach((card, k) => {
       const i = LEAD[k] * 3;
       proj.set(cur[i], cur[i + 1], cur[i + 2]).project(camera);
       const sxp = (proj.x * 0.5 + 0.5) * W, syp = (-proj.y * 0.5 + 0.5) * H;
-      card.style.opacity = (leadW * Math.min(1, Math.max(0, (cs - 4.35 - k * 0.05) / 0.4))).toFixed(3);
-      card.style.transform = `translate3d(${(sxp + 22).toFixed(1)}px, ${(syp).toFixed(1)}px, 0) translateY(-50%)`;
+      const g = smooth((cs - 4.55 - k * 0.04) / 0.35);
+      card.style.opacity = g.toFixed(3);
+      card.style.transform = `translate3d(${sxp.toFixed(1)}px, ${syp.toFixed(1)}px, 0) translate(-50%, -50%) scale(${(0.18 + 0.82 * g).toFixed(3)})`;
     });
     if (more) {
       const i = LEAD[LEAD.length - 1] * 3;
       proj.set(cur[i], cur[i + 1], cur[i + 2]).project(camera);
-      more.style.opacity = leadW.toFixed(3);
-      more.style.transform = `translate3d(${((proj.x * 0.5 + 0.5) * W + 22).toFixed(1)}px, ${((-proj.y * 0.5 + 0.5) * H + 44).toFixed(1)}px, 0)`;
+      more.style.opacity = smooth((cs - 4.75) / 0.25).toFixed(3);
+      more.style.transform = `translate3d(${((proj.x * 0.5 + 0.5) * W).toFixed(1)}px, ${((-proj.y * 0.5 + 0.5) * H + 46).toFixed(1)}px, 0) translateX(-50%)`;
     }
 
     // signal tooltip: under the pointer, or a gentle tour when the pointer is still
@@ -475,8 +551,8 @@ function main() {
 function set(a, i, x, y, z) {
   a[i * 3] = x; a[i * 3 + 1] = y; a[i * 3 + 2] = z;
 }
-function put(out, c, a, s) {
-  out[0] = c.r; out[1] = c.g; out[2] = c.b; out[3] = a; out[4] = s;
+function put(out, c, a, s, tg) {
+  out[0] = c.r; out[1] = c.g; out[2] = c.b; out[3] = a; out[4] = s; out[5] = tg;
   return out;
 }
 function smooth(x) {
