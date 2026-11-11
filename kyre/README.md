@@ -29,3 +29,5 @@ If WebGL is unavailable, the page falls back to the plain hero and a text versio
 | D | `city.html` | Isometric canvas: a city of companies, planes out and back |
 
 Each concept is `name.visual.html` (stage markup) + `name.css` + `name.js`, assembled into `name.html` by `python3 build_pages.py` (run in `concepts/`; edit captions there). `common.js` holds the shared scroll/caption logic. Options E to I are the globe looks on the homepage (`?style=`).
+
+**Chosen:** Signal City (Option D) is now the homepage (`index.html` loads `concepts/common.js` + `concepts/city.js`), with a fifth step where the 15 leads are forwarded to the client's inbox. The globe version lives on at `globe.html` (`?style=` still works there). Team photos are in `team/`.

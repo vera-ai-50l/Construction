@@ -25,11 +25,12 @@ CONCEPTS = [
         ("01 · The scan", "1,020", "companies hiring now", "A scan across your market lights up every company with a reason to talk this month."),
         ("02 · Outreach", "1,020", "personal emails", "Sent from mailboxes in your name, each one about that company's own hiring."),
         ("03 · Replies", "51", "conversations start", "Kyre reads every reply and keeps the noise away from you."),
-        ("04 · Interested", "15", "handed to you", "The companies that say yes rise to the top, with the full conversation. Billed per lead."),
+        ("04 · Interested", "15", "say yes", "The companies that say yes rise to the top. Out of office, not now and unsubscribes stay with us."),
+        ("05 · Forwarded", "15", "leads in your inbox", "Each one forwarded to you with the full conversation, ready for your reply. You're billed for these 15, nothing else."),
     ]),
 ]
 
-SWITCH = [("../?style=tiles", "Globe")] + [(f"{c[0]}.html", c[1]) for c in CONCEPTS] + [("index.html", "All options")]
+SWITCH = [("../globe.html?style=tiles", "Globe")] + [(f"{c[0]}.html", c[1]) for c in CONCEPTS] + [("index.html", "All options")]
 
 PAGE = """<!doctype html>
 <html lang="en">

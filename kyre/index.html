@@ -13,6 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="concepts/concept.css">
+<link rel="stylesheet" href="concepts/city.css">
 </head>
 <body>
 
@@ -22,6 +24,7 @@
     <nav class="nav-links" aria-label="Sections">
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
+      <a href="#team">Team</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-dark btn-sm js-book" href="#contact">Book a call</a>
@@ -30,11 +33,30 @@
 
 <main id="top">
 
-  <section class="story" id="story" aria-label="How Kyre finds your interested leads">
-    <div class="stage">
-      <canvas id="world" aria-hidden="true"></canvas>
-
-      <div class="hero-layer" id="heroLayer">
+  <section class="cstory" id="cstory" style="height: 550vh" aria-label="How Kyre finds your interested leads">
+    <div class="cstage" id="cstage">
+      <canvas id="city" aria-hidden="true"></canvas>
+      <div class="ct-tip" id="ctTip" aria-hidden="true"><b></b><span></span></div>
+      <div class="ct-cards" id="ctCards" aria-hidden="true">
+        <div class="ct-card"><span>Interested</span><b>Sarah Kim</b><p>Northwind Logistics · "Send me two profiles"</p></div>
+        <div class="ct-card"><span>Interested</span><b>Leah Morris</b><p>Corvel Energy · "Free for a call Thursday?"</p></div>
+        <div class="ct-card"><span>Interested</span><b>Tom Reid</b><p>Fernhill Homes · "What would the fee be?"</p></div>
+      </div>
+      <div class="ct-client" id="ctClient" aria-hidden="true">
+        <div class="cl-bar"><i></i><i></i><i></i><span>Your inbox · Acme Talent</span></div>
+        <div class="cl-mail">
+          <div class="cl-from"><span class="cl-k">k</span><div><b>Kyre</b><small>to you · just now</small></div><em>Fwd</em></div>
+          <p class="cl-subj">15 interested leads this month</p>
+          <div class="cl-rows">
+            <div class="cl-row" data-k="0"><b>Sarah Kim</b><span>Northwind Logistics · "Send me two profiles"</span><i>Thread</i></div>
+            <div class="cl-row" data-k="1"><b>Leah Morris</b><span>Corvel Energy · "Free for a call Thursday?"</span><i>Thread</i></div>
+            <div class="cl-row" data-k="2"><b>Tom Reid</b><span>Fernhill Homes · "What would the fee be?"</span><i>Thread</i></div>
+            <div class="cl-row more" data-k="3"><b>+ 12 more</b><span>each with the full conversation</span></div>
+          </div>
+          <div class="cl-bill"><span>Your invoice</span><b>15 leads</b><small>Nothing else. No retainer, no setup fee.</small></div>
+        </div>
+      </div>
+      <div class="chero" id="chero">
         <div class="wrap">
           <div class="hero-copy">
             <p class="eyebrow"><span class="dot"></span>Pay-per-lead outbound for companies that hire</p>
@@ -53,47 +75,30 @@
         </div>
       </div>
 
-      <div class="sig-tip" id="sigTip" aria-hidden="true">
-        <span class="live">Live signal</span>
-        <b>Company</b>
-        <span class="w">Signal</span>
-        <span class="s">When</span>
-      </div>
-
-      <div class="cap-layer" id="capLayer" aria-hidden="true">
-        <div class="cap-card">
+      <div class="ccap" id="ccap" aria-hidden="true">
+        <div class="cap-card" style="margin-left: max(24px, calc((100vw - 1160px) / 2 + 24px))">
           <div class="caps">
-            <div class="cap"><span class="k">01 · The market</span><span class="n">12,400</span><h3>companies in your niche</h3><p>Recruitment agencies, staffing firms and companies hiring. We map the whole market first.</p></div>
-            <div class="cap"><span class="k">02 · Signals</span><span class="n">1,020</span><h3>are hiring right now</h3><p>A role posted, a team growing, a new sales lead started. That's the reason we write.</p></div>
-            <div class="cap"><span class="k">03 · Outreach</span><span class="n">1,020</span><h3>personal emails go out</h3><p>Short, specific emails from warmed mailboxes in your name, with follow-ups and an opt-out in every one.</p></div>
-            <div class="cap"><span class="k">04 · Replies</span><span class="n">51</span><h3>conversations start</h3><p>Every reply is read and sorted. "Not now", auto-replies and unsubscribes stay with us.</p></div>
-            <div class="cap"><span class="k">05 · Interested</span><span class="n">15</span><h3>handed to you</h3><p>Each with the full conversation. These are the only leads you pay for.</p></div>
+            <div class="cap"><span class="k">01 · The scan</span><span class="n">1,020</span><h3>companies hiring now</h3><p>A scan across your market lights up every company with a reason to talk this month.</p></div>
+            <div class="cap"><span class="k">02 · Outreach</span><span class="n">1,020</span><h3>personal emails</h3><p>Sent from mailboxes in your name, each one about that company&#x27;s own hiring.</p></div>
+            <div class="cap"><span class="k">03 · Replies</span><span class="n">51</span><h3>conversations start</h3><p>Kyre reads every reply and keeps the noise away from you.</p></div>
+            <div class="cap"><span class="k">04 · Interested</span><span class="n">15</span><h3>say yes</h3><p>The companies that say yes rise to the top. Out of office, not now and unsubscribes stay with us.</p></div>
+            <div class="cap"><span class="k">05 · Forwarded</span><span class="n">15</span><h3>leads in your inbox</h3><p>Each one forwarded to you with the full conversation, ready for your reply. You&#x27;re billed for these 15, nothing else.</p></div>
           </div>
           <div class="seg"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="cap-note">An illustrative month for one client.</p>
         </div>
       </div>
 
-      <div class="leads" id="leads" aria-hidden="true">
-        <div class="lead"><b>Sarah K.</b><span>Head of Talent · "Send me two profiles"</span><em>Interested</em></div>
-        <div class="lead"><b>James O.</b><span>Ops Director · "Free for a call Thursday?"</span><em>Interested</em></div>
-        <div class="lead"><b>Dan W.</b><span>Senior Engineer · "What's the salary range?"</span><em>Interested</em></div>
-        <div class="lead"><b>Amira H.</b><span>HR Manager · "Can you send a quote?"</span><em>Interested</em></div>
-        <div class="lead"><b>Tom R.</b><span>Founder · "Let's talk next week"</span><em>Interested</em></div>
-        <div class="lead"><b>Leah M.</b><span>Talent Partner · "Yes, interested"</span><em>Interested</em></div>
-        <div class="lead-more" id="leadsMore">+ 9 more this month</div>
-      </div>
-
-      <div class="scroll-hint" id="scrollHint" aria-hidden="true"><span>Scroll to follow one month of outreach</span><i></i></div>
+      <div class="scroll-hint ct-hint" id="ctHint" aria-hidden="true"><span>Scroll to follow one month of outreach</span><i></i></div>
       <a class="skip" href="#who">Skip the story</a>
     </div>
 
     <ol class="sr-only">
-      <li>The market: 12,400 companies in your niche.</li>
-      <li>Signals: 1,020 are hiring right now.</li>
-      <li>Outreach: 1,020 personal emails go out from warmed mailboxes in your name.</li>
-      <li>Replies: 51 conversations start; every reply is read and sorted.</li>
-      <li>Interested: 15 leads are handed to you, and these are the only ones you pay for. An illustrative month for one client.</li>
+      <li>The scan: 1,020 companies in your market are hiring right now.</li>
+      <li>Outreach: 1,020 personal emails go out from mailboxes in your name.</li>
+      <li>Replies: 51 conversations start; Kyre reads every reply.</li>
+      <li>Interested: 15 say yes. Out of office, not now and unsubscribes stay with us.</li>
+      <li>Forwarded: the 15 leads land in your inbox with the full conversation, and those 15 are all you're billed for. An illustrative month for one client.</li>
     </ol>
   </section>
 
@@ -212,6 +217,62 @@
     </div>
   </section>
 
+  <section class="section team" id="team">
+    <div class="wrap">
+      <div class="team-top">
+        <div>
+          <p class="eyebrow">About us</p>
+          <h2>Outbound you only pay for <em>when it works.</em></h2>
+        </div>
+        <div>
+          <p class="lede">Kyre is run by its founders. We set up every campaign ourselves, sort every reply, and only bill you when someone says they're interested.</p>
+          <ul class="beliefs">
+            <li><b>Paid for outcomes</b><span>No retainer, no setup fee. One price per interested lead.</span></li>
+            <li><b>Your name, protected</b><span>Warmed mailboxes and a low daily volume keep your domain clean.</span></li>
+            <li><b>Every reply sorted</b><span>Noise stays with us. Only real interest reaches you.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="team-head">
+        <h3>Meet the <em>team</em></h3>
+        <p>Tap a photo for LinkedIn</p>
+      </div>
+      <ul class="people">
+        <li>
+          <a class="person" href="https://www.linkedin.com/in/rishiraj-nath-964a29292/" target="_blank" rel="noopener noreferrer" aria-label="Rishiraj Nath on LinkedIn (opens in a new tab)">
+            <div class="photo">
+              <img src="team/rishiraj-nath.webp" alt="Rishiraj Nath" loading="lazy">
+              <span class="li-badge"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></span>
+              <span class="li-pill">View on LinkedIn <i><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i></span>
+            </div>
+            <div class="who"><b>Rishiraj Nath</b><span>IIM Calcutta</span></div>
+          </a>
+        </li>
+        <li>
+          <a class="person" href="https://www.linkedin.com/in/shivam-vatkar-a29405281/" target="_blank" rel="noopener noreferrer" aria-label="Shivam Vatkar on LinkedIn (opens in a new tab)">
+            <div class="photo">
+              <img src="team/shivam-vatkar.webp" alt="Shivam Vatkar" loading="lazy">
+              <span class="li-badge"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></span>
+              <span class="li-pill">View on LinkedIn <i><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i></span>
+            </div>
+            <div class="who"><b>Shivam Vatkar</b><span>IIM Calcutta</span></div>
+          </a>
+        </li>
+        <li>
+          <a class="person" href="https://www.linkedin.com/in/aditya-bhagat-3949073b1/" target="_blank" rel="noopener noreferrer" aria-label="Aditya Bhagat on LinkedIn (opens in a new tab)">
+            <div class="photo">
+              <img src="team/aditya-bhagat.webp" alt="Aditya Bhagat" loading="lazy">
+              <span class="li-badge"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg></span>
+              <span class="li-pill">View on LinkedIn <i><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i></span>
+            </div>
+            <div class="who"><b>Aditya Bhagat</b><span>IIM Indore</span></div>
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
   <section class="section band" id="faq">
     <div class="wrap faq-in">
       <div class="sec-head">
@@ -262,6 +323,7 @@
 </footer>
 
 <script src="contact.js"></script>
-<script type="module" src="story.js"></script>
+<script src="concepts/common.js"></script>
+<script src="concepts/city.js"></script>
 </body>
 </html>

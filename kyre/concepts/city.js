@@ -2,12 +2,16 @@
 // Hover any building to see who it is. Scroll: a scan finds who's hiring, paper planes fly out to them,
 // blue planes come back from the ones who reply, and the interested companies rise with their lead cards.
 (function () {
-  const S = Story(4);
+  const S = Story(document.querySelectorAll("#ccap .cap").length);
+  const client = document.getElementById("ctClient");
+  const rows = client ? [...client.querySelectorAll(".cl-row")] : [];
+  const bill = client && client.querySelector(".cl-bill");
+  const hint = document.getElementById("ctHint");
   const cv = document.getElementById("city"), ctx = cv.getContext("2d");
   const tip = document.getElementById("ctTip"), cards = [...document.querySelectorAll(".ct-card")];
   const N = 15, HQ = 7;
   const BLUE = "#2f4cff";
-  let W = 0, H = 0, dpr = 1, s = 20, ox = 0, oy = 0, wide = true;
+  let W = 0, H = 0, dpr = 1, s = 20, ox = 0, oy = 0, wide = true, s0 = 20, ox0 = 0, oy0 = 0;
 
   // deterministic random
   let seed = 7;
@@ -43,8 +47,9 @@
     dpr = Math.min(devicePixelRatio || 1, 2);
     W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
     wide = W > 960;
-    if (wide) { s = Math.min(W * 0.56, H * 1.25, 980) / (2 * N) * 1.12; ox = W * 0.68; oy = H * 0.58 - N * s * 0.5 + 30; }
-    else { s = (W * 1.2) / (2 * N); ox = W / 2; oy = H * 0.1 + 40; }
+    if (wide) { s0 = Math.min(W * 0.56, H * 1.25, 980) / (2 * N) * 1.12; ox0 = W * 0.68; oy0 = H * 0.58 - N * s0 * 0.5 + 30; }
+    else { s0 = (W * 1.2) / (2 * N); ox0 = W / 2; oy0 = H * 0.1 + 40; }
+    s = s0; ox = ox0; oy = oy0;
   }
   addEventListener("resize", resize);
   resize();
@@ -92,8 +97,18 @@
 
   let hover = null, time = 0;
   loop((dt, now) => {
-    const { cs } = S.update(dt);
+    const { cs, heroW } = S.update(dt);
+    if (hint) hint.style.opacity = heroW.toFixed(3);
     time += dt;
+    // stage 5: the city steps back and the client's inbox slides in
+    const k5 = client ? K.smooth((cs - 4.1) / 0.55) : 0;
+    if (wide) {
+      // fit the city in the gap between the caption card and the inbox
+      const capR = Math.max(24, (W - 1160) / 2 + 24) + 340, cliL = W - Math.max(24, (W - 1160) / 2 + 24) - 380;
+      const s5 = Math.min(s0, (cliL - capR - 30) / 22.4);
+      s = s0 + (s5 - s0) * k5; ox = ox0 + ((capR + cliL) / 2 - ox0) * k5; oy = oy0 + (H * 0.5 - N * s5 * 0.5 + s5 * 3 - oy0) * k5;
+    }
+    else { s = s0; ox = ox0; oy = oy0; cv.style.opacity = (1 - 0.8 * k5).toFixed(3); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
@@ -183,25 +198,50 @@
       tip.style.transform = `translate3d(${(r[0] + 14).toFixed(0)}px, ${(r[1] - 46).toFixed(0)}px, 0)`;
     } else tip.style.opacity = "0";
 
-    // lead cards in a row above the city, each tied to its building by a leader line
+    // lead cards in a row above the city, each tied to its building by a leader line;
+    // in stage 5 each card flies into the client's inbox and becomes a row there
+    const stageR = cv.getBoundingClientRect();
+    if (client) {
+      client.style.opacity = k5.toFixed(3);
+      client.style.transform = `translate3d(${((1 - k5) * 40).toFixed(1)}px, 0, 0)`;
+    }
     const order = lucky.map((b, k) => [roofs.get(b)[0], k]).sort((a, b) => a[0] - b[0]);
     const cw = cards[0].offsetWidth, gap = 14;
     const rowW = cw * 3 + gap * 2;
-    const left = K.clamp(ox - rowW / 2, wide ? Math.min(W * 0.4, W - rowW - 16) : 8, W - rowW - 8);
+    const left = K.clamp(ox0 - rowW / 2, wide ? Math.min(W * 0.4, W - rowW - 16) : 8, W - rowW - 8);
     order.forEach(([, k], slot) => {
       const c = cards[k], r = roofs.get(lucky[k]);
       const a = K.smooth((cs - 3.45 - slot * 0.08) / 0.35);
-      c.style.opacity = a.toFixed(3);
       let x, y;
-      if (wide) { x = left + slot * (cw + gap); y = Math.max(124, oy - s * 9.5) - (1 - a) * 10; }
-      else { x = 8 + slot * ((W - 16 - cw) / 2); y = oy - s * 6 + slot * 56 - (1 - a) * 10; }
-      c.style.transform = `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0)`;
-      if (a > 0.01 && wide) {
-        ctx.globalAlpha = a * 0.7; ctx.strokeStyle = BLUE; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]);
+      if (wide) { x = left + slot * (cw + gap); y = Math.max(124, oy0 - s0 * 9.5) - (1 - a) * 10; }
+      else { x = 8 + slot * ((W - 16 - cw) / 2); y = 80 + slot * 50 - (1 - a) * 10; }
+      const e = client ? K.ease((cs - 4.25 - k * 0.12) / 0.45) : 0;
+      if (e > 0) {
+        const rr = rows[k].getBoundingClientRect();
+        x += (rr.left - stageR.left - x) * e;
+        y += (rr.top - stageR.top - y) * e;
+      }
+      if (rows[k]) rows[k].style.opacity = K.smooth((e - 0.75) / 0.25).toFixed(3);
+      c.style.opacity = (a * (1 - K.smooth((e - 0.8) / 0.2))).toFixed(3);
+      c.style.transform = `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0) scale(${(1 - 0.06 * e).toFixed(3)})`;
+      const la = a * (1 - K.smooth(e / 0.3));
+      if (la > 0.01 && wide) {
+        ctx.globalAlpha = la * 0.7; ctx.strokeStyle = BLUE; ctx.lineWidth = 1.2; ctx.setLineDash([3, 4]);
         ctx.beginPath(); ctx.moveTo(x + cw / 2, y + c.offsetHeight); ctx.lineTo(r[0], r[1] - 4); ctx.stroke();
         ctx.setLineDash([]); ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(r[0], r[1] - 4, 3, 0, 7); ctx.fill();
         ctx.globalAlpha = 1;
       }
     });
+    if (client) {
+      rows[3].style.opacity = K.smooth((cs - 4.75) / 0.2).toFixed(3);
+      bill.style.opacity = K.smooth((cs - 4.85) / 0.2).toFixed(3);
+      // one blue plane from the tower to the client's inbox
+      const t = (cs - 4.15) / 0.55;
+      if (wide && t > 0 && t < 1) {
+        const cr = client.getBoundingClientRect();
+        const [x, y, a] = arc(roofs.get(hq), [cr.left - stageR.left, cr.top - stageR.top + 60], K.ease(t), s * 4);
+        plane(x, y, a, BLUE, s * 0.45);
+      }
+    }
   });
 })();
