@@ -30,53 +30,71 @@
 
 <main id="top">
 
-  <section class="hero">
-    <div class="wrap hero-in">
-      <div class="hero-copy">
-        <p class="eyebrow"><span class="dot"></span>Pay-per-lead outbound for companies that hire</p>
-        <h1>Interested leads, <em>or you don't pay.</em></h1>
-        <p class="lede">Kyre runs cold outreach for recruitment agencies, staffing firms and companies that are hiring. We find the people, start the conversation, and hand you the ones who say yes. You pay per interested lead. No retainer. No setup fee.</p>
-        <div class="cta-row">
-          <a class="btn btn-accent js-book" href="#contact">Book a 15-minute call</a>
-          <a class="btn btn-ghost" href="#how">How it works</a>
+  <section class="story" id="story" aria-label="How Kyre finds your interested leads">
+    <div class="stage">
+      <canvas id="world" aria-hidden="true"></canvas>
+
+      <div class="hero-layer" id="heroLayer">
+        <div class="wrap">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="dot"></span>Pay-per-lead outbound for companies that hire</p>
+            <h1>Interested leads, <em>or you don't pay.</em></h1>
+            <p class="lede">Kyre runs cold outreach for recruitment agencies, staffing firms and companies that are hiring. We find the people, start the conversation, and hand you the ones who say yes. You pay per interested lead. No retainer. No setup fee.</p>
+            <div class="cta-row">
+              <a class="btn btn-accent js-book" href="#contact">Book a 15-minute call</a>
+              <a class="btn btn-ghost" href="#how">How it works</a>
+            </div>
+            <ul class="proof">
+              <li>No retainer</li>
+              <li>No upfront fee</li>
+              <li>Billed per interested lead</li>
+            </ul>
+          </div>
         </div>
-        <ul class="proof">
-          <li>No retainer</li>
-          <li>No upfront fee</li>
-          <li>Billed per interested lead</li>
-        </ul>
       </div>
 
-      <div class="hero-visual" aria-hidden="true">
-        <div class="inbox">
-          <div class="inbox-head">
-            <span>Replies this week</span>
-            <span class="pill">3 interested</span>
+      <div class="sig-tip" id="sigTip" aria-hidden="true">
+        <span class="live">Live signal</span>
+        <b>Company</b>
+        <span class="w">Signal</span>
+        <span class="s">When</span>
+      </div>
+
+      <div class="cap-layer" id="capLayer" aria-hidden="true">
+        <div class="cap-card">
+          <div class="caps">
+            <div class="cap"><span class="k">01 · The market</span><span class="n">12,400</span><h3>companies in your niche</h3><p>Recruitment agencies, staffing firms and companies hiring. We map the whole market first.</p></div>
+            <div class="cap"><span class="k">02 · Signals</span><span class="n">1,020</span><h3>are hiring right now</h3><p>A role posted, a team growing, a new sales lead started. That's the reason we write.</p></div>
+            <div class="cap"><span class="k">03 · Outreach</span><span class="n">1,020</span><h3>personal emails go out</h3><p>Short, specific emails from warmed mailboxes in your name, with follow-ups and an opt-out in every one.</p></div>
+            <div class="cap"><span class="k">04 · Replies</span><span class="n">51</span><h3>conversations start</h3><p>Every reply is read and sorted. "Not now", auto-replies and unsubscribes stay with us.</p></div>
+            <div class="cap"><span class="k">05 · Interested</span><span class="n">15</span><h3>handed to you</h3><p>Each with the full conversation. These are the only leads you pay for.</p></div>
           </div>
-          <div class="msg hot">
-            <div class="msg-top"><b>Sarah K.</b><span>Head of Talent</span><span class="tag">Interested</span></div>
-            <p>"Timing's good. Can you send me two profiles for the backend roles?"</p>
-          </div>
-          <div class="msg hot">
-            <div class="msg-top"><b>James O.</b><span>Ops Director</span><span class="tag">Interested</span></div>
-            <p>"We're hiring 12 warehouse leads this quarter. Free for a call Thursday?"</p>
-          </div>
-          <div class="msg">
-            <div class="msg-top"><b>Priya N.</b><span>Founder</span><span class="tag muted">Not now</span></div>
-            <p>"Not this quarter, try us in March."</p>
-          </div>
-          <div class="msg hot">
-            <div class="msg-top"><b>Dan W.</b><span>Senior Engineer</span><span class="tag">Interested</span></div>
-            <p>"Open to a chat. What's the salary range?"</p>
-          </div>
-          <div class="inbox-foot">
-            <span>Handed to you</span><b>3</b>
-            <span>Billed</span><b>3</b>
-            <span>"Not now"</span><b class="muted">free</b>
-          </div>
+          <div class="seg"><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="cap-note">An illustrative month for one client.</p>
         </div>
       </div>
+
+      <div class="leads" id="leads" aria-hidden="true">
+        <div class="lead"><b>Sarah K.</b><span>Head of Talent · "Send me two profiles"</span><em>Interested</em></div>
+        <div class="lead"><b>James O.</b><span>Ops Director · "Free for a call Thursday?"</span><em>Interested</em></div>
+        <div class="lead"><b>Dan W.</b><span>Senior Engineer · "What's the salary range?"</span><em>Interested</em></div>
+        <div class="lead"><b>Amira H.</b><span>HR Manager · "Can you send a quote?"</span><em>Interested</em></div>
+        <div class="lead"><b>Tom R.</b><span>Founder · "Let's talk next week"</span><em>Interested</em></div>
+        <div class="lead"><b>Leah M.</b><span>Talent Partner · "Yes, interested"</span><em>Interested</em></div>
+        <div class="lead-more" id="leadsMore">+ 9 more this month</div>
+      </div>
+
+      <div class="scroll-hint" id="scrollHint" aria-hidden="true"><span>Scroll to follow one month of outreach</span><i></i></div>
+      <a class="skip" href="#who">Skip the story</a>
     </div>
+
+    <ol class="sr-only">
+      <li>The market: 12,400 companies in your niche.</li>
+      <li>Signals: 1,020 are hiring right now.</li>
+      <li>Outreach: 1,020 personal emails go out from warmed mailboxes in your name.</li>
+      <li>Replies: 51 conversations start; every reply is read and sorted.</li>
+      <li>Interested: 15 leads are handed to you, and these are the only ones you pay for. An illustrative month for one client.</li>
+    </ol>
   </section>
 
   <section class="band" id="who">
@@ -244,5 +262,6 @@
 </footer>
 
 <script src="contact.js"></script>
+<script type="module" src="story.js"></script>
 </body>
 </html>
