@@ -1,0 +1,1122 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>The Two-Engine Hedge</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout concept: a field manual for one outbound engine wired to two offers. Every section is tagged with the engine it serves. */
+:root{
+  --bg:#f4f6f9; --surface:#ffffff; --surface-2:#eaedf3; --ink:#141821; --ink-2:#454c5e; --ink-3:#687089;
+  --rule:#d8dce6; --grid:#e4e7ee; --accent:#2747c9; --accent-ink:#ffffff; --accent-soft:rgba(39,71,201,.10);
+  --signal:#b46f05; --signal-soft:rgba(180,111,5,.12); --good:#1c7a45; --good-soft:rgba(28,122,69,.12);
+  --warn:#9a6300; --warn-soft:rgba(154,99,0,.13); --bad:#b3313a; --bad-soft:rgba(179,49,58,.11);
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1117; --surface:#161a23; --surface-2:#1e2330; --ink:#e7eaf1; --ink-2:#b3b9ca; --ink-3:#8b92a7;
+  --rule:#2a303d; --grid:#252b37; --accent:#8ea2ff; --accent-ink:#0e1117; --accent-soft:rgba(142,162,255,.15);
+  --signal:#eeb04c; --signal-soft:rgba(238,176,76,.14); --good:#5cc68c; --good-soft:rgba(92,198,140,.14);
+  --warn:#e3ab3e; --warn-soft:rgba(227,171,62,.14); --bad:#f07079; --bad-soft:rgba(240,112,121,.14); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1117; --surface:#161a23; --surface-2:#1e2330; --ink:#e7eaf1; --ink-2:#b3b9ca; --ink-3:#8b92a7;
+  --rule:#2a303d; --grid:#252b37; --accent:#8ea2ff; --accent-ink:#0e1117; --accent-soft:rgba(142,162,255,.15);
+  --signal:#eeb04c; --signal-soft:rgba(238,176,76,.14); --good:#5cc68c; --good-soft:rgba(92,198,140,.14);
+  --warn:#e3ab3e; --warn-soft:rgba(227,171,62,.14); --bad:#f07079; --bad-soft:rgba(240,112,121,.14); color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.58;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top, 0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1080px;margin:0 auto}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(28px,4.6vw,46px);line-height:1.08;font-weight:800}
+h2{font-size:clamp(23px,3vw,31px);line-height:1.15;font-weight:800}
+h3{font-size:18px;font-weight:600;line-height:1.3}
+p{margin:0}
+.lead{font-size:17px;color:var(--ink-2);max-width:68ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-3)}
+.small{font-size:13px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* nav */
+.nav{position:sticky;top:env(safe-area-inset-top, 0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--rule);margin-left:calc(-1 * max(16px, env(safe-area-inset-left, 0px)));margin-right:calc(-1 * max(16px, env(safe-area-inset-right, 0px)))}
+svg{max-width:100%;height:auto;display:block}
+.panel > svg{width:100%}
+.nav-in{max-width:1080px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding-block:8px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.nav-in::-webkit-scrollbar{display:none}
+.nav a{flex:none;text-decoration:none;color:var(--ink-2);font-size:13px;font-weight:500;padding:6px 10px;border-radius:6px;white-space:nowrap}
+.nav a:hover{background:var(--surface-2);color:var(--ink)}
+.nav a.on{background:var(--accent-soft);color:var(--accent)}
+
+/* sections */
+section{padding-block:52px;border-top:1px solid var(--rule);scroll-margin-top:56px}
+section:first-of-type{border-top:0}
+.sec-head{display:flex;flex-direction:column;gap:10px;margin-bottom:26px}
+.eyebrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:4px;border:1px solid var(--rule);color:var(--ink-2);background:var(--surface)}
+.tag.vera{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.tag.lg{border-color:var(--signal);color:var(--signal);background:var(--signal-soft)}
+.tag.good{border-color:var(--good);color:var(--good);background:var(--good-soft)}
+.tag.warn{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.tag.bad{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+
+/* hero */
+.hero{padding-block:40px 44px;display:grid;gap:28px}
+.verdict-pill{display:inline-flex;gap:10px;align-items:center;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.verdict-pill b{background:var(--good);color:var(--bg);padding:3px 9px;border-radius:4px;font-weight:500}
+.conds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cond{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px 16px;display:flex;gap:12px}
+.cond .n{font-family:var(--f-mono);color:var(--accent);font-size:13px;padding-top:2px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.tile{background:var(--surface);padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.tile .v{font-family:var(--f-display);font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .k{font-size:13px;color:var(--ink-2)}
+
+.split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:18px}
+.callout{border-left:3px solid var(--signal);background:var(--signal-soft);padding:14px 16px;border-radius:0 8px 8px 0}
+.callout h3{font-size:16px;margin-bottom:6px}
+.flow{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.flow div{display:flex;gap:8px;align-items:baseline}
+.flow .arr{color:var(--accent);font-family:var(--f-mono)}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tbl table{min-width:720px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--grid)}
+th{font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;background:var(--surface-2);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+details{border:1px solid var(--rule);border-radius:8px;background:var(--surface);padding:0 14px}
+details+details{margin-top:8px}
+summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:14px;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--ink-3)}
+details[open] summary::after{content:"−"}
+details .body{padding:0 0 14px;color:var(--ink-2);font-size:14px;display:flex;flex-direction:column;gap:8px}
+
+/* controls */
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px;background:var(--surface-2);padding:4px;border-radius:8px}
+.seg button{font:inherit;font-size:13px;font-weight:500;border:0;background:transparent;color:var(--ink-2);padding:6px 12px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--rule)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:inherit;font-size:13px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:6px 11px;border-radius:999px;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+.chip .dot{width:8px;height:8px;border-radius:50%}
+.chip[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.d-open{background:var(--good)} .d-careful{background:var(--warn)} .d-closed{background:var(--bad)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.ctl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:13px}
+.ctl label{color:var(--ink-2)}
+.ctl output{font-family:var(--f-mono);font-size:13px;color:var(--ink)}
+.ctl input{grid-column:1 / -1}
+.ctls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 22px}
+
+/* country panel */
+.cpanel{display:grid;gap:10px}
+.cpanel .row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;font-size:14px}
+.cpanel .row b{font-weight:500;color:var(--ink-3);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+
+/* signal cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.card h3{font-size:15px}
+.kv{display:grid;grid-template-columns:72px minmax(0,1fr);gap:4px 10px;font-size:13px}
+.kv b{font-weight:500;color:var(--ink-3)}
+
+/* funnel */
+.funnel{display:flex;flex-direction:column;gap:6px}
+.frow{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) 72px;gap:12px;align-items:center}
+.frow .lbl{font-size:13px;color:var(--ink-2);line-height:1.3}
+.frow .track{height:22px;background:var(--surface-2);border-radius:4px;position:relative;overflow:hidden}
+.frow .bar{height:100%;background:var(--accent);border-radius:0 4px 4px 0;min-width:3px;transition:width .25s ease}
+.frow.last .bar{background:var(--good)}
+.frow .cnt{font-family:var(--f-mono);font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.fstep{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);padding-left:calc(min(190px,40%) + 12px)}
+@media (max-width:560px){.frow{grid-template-columns:minmax(0,1fr) 64px}.frow .track{grid-column:1 / -1;order:3}.fstep{padding-left:0}}
+.fctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 20px;margin-top:16px}
+.fnote{font-size:12.5px;color:var(--ink-3);line-height:1.4}
+
+/* cadence */
+.strip{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.strip-in{min-width:640px;display:grid;grid-template-columns:96px repeat(14,minmax(0,1fr));font-size:12px}
+.strip-in div{border-bottom:1px solid var(--grid);border-right:1px solid var(--grid);height:40px;display:flex;align-items:center;justify-content:center}
+.strip-in .ch{justify-content:flex-start;padding-left:10px;color:var(--ink-2);font-weight:500}
+.strip-in .dh{color:var(--ink-3);font-family:var(--f-mono);height:30px}
+.stepbtn{font:inherit;font-family:var(--f-mono);font-size:11px;width:28px;height:28px;border-radius:50%;border:1.5px solid var(--accent);background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.stepbtn.ch-l{border-color:var(--signal);background:var(--signal-soft);color:var(--signal)}
+.stepbtn.ch-c{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.stepbtn[aria-pressed="true"]{box-shadow:0 0 0 3px var(--bg),0 0 0 5px currentColor}
+.steplist{display:grid;gap:8px}
+.step{display:grid;grid-template-columns:62px minmax(0,1fr);gap:12px;padding:10px 12px;border-radius:8px;border:1px solid transparent}
+.step.on{border-color:var(--accent);background:var(--accent-soft)}
+.step .d{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+
+/* chart */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 18px rgba(0,0,0,.12);min-width:170px}
+.tip .t{font-weight:600;margin-bottom:4px}
+.tip .r{display:flex;justify-content:space-between;gap:12px;font-family:var(--f-mono)}
+.meter{height:12px;background:var(--surface-2);border-radius:6px;overflow:hidden;position:relative}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .25s}
+.meter.over i{background:var(--bad)}
+.readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ro{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:10px 12px}
+.ro .v{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.ro .k{font-size:12px;color:var(--ink-3)}
+
+/* costs */
+.cost-row{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;padding:9px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.cost-row:last-child{border-bottom:0}
+.cost-row .amt{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.up{display:grid;grid-template-columns:22px minmax(0,1fr) 96px;gap:10px;padding:12px 0;border-bottom:1px solid var(--grid);align-items:start}
+.up:last-child{border-bottom:0}
+.up input{margin-top:3px;accent-color:var(--accent);width:16px;height:16px}
+.up .t{font-weight:600;font-size:14px}
+.up .s{font-size:13px;color:var(--ink-2)}
+.up .amt{text-align:right;font-family:var(--f-mono);font-size:14px}
+
+/* journey */
+.tl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+.tl svg{display:block;min-width:760px;width:100%;height:auto}
+.check{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.check input{margin-top:4px;accent-color:var(--accent)}
+.check.done span{color:var(--ink-3);text-decoration:line-through}
+.week h3{font-size:14px;font-family:var(--f-mono);font-weight:500;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 4px}
+
+.src{columns:2 320px;column-gap:28px;font-size:13.5px;padding-left:18px}
+.src li{margin-bottom:6px;break-inside:avoid}
+footer{padding-block:28px 48px;border-top:1px solid var(--rule);color:var(--ink-3);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<nav class="nav" aria-label="Sections"><div class="nav-in" id="navIn">
+  <a href="#verdict">Verdict</a><a href="#thesis">Thesis tested</a><a href="#market">Market</a><a href="#countries">Countries</a>
+  <a href="#stakeholders">Stakeholders</a><a href="#signals">Signals</a><a href="#freebies">Freebies</a><a href="#cadence">Multichannel</a>
+  <a href="#funnels">Funnels</a><a href="#costs">Costs</a><a href="#economics">Scenarios</a><a href="#journey">90-day plan</a>
+  <a href="#risks">Risks</a><a href="#sources">Sources</a>
+</div></nav>
+
+<main class="wrap">
+
+<!-- VERDICT -->
+<section id="verdict" class="hero">
+  <div class="eyebrow"><span>Decision memo</span><span>·</span><span>10 Nov 2026</span><span>·</span><span class="tag">Both engines</span></div>
+  <div class="stack" style="gap:16px">
+    <div class="verdict-pill"><b>Go, with a gate</b><span class="muted">Confidence: medium</span></div>
+    <h1>Run lead gen as Vera's second offer on one shared engine, and decide on 9 January whether it stays.</h1>
+    <p class="lead">Lead gen is worth starting because it pays in weeks while Vera's enterprise deals take months, and it trains the exact skill Vera's own outreach needs. It will not double revenue. Sharing tools saves about ₹6.7k a month; the real limit is founder hours, which cap lead gen at roughly four clients while Vera keeps 60% of your time.</p>
+  </div>
+  <div class="conds">
+    <div class="cond"><span class="n">1</span><p><b>Vera keeps first claim.</b> 60% of founder hours, and every Lodha, PRS Legal and clinic meeting, outrank any lead-gen task.</p></div>
+    <div class="cond"><span class="n">2</span><p><b>Separate brand and inboxes.</b> Lead gen gets its own name, domains and mailboxes. Nothing cold goes out from Vera's main domain.</p></div>
+    <div class="cond"><span class="n">3</span><p><b>One niche, signal-led, gated.</b> Recruitment agencies in the UK, Ireland and US. By 9 Jan 2027: 2 paying clients or 8 held sales calls, or you stop.</p></div>
+  </div>
+  <div class="tiles" role="list">
+    <div class="tile" role="listitem"><span class="v mono">₹9.7k</span><span class="k">Lead gen's running cost per month at launch, incl. half the shared stack</span></div>
+    <div class="tile" role="listitem"><span class="v mono">₹6.7k</span><span class="k">Monthly saving from sharing Saleshandy, scrapers and verification</span></div>
+    <div class="tile" role="listitem"><span class="v mono">~3.8</span><span class="k">Clients you can serve at 25 hrs/week each with Vera at 60%</span></div>
+    <div class="tile" role="listitem"><span class="v mono">₹68k–3.8L</span><span class="k">Lead-gen MRR by June 2027, conservative to base case</span></div>
+  </div>
+
+  <div class="split">
+    <div class="panel" aria-label="Diagram of one engine feeding two offers">
+      <svg viewBox="0 0 520 300" role="img" aria-label="One shared engine feeds two offers with separate sending infrastructure">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ink-3)"/></marker></defs>
+        <text x="16" y="24" font-family="var(--f-display)" font-size="15" font-weight="600" fill="var(--ink)">One engine, two offers, two sets of mailboxes</text>
+        <rect x="16" y="44" width="200" height="214" rx="8" fill="var(--surface-2)" stroke="var(--rule)"/>
+        <text x="30" y="68" font-size="13" font-weight="600" fill="var(--ink)">Shared engine</text>
+        <text x="30" y="94" font-size="12" fill="var(--ink-2)">Saleshandy (client workspaces)</text>
+        <text x="30" y="116" font-size="12" fill="var(--ink-2)">n8n + Apify signal scrapers</text>
+        <text x="30" y="138" font-size="12" fill="var(--ink-2)">Lead Finder + verification</text>
+        <text x="30" y="160" font-size="12" fill="var(--ink-2)">Copy and testing playbook</text>
+        <text x="30" y="182" font-size="12" fill="var(--ink-2)">3 founders' LinkedIn accounts</text>
+        <text x="30" y="214" font-size="11.5" fill="var(--ink-3)">Binding limit:</text>
+        <text x="30" y="232" font-size="11.5" fill="var(--ink-3)">~325 founder-hours a month</text>
+        <path d="M216 120 H286" stroke="var(--ink-3)" stroke-width="1.25" fill="none" marker-end="url(#ar)"/>
+        <path d="M216 200 H286" stroke="var(--ink-3)" stroke-width="1.25" fill="none" marker-end="url(#ar)"/>
+        <rect x="290" y="76" width="214" height="88" rx="8" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+        <text x="304" y="100" font-size="13" font-weight="600" fill="var(--ink)">Vera AI</text>
+        <text x="304" y="120" font-size="12" fill="var(--ink-2)">High ticket, months to close</text>
+        <text x="304" y="140" font-size="12" fill="var(--ink-2)">Own secondary domains</text>
+        <rect x="290" y="176" width="214" height="88" rx="8" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.5"/>
+        <text x="304" y="200" font-size="13" font-weight="600" fill="var(--ink)">Lead gen (new brand)</text>
+        <text x="304" y="220" font-size="12" fill="var(--ink-2)">Low ticket, cash in weeks</text>
+        <text x="304" y="240" font-size="12" fill="var(--ink-2)">Own domains + per-client sets</text>
+        <text x="16" y="288" font-size="11.5" fill="var(--ink-3)">Lessons flow both ways; sender reputation never does.</text>
+      </svg>
+    </div>
+    <div class="stack">
+      <div class="callout">
+        <h3>Where the original framing needs correcting</h3>
+        <div class="flow">
+          <div><span class="arr">→</span><span><b>"2x revenue."</b> Revenue adds; it doesn't multiply. The same 325 founder-hours now serve two offers. The gain is timing: lead-gen cash arrives while Vera deals are still in pilots.</span></div>
+          <div><span class="arr">→</span><span><b>"Cost synergy."</b> Real but small: the whole shared stack is about ₹13.5k a month. The larger synergy is learning, since every copy and signal test informs both engines.</span></div>
+          <div><span class="arr">→</span><span><b>"Belgium, Switzerland."</b> They're quieter partly because cold email to named people there needs consent. See <a href="#countries">Countries</a>.</span></div>
+          <div><span class="arr">→</span><span><b>A hedge needs uncorrelated risk.</b> One shared domain or LinkedIn ban would hit both businesses at once. Separate sending infrastructure is what makes it a hedge.</span></div>
+        </div>
+      </div>
+      <details><summary>How to read this page</summary><div class="body">
+        <p>Each section opens with its answer. Grey "why" panels hold the reasoning. Funnels, costs and scenarios are live: move a slider and every number downstream recalculates.</p>
+        <p>Money is in rupees at about ₹92 per US$ (Nov 2026). Tool prices are list prices checked in 2026; confirm at checkout. Rates marked "estimate" are planning assumptions, not measurements.</p>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- THESIS -->
+<section id="thesis">
+  <div class="sec-head">
+    <div class="eyebrow"><span>01 · Thesis tested</span><span class="tag">Both engines</span></div>
+    <h2>Share tools and lessons; never share sending reputation.</h2>
+    <p class="lead">Most of what you planned to share is safe to share. Mailboxes and LinkedIn accounts are where one business can damage the other, and founder hours are the only shared resource that is actually scarce.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Asset</th><th>Share it?</th><th>What sharing buys</th><th>What can go wrong</th><th>Rule</th></tr></thead>
+    <tbody>
+      <tr><td><b>Saleshandy account</b></td><td><span class="tag good">Yes</span></td><td>One subscription with separate client workspaces</td><td>Starter allows 6,000 emails and 2,000 active prospects a month, one user. Planned volume for both engines is ~7,600 emails.</td><td>Starter (monthly) for Vera in Nov; Pro ($99) the week lead-gen domains go live</td></tr>
+      <tr><td><b>Signal scrapers</b> (n8n + Apify)</td><td><span class="tag good">Yes</span></td><td>Build once, run two feeds</td><td>A broken scraper starves both pipelines silently</td><td>One owner, weekly health check</td></tr>
+      <tr><td><b>Data + verification</b></td><td><span class="tag good">Yes</span></td><td>Pro includes 4,000 Lead Finder credits a month; verifier credits don't expire</td><td>Your earlier Apollo run (₹8,000 for 4,000 credits) failed on false emails and few usable contacts</td><td>Verify every list; pause any campaign whose bounce rate passes 2%</td></tr>
+      <tr><td><b>Sending domains and inboxes</b></td><td><span class="tag bad">No</span></td><td>Nothing worth the risk</td><td>Complaints on one brand drag the other's inbox placement</td><td>Separate domains per brand, and per lead-gen client</td></tr>
+      <tr><td><b>LinkedIn accounts</b></td><td><span class="tag warn">Split</span></td><td>Same three people, same networks</td><td>About 100 invites per week per account, total</td><td>Assign each founder's invites to one engine per week</td></tr>
+      <tr><td><b>Founder hours</b></td><td><span class="tag warn">Scarce</span></td><td>None; this is the constraint</td><td>Lead-gen reply handling is daily and urgent</td><td>Hours budget in <a href="#economics">Scenarios</a></td></tr>
+      <tr><td><b>Co-founder's 2 warmed inboxes</b></td><td><span class="tag lg">Lead gen</span></td><td>Skip 3–4 weeks of warmup for the offer test</td><td>The old brand shows in the from-address</td><td>Check blacklists, re-verify SPF/DKIM/DMARC, redirect the old domain to the lead-gen site, send 10–15/day each</td></tr>
+    </tbody>
+  </table></div>
+  <div class="split" style="margin-top:20px">
+    <details open><summary>Vera's three warming inboxes: one check before they send</summary><div class="body">
+      <p>If those inboxes sit on Vera's main domain (the one on your website and proposals), keep them for warm intros, replies and low-volume cold, about 15 a day each. Put volume on two secondary domains, so a bad week of cold email can never land Lodha or PRS Legal follow-ups in spam.</p>
+      <p>Planned monthly volume, at 22 sending days: Vera main 3 × 15/day = 990, Vera secondary 4 × 25/day = 2,200, lead gen 8 × 25/day = 4,400. Total 7,590.</p>
+    </div></details>
+    <details><summary>Why per-inbox volume stays at 25–30 a day</summary><div class="body">
+      <p>Instantly's 2026 benchmark recommends ramping new inboxes from 5–10 a day to 15, then 30, and not exceeding 30 campaign emails per inbox per day. Domains need 4–6 weeks of warmup before full volume.</p>
+      <p>Google and Yahoo (Feb 2024) and Microsoft (May 2025) require SPF, DKIM and DMARC for bulk senders and treat a 0.3% spam-complaint rate as the failure line; Google recommends staying under 0.1%. At 30 sends a day, one complaint is already 3%. That's why scale comes from more inboxes, not more email per inbox.</p>
+    </div></details>
+  </div>
+</section>
+
+<!-- MARKET -->
+<section id="market">
+  <div class="sec-head">
+    <div class="eyebrow"><span>02 · Market</span><span class="tag lg">Lead gen</span></div>
+    <h2>Buyers still pay for meetings, but reply rates have roughly halved since 2022.</h2>
+    <p class="lead">Benchmarks disagree by a factor of five depending on whose senders they measure. Plan and price on a 2.5% reply rate for list-based email, and make signals and a niche your reason to beat it.</p>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <h3 style="margin-bottom:4px">Average cold-email reply rate, 2026 benchmarks</h3>
+      <p class="small muted" style="margin-bottom:10px">Each bar is one dataset. The line is the rate this plan assumes.</p>
+      <div class="chart" id="benchChart"></div>
+      <p class="small muted" style="margin-top:8px">Sources: Smartlead (850M emails), Boomerang (triangulated), Visionary Marketing (median, Apr 2026), Instantly (2025 data, published 2026), Saleshandy (53M emails, Jan–Jun 2026). Instantly's top 10% of senders clear 10.7%.</p>
+    </div>
+    <div class="stack">
+      <div class="tbl"><table style="min-width:520px">
+        <thead><tr><th>Pricing model</th><th>2026 range</th><th>Fit for you</th></tr></thead>
+        <tbody>
+          <tr><td>Pay per appointment</td><td class="mono">$150–400</td><td>First 2 founding clients, priced low for case studies</td></tr>
+          <tr><td>SMB meeting (per meeting)</td><td class="mono">$150–500</td><td>Your recruitment-agency niche sits here</td></tr>
+          <tr><td>BANT-verified meeting</td><td class="mono">$400–750</td><td>Later, once qualification is proven</td></tr>
+          <tr><td>Retainer, cold email only</td><td class="mono">$2k–8k/mo</td><td>After 2–3 case studies</td></tr>
+          <tr><td>Hybrid: base + per meeting</td><td class="mono">base + bonus</td><td>Default from month 3 (modelled at ~$1,100/mo)</td></tr>
+          <tr><td>Pay per positive reply</td><td class="mono">$75 / reply</td><td>The deal a placement firm offered you earlier; a usable anchor</td></tr>
+          <tr><td>India managed cold email</td><td class="mono">₹80k–4L/mo</td><td>Domestic benchmark; skip for now</td></tr>
+        </tbody>
+      </table></div>
+      <details><summary>Why margins are high, and why that won't last for generalists</summary><div class="body">
+        <p>A practitioner breakdown quoted by Prospeo puts the delivery cost of an $8k retainer at roughly $500 for domains and mailboxes plus $2–3k of execution. The rest is margin.</p>
+        <p>That margin is under pressure: entry AI SDR tools cost $100–400 a month, so a buyer can now run mediocre outbound alone. What they can't easily copy is a niche-specific signal feed and a pay-for-results guarantee. That's the position to take.</p>
+      </div></details>
+    </div>
+  </div>
+
+  <h3 style="margin:30px 0 12px">Pick one niche to start</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Niche</th><th>Free signal you can scrape</th><th>Willingness to pay</th><th>Crowding</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><b>Recruitment and staffing agencies</b> (UK, Ireland, US)</td><td>Companies hiring in bulk, from job boards. You sell them the very signal you use.</td><td>High; already used to paying per result</td><td>Medium; specialist agencies exist (one lists ~$3,000/mo + setup)</td><td><span class="tag good">Start here</span></td></tr>
+      <tr><td>IT services and dev shops</td><td>Funding rounds, tech-stack changes, hiring engineers</td><td>Medium</td><td>High; everyone targets them</td><td><span class="tag warn">Second</span></td></tr>
+      <tr><td>B2B SaaS</td><td>Many signals</td><td>High</td><td>Very high</td><td><span class="tag bad">Avoid early</span></td></tr>
+      <tr><td>Indian SMEs (domestic)</td><td>Fewer clean sources</td><td>Low in rupee terms</td><td>Low</td><td><span class="tag bad">Avoid</span>, and DPDP applies from May 2027</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- COUNTRIES -->
+<section id="countries">
+  <div class="sec-head">
+    <div class="eyebrow"><span>03 · Where to sell</span><span class="tag">Both engines</span></div>
+    <h2>Go where B2B cold email is lawful with an opt-out; use LinkedIn in the consent countries.</h2>
+    <p class="lead">Belgium and Switzerland are less crowded partly because emailing named people there needs consent. The under-served markets that are also open to cold email are Ireland and, for role-relevant offers, Finland and Sweden. Tap a country.</p>
+  </div>
+  <div class="split">
+    <div class="stack">
+      <div class="chips" id="countryChips" role="group" aria-label="Countries"></div>
+      <div class="chips small muted" aria-hidden="true" style="gap:14px"><span><span class="dot d-open" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> Open with opt-out</span><span><span class="dot d-careful" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> Conditions apply</span><span><span class="dot d-closed" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span> Consent needed</span></div>
+      <p class="small muted">General guidance from compliance guides by Dealfront/Leadfeeder (Sep 2026), lemlist (May 2026) and others; not legal advice. Sources disagree on France. Check the rule for a lead-gen client's target country before you build their list.</p>
+    </div>
+    <div class="panel cpanel" id="countryPanel" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- STAKEHOLDERS -->
+<section id="stakeholders">
+  <div class="sec-head">
+    <div class="eyebrow"><span>04 · Stakeholders</span><span class="tag">Both engines</span></div>
+    <h2>The people who lose most if this goes wrong are Vera's live prospects.</h2>
+    <p class="lead">Lodha, PRS Legal and the clinics never see the lead-gen business, but they feel it the moment replies slow down or a Vera email lands in spam. Every mitigation below protects them first.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Stakeholder</th><th>What they want</th><th>How the hedge affects them</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td><b>The three co-founders</b></td><td>Cash sooner, skills, a fair split</td><td>Two businesses on one calendar; unclear who owns lead gen</td><td>Put hours, ownership and revenue split in writing this week. One owner per engine.</td></tr>
+      <tr><td><b>Vera's live prospects</b> (Lodha, PRS Legal, clinics)</td><td>Fast, credible follow-through</td><td>Slower replies; brand confusion if lead gen ever sends from Vera domains</td><td>Vera meetings outrank everything; separate brand; same-day replies on Vera threads.</td></tr>
+      <tr><td><b>Lead-gen clients</b></td><td>Held, qualified meetings; brand safety</td><td>You send in their name to their market</td><td>Define "qualified" and "held" in the contract; send from their lookalike domains, never their main one; weekly report.</td></tr>
+      <tr><td><b>Prospects being emailed</b></td><td>Relevance, or silence</td><td>Irrelevant email becomes spam complaints</td><td>Signal-only lists, under 80 words, clear opt-out, suppression list shared across both engines.</td></tr>
+      <tr><td><b>Gmail, Outlook, Yahoo</b></td><td>Authenticated, low-complaint mail</td><td>Decide whether you land in the inbox</td><td>SPF, DKIM, DMARC on every domain; complaint rate under 0.1%; bounce under 2%.</td></tr>
+      <tr><td><b>LinkedIn</b></td><td>Human-looking activity</td><td>Restricts accounts that automate aggressively</td><td>Manual first; under 100 invites a week; no browser-extension bots.</td></tr>
+      <tr><td><b>Saleshandy</b></td><td>Paid plans used within limits</td><td>Agency features (client workspaces) support this model</td><td>Plan sized to volume; client association is permanent once a sequence starts.</td></tr>
+      <tr><td><b>Co-founder with the dormant domain</b></td><td>His old brand isn't misused</td><td>His old business name appears in the from-address</td><td>Get his explicit OK; redirect the domain to the lead-gen site.</td></tr>
+      <tr><td><b>Regulators</b></td><td>Consent where the law requires it</td><td>Rules differ by recipient country</td><td>Country gate at list-build stage; India's DPDP Rules bind from 13 May 2027.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- SIGNALS -->
+<section id="signals">
+  <div class="sec-head">
+    <div class="eyebrow"><span>05 · Signal and intent</span><span class="tag">Both engines</span></div>
+    <h2>Signals roughly double replies; treat bigger vendor claims as a ceiling.</h2>
+    <p class="lead">A signal is a public event that says a company has the problem, and often the budget, right now. Emailing on that event changes who you contact and when, which is why it lifts close rates as well as replies.</p>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <h3 style="margin-bottom:12px">Why signals raise close rates, not only replies</h3>
+      <div class="flow">
+        <div><span class="arr">①</span><span><b>Timing.</b> A job post or a RERA extension → budget or pain exists today → more replies say "yes" instead of "not now".</span></div>
+        <div><span class="arr">②</span><span><b>Relevance.</b> First line names their own event → fewer "not interested" → higher share of positive replies.</span></div>
+        <div><span class="arr">③</span><span><b>Deliverability.</b> Fewer, fresher contacts → fewer bounces and complaints → better inbox placement → more replies from the same volume.</span></div>
+        <div><span class="arr">④</span><span><b>Position.</b> You arrive before the vendor shortlist exists → shorter cycle → more deals close before a competitor appears.</span></div>
+      </div>
+      <p class="small muted" style="margin-top:14px">Instantly's data says 58% of replies come from step one, so the signal has to be in the first email, not saved for a follow-up.</p>
+    </div>
+    <div class="stack">
+      <div class="tbl"><table style="min-width:480px">
+        <thead><tr><th>Claim</th><th>Source</th><th>Trust</th></tr></thead>
+        <tbody>
+          <tr><td>Signal-triggered 4–8% reply vs 1–3% generic</td><td>Instantly (platform data)</td><td><span class="tag warn">Medium</span></td></tr>
+          <tr><td>2.5x reply rate after moving to signal-led outbound</td><td>Unify, Quo case study</td><td><span class="tag warn">Vendor case</span></td></tr>
+          <tr><td>Win rate 33–41% vs 18–25%; reply 18–28%</td><td>Signal-vendor primer</td><td><span class="tag bad">Ceiling only</span></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout"><h3>Planning assumption used in the funnels</h3><p class="small">Reply rate 2.5% → 5%. Positive share 25% → 30%. Sales-call close rate +5 points. Prove it on your own sends in the first 600 contacts before trusting it.</p></div>
+    </div>
+  </div>
+  <div style="margin:28px 0 14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
+    <h3>Signal library</h3>
+    <div class="seg" role="group" aria-label="Choose engine" id="sigSeg">
+      <button type="button" data-k="lg" aria-pressed="true">Lead gen</button>
+      <button type="button" data-k="vera" aria-pressed="false">Vera AI</button>
+    </div>
+  </div>
+  <div class="cards" id="sigCards"></div>
+</section>
+
+<!-- FREEBIES -->
+<section id="freebies">
+  <div class="sec-head">
+    <div class="eyebrow"><span>06 · Freebies</span><span class="tag">Both engines</span></div>
+    <h2>Give a small, specific result before asking for a meeting.</h2>
+    <p class="lead">The freebies that work cost you minutes and prove the engine works. Put the cheapest proof inside the first email, offer the next one in email two, and deliver the expensive ones unasked only to your top accounts.</p>
+  </div>
+  <div style="margin-bottom:14px"><div class="seg" role="group" aria-label="Choose engine" id="freeSeg">
+    <button type="button" data-k="lg" aria-pressed="true">Lead gen</button>
+    <button type="button" data-k="vera" aria-pressed="false">Vera AI</button>
+  </div></div>
+  <div class="tbl"><table><thead><tr><th>Freebie</th><th>Touch</th><th>Your cost</th><th>Why it lifts replies</th><th>Watch out</th></tr></thead><tbody id="freeBody"></tbody></table></div>
+  <div class="split" style="margin-top:18px">
+    <div class="panel"><h3 style="margin-bottom:8px">Rules for every first email</h3>
+      <div class="flow small">
+        <div><span class="arr">→</span><span>Under 80 words: one line on their situation, one value line, one ask.</span></div>
+        <div><span class="arr">→</span><span>No attachments, at most one link, no calendar link in touch one.</span></div>
+        <div><span class="arr">→</span><span>Give before asking: the proof sits in the email, not behind a call.</span></div>
+        <div><span class="arr">→</span><span>Plain text, sender name a real founder, clear opt-out line.</span></div>
+      </div>
+    </div>
+    <details><summary>What the evidence says about video and audits</summary><div class="body">
+      <p>Salesforge's practitioner data puts video and "Loom" asks at 3–5% reply, and specific teardowns at 5–7%. Single-campaign stories of 15–22% exist but are anecdotes.</p>
+      <p>A video only works when it's specific to the prospect. Record them for your top 20% of accounts, under 90 seconds, and embed a thumbnail rather than a bare link.</p>
+    </div></details>
+  </div>
+</section>
+
+<!-- CADENCE -->
+<section id="cadence">
+  <div class="sec-head">
+    <div class="eyebrow"><span>07 · Multichannel outbound</span><span class="tag">Both engines</span></div>
+    <h2>Run two channels well rather than five badly: email plus LinkedIn over 14 days.</h2>
+    <p class="lead">Email alone averages 3–5% reply in 2026; a coordinated email and LinkedIn sequence reports 7–12%. The coordination matters: never email and message on the same day, and a reply on any channel stops every other touch.</p>
+  </div>
+  <div style="margin-bottom:14px"><div class="seg" role="group" aria-label="Choose sequence" id="cadSeg">
+    <button type="button" data-k="lg" aria-pressed="true">Lead gen · UK, IE, US</button>
+    <button type="button" data-k="vera" aria-pressed="false">Vera · India</button>
+  </div></div>
+  <div class="strip"><div class="strip-in" id="cadStrip"></div></div>
+  <div class="split" style="margin-top:18px">
+    <div class="steplist" id="cadList"></div>
+    <div class="stack">
+      <div class="panel"><h3 style="margin-bottom:10px">Safe limits</h3>
+        <div class="tbl" style="border:0"><table style="min-width:0">
+          <tbody>
+            <tr><td>Email per inbox</td><td class="num">5–10 → 15 → 30/day</td></tr>
+            <tr><td>Steps per sequence</td><td class="num">4–7</td></tr>
+            <tr><td>Bounce rate</td><td class="num">&lt; 2%</td></tr>
+            <tr><td>Spam complaints</td><td class="num">&lt; 0.1%</td></tr>
+            <tr><td>LinkedIn invites per account</td><td class="num">&lt; 100/week</td></tr>
+            <tr><td>LinkedIn messages per account</td><td class="num">20–30/day</td></tr>
+            <tr><td>Founders' combined invite budget</td><td class="num">~300/week</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <details><summary>India-specific: calls and WhatsApp</summary><div class="body">
+        <p>Since TRAI's February 2025 amendment, promotional calls belong on registered 140-series numbers, and five complaints in ten days can bar every number a sender holds for 15 days. A founder's own phone is at risk.</p>
+        <p>So in the Vera sequence, call and WhatsApp only people who replied, accepted on LinkedIn, or came through an introduction.</p>
+      </div></details>
+    </div>
+  </div>
+</section>
+
+<!-- FUNNELS -->
+<section id="funnels">
+  <div class="sec-head">
+    <div class="eyebrow"><span>08 · Client-acquisition funnels</span><span class="tag">Both engines</span></div>
+    <h2>At these rates, cold signals add about one Vera client and one to two lead-gen clients a month.</h2>
+    <p class="lead">These are the exact monthly funnels, stage by stage. Every rate is a slider: drag one and the stages below it, and the outcome line, recalculate. Defaults are the planning assumptions explained under each slider.</p>
+  </div>
+  <div style="margin-bottom:16px"><div class="seg" role="group" aria-label="Choose funnel" id="funSeg">
+    <button type="button" data-k="vera" aria-pressed="true">A · Vera acquisition</button>
+    <button type="button" data-k="lgacq" aria-pressed="false">B · Lead-gen acquisition</button>
+    <button type="button" data-k="deliv" aria-pressed="false">C · Lead-gen delivery per client</button>
+  </div></div>
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;align-items:baseline">
+      <h3 id="funTitle"></h3><span class="mono small muted" id="funOut"></span>
+    </div>
+    <p class="small muted" id="funDesc" style="margin-bottom:14px;max-width:80ch"></p>
+    <div id="funPreset" style="margin-bottom:14px"></div>
+    <div class="funnel" id="funRows"></div>
+    <div class="fctl" id="funCtl"></div>
+  </div>
+</section>
+
+<!-- COSTS -->
+<section id="costs">
+  <div class="sec-head">
+    <div class="eyebrow"><span>09 · Costs</span><span class="tag">Both engines</span></div>
+    <h2>The lean stack costs lead gen ₹9.7k a month; every upgrade still fits under ₹40k except Clay.</h2>
+    <p class="lead">Tick upgrades to see the monthly total against your ₹40k ceiling. Each one says which result it should move, so you can buy it only when that result is the bottleneck.</p>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <h3 style="margin-bottom:6px">Launch stack, per month</h3>
+      <p class="small muted" style="margin-bottom:8px">Shared lines are split 50/50 between Vera and lead gen.</p>
+      <div id="baseCost"></div>
+    </div>
+    <div class="stack">
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px">
+          <h3>Lead gen monthly total</h3><span class="mono" style="font-size:22px" id="costTotal"></span>
+        </div>
+        <div class="meter" id="costMeter"><i></i></div>
+        <p class="small muted" style="margin-top:6px" id="costNote"></p>
+      </div>
+      <div class="panel"><h3 style="margin-bottom:4px">Upgrades, in the order to buy them</h3><div id="upList"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ECONOMICS -->
+<section id="economics">
+  <div class="sec-head">
+    <div class="eyebrow"><span>10 · Unit economics and scenarios</span><span class="tag lg">Lead gen</span></div>
+    <h2 id="ecoHead">Lead gen covers its costs from the first client; hours, not money, cap it.</h2>
+    <p class="lead">The model adds new clients each month, loses some to churn, and stops at the number your hours can serve. Costs include the stack from the Costs section plus ₹4,189 per client for their own domains, inboxes and data.</p>
+  </div>
+  <div style="margin-bottom:16px"><div class="seg" role="group" aria-label="Scenario presets" id="scSeg">
+    <button type="button" data-k="cons" aria-pressed="false">Conservative</button>
+    <button type="button" data-k="base" aria-pressed="true">Base</button>
+    <button type="button" data-k="up" aria-pressed="false">Upside</button>
+  </div></div>
+  <div class="split">
+    <div class="panel">
+      <h3 style="margin-bottom:2px">Monthly revenue vs cost, Dec 2026 – Nov 2027</h3>
+      <p class="small muted" style="margin-bottom:8px">₹ lakh per month. Hover a month for detail.</p>
+      <div class="chart" id="ecoChart"></div>
+    </div>
+    <div class="stack">
+      <div class="readouts" id="ecoRead"></div>
+      <div class="panel">
+        <div class="ctls">
+          <div class="ctl"><label for="e-new">New clients a month (from Feb)</label><output id="o-new"></output><input id="e-new" type="range" min="0" max="3" step="0.25"></div>
+          <div class="ctl"><label for="e-arpa">Revenue per client a month</label><output id="o-arpa"></output><input id="e-arpa" type="range" min="300" max="2500" step="50"></div>
+          <div class="ctl"><label for="e-churn">Monthly churn</label><output id="o-churn"></output><input id="e-churn" type="range" min="0.05" max="0.35" step="0.01"></div>
+          <div class="ctl"><label for="e-hrs">Hours per founder per week</label><output id="o-hrs"></output><input id="e-hrs" type="range" min="10" max="45" step="1"></div>
+          <div class="ctl"><label for="e-vera">Share of hours kept for Vera</label><output id="o-vera"></output><input id="e-vera" type="range" min="0.3" max="0.8" step="0.05"></div>
+        </div>
+        <p class="small muted" style="margin-top:12px">Capacity = (founder hours × lead-gen share − 35 h/mo for winning clients) ÷ 25 h per client. These two hour figures are estimates.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY -->
+<section id="journey">
+  <div class="sec-head">
+    <div class="eyebrow"><span>11 · Setup and the 90-day journey</span><span class="tag">Both engines</span></div>
+    <h2>Test the offer on the warmed inboxes next week; decide on 9 January.</h2>
+    <p class="lead">The two pre-warmed mailboxes let lead gen start testing on 17 Nov while new domains warm. Vera's cold sequences start when its inboxes finish warmup around 1 Dec. Three gates decide whether to continue.</p>
+  </div>
+  <div class="tl" id="tl"></div>
+  <div class="split" style="margin-top:22px">
+    <div id="checklist"></div>
+    <div class="stack">
+      <div class="panel"><h3 style="margin-bottom:10px">Gates</h3>
+        <div class="tbl" style="border:0"><table style="min-width:0"><tbody>
+          <tr><td class="mono" style="white-space:nowrap">1 Dec</td><td><b>Deliverability.</b> Bounce under 2%, no blacklist hits, test emails landing in Primary. Else fix before any volume.</td></tr>
+          <tr><td class="mono" style="white-space:nowrap">25 Dec</td><td><b>Offer.</b> At least 1% positive replies on 600+ contacts in one segment. Else change the offer or niche once.</td></tr>
+          <tr><td class="mono" style="white-space:nowrap">9 Jan</td><td><b>Go or stop.</b> 2 paying clients or 8 held sales calls. Else stop lead gen and point the engine at Vera.</td></tr>
+          <tr><td class="mono" style="white-space:nowrap">8 Feb</td><td><b>Scale.</b> ₹1.5L+ lead-gen MRR and Vera pipeline not starved. Then buy Sales Navigator and LinkedIn automation.</td></tr>
+        </tbody></table></div>
+      </div>
+      <details open><summary>The step most teams miss: a pre-warmed bench</summary><div class="body">
+        <p>Each lead-gen client needs their own 3 domains and 9 inboxes, and those need 3–4 weeks of warmup. Without a bench, your first client waits a month for their first meeting.</p>
+        <p>Buy and warm one client set (about ₹3.2k a month) in early December so the first founding client starts sending the week they sign.</p>
+      </div></details>
+      <p class="small muted">Ticks save in this browser only.</p>
+    </div>
+  </div>
+</section>
+
+<!-- RISKS -->
+<section id="risks">
+  <div class="sec-head">
+    <div class="eyebrow"><span>12 · Risks and kill criteria</span><span class="tag">Both engines</span></div>
+    <h2>Stop early on two signs: Vera work slipping, or a Vera domain in spam.</h2>
+    <p class="lead">Most risks here have an early warning you can watch weekly. Two of them should end the experiment immediately, regardless of how lead gen is doing.</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Risk</th><th>Early warning</th><th>Response</th><th>Severity</th></tr></thead>
+    <tbody>
+      <tr><td><b>Vera loses momentum</b></td><td>A Vera reply waits over 24 h, or a meeting is moved for lead-gen work</td><td>Freeze new lead-gen sales for two weeks; if it repeats, stop</td><td><span class="tag bad">Kill trigger</span></td></tr>
+      <tr><td><b>Vera domain reputation hit</b></td><td>Vera emails landing in spam; blacklist listing</td><td>Stop all cold from that domain; audit what was shared</td><td><span class="tag bad">Kill trigger</span></td></tr>
+      <tr><td>Data quality repeats the Apollo failure</td><td>Bounce over 2% on any list</td><td>Pause, re-verify, switch source</td><td><span class="tag warn">High</span></td></tr>
+      <tr><td>Clients churn over no-shows</td><td>Show rate under 70%</td><td>Contract defines "held"; replace no-shows; confirm meetings the day before</td><td><span class="tag warn">High</span></td></tr>
+      <tr><td>LinkedIn restriction</td><td>Weekly-limit warnings, captcha prompts</td><td>Manual only for 2 weeks; drop invites to 10/day</td><td><span class="tag warn">Medium</span></td></tr>
+      <tr><td>Wrong-country sends</td><td>Prospects in DE, CH, NL, BE on an email list</td><td>Country filter at list build; LinkedIn-only for those</td><td><span class="tag warn">Medium</span></td></tr>
+      <tr><td>Price pressure from AI SDR tools</td><td>Prospects say "we'll do it ourselves"</td><td>Lead with the niche signal feed and pay-for-held-meetings terms</td><td><span class="tag">Medium</span></td></tr>
+      <tr><td>India DPDP Rules from 13 May 2027</td><td>Vera outbound in India still list-based in spring 2027</td><td>Record where each contact came from; one suppression list; move Vera India toward intros and inbound</td><td><span class="tag">Planned</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- SOURCES -->
+<section id="sources">
+  <div class="sec-head">
+    <div class="eyebrow"><span>13 · Sources</span></div>
+    <h2>Where the numbers come from</h2>
+    <p class="lead">Checked 10 Nov 2026. Vendor-published benchmarks are labelled as such where they carry a claim.</p>
+  </div>
+  <ol class="src">
+    <li><a href="https://instantly.ai/blog/ai-sales-agent-benchmarks-2026-the-complete-performance-report/">Instantly: 2026 cold email benchmark (3.43% avg, 58% from step one, 30/day cap)</a></li>
+    <li><a href="https://saleshandy.com/blog/cold-email-statistics/">Saleshandy: 53M cold emails, Jan–Jun 2026</a></li>
+    <li><a href="https://www.smartlead.ai/benchmarks">Smartlead: State of Cold Email 2026</a></li>
+    <li><a href="https://www.getboomerang.ai/glossaries/cold-email-reply-rate-benchmarks-2026">Boomerang: reply-rate benchmarks 2026</a></li>
+    <li><a href="https://visionary-marketing.co.uk/blog/b2b-cold-email-statistics-2026">Visionary Marketing: B2B cold email statistics 2026</a></li>
+    <li><a href="https://leadhaste.com/blog/saleshandy-pricing">LeadHaste: Saleshandy plans and limits (checked 16 Sep 2026)</a></li>
+    <li><a href="https://prospeo.io/s/appointment-setting-pricing">Prospeo: appointment-setting pricing 2026</a></li>
+    <li><a href="https://www.cleverly.co/blog/b2b-lead-generation-agency-cost">Cleverly: B2B lead generation agency cost 2026</a></li>
+    <li><a href="https://www.cleverly.co/blog/lead-generation-agencies-for-staffing-and-recruitment-firms">Cleverly: lead-gen agencies for staffing firms</a></li>
+    <li><a href="https://moderninbound.com/blog/best-cold-email-agencies-india">Modern Inbound: cold email agencies in India</a></li>
+    <li><a href="https://www.leadfeeder.com/blog/sales-prospecting/cold-calling-illegal-ireland/">Dealfront/Leadfeeder: cold outreach laws across Europe (Sep 2026)</a></li>
+    <li><a href="https://help.lemlist.com/en/articles/10213662-gdpr-and-cold-emailing-what-you-need-to-know">lemlist: GDPR and cold emailing by country</a></li>
+    <li><a href="https://prospeo.io/s/casl-cold-email">Prospeo: CASL cold email guide</a></li>
+    <li><a href="https://imisofts-com.pages.dev/blog/cold-email-laws-australia">Cold email laws in Australia (Spam Act)</a></li>
+    <li><a href="https://echai.ventures/gtm/gtm-outbound/we-buy-contact-lists-and-run-outbound-in-india-what-do-the-dpdp-rules-and-trai-s-spam-rules-change-for-us">eChai: DPDP Rules and TRAI rules for outbound in India</a></li>
+    <li><a href="https://www.salesforge.ai/blog/multichannel-outreach">Salesforge: multichannel outreach playbook 2026</a></li>
+    <li><a href="https://www.salesforge.ai/blog/soft-ctas-that-make-your-prospects-respond-to-your-emails">Salesforge: soft CTAs and video asks</a></li>
+    <li><a href="https://firstsales.io/blog/video-cold-email-loom">FirstSales: does Loom lift replies?</a></li>
+    <li><a href="https://instantly.ai/blog/ai-sdr-reply-rate-improvement/">Instantly: signal-triggered vs generic reply rates</a></li>
+    <li><a href="https://unifygtm.com/explore/signal-density-deliverability-mechanics">Unify: signal-triggered deliverability, Quo case</a></li>
+    <li><a href="https://productquant-dev.pages.dev/blog/signal-based-selling-b2b-primer">ProductQuant: signal-based selling primer (vendor claims)</a></li>
+    <li><a href="https://tomba.io/blog/hiring-signals-for-sales">Tomba: hiring signals for sales</a></li>
+    <li><a href="https://leadmagic.io/gtm-skills/hiring-signal-play">LeadMagic: hiring-signal play</a></li>
+    <li><a href="https://www.freepressjournal.in/business/maharera-registers-record-435-housing-projects-for-dussehra-23719-crore-investment-expected">Free Press Journal: MahaRERA registrations and extensions, Apr–Oct 2026</a></li>
+    <li><a href="https://help.heyreach.io/en/articles/15128619-how-do-connection-request-limits-work-in-heyreach">HeyReach: connection request limits</a></li>
+    <li><a href="https://www.salesforge.ai/blog/linkedin-connection-request-limit">Salesforge: LinkedIn connection limit 2026</a></li>
+    <li><a href="https://www.joinvalley.co/blog/heyreach-pricing-explained-2026">Valley: HeyReach pricing 2026</a></li>
+    <li><a href="https://overloop.com/blog/heyreach-vs-waalaxy">Overloop: HeyReach vs Waalaxy (Sep 2026)</a></li>
+    <li><a href="https://www.addtocrm.com/blog/sales-navigator-pricing-cost">Sales Navigator pricing 2026</a></li>
+    <li><a href="https://www.landbase.com/blog/clay-pricing">Landbase: Clay pricing after March 2026</a></li>
+    <li><a href="https://use-apify.com/docs/what-is-apify/apify-pricing">Apify pricing 2026</a></li>
+    <li><a href="https://prospeo.io/s/millionverifier-pricing-reviews-pros-and-cons">MillionVerifier pricing</a></li>
+    <li><a href="https://cloudfysystems.com/blog/google-workspace-pricing-plans-india">Google Workspace pricing in India 2026</a></li>
+    <li><a href="https://joinvalley.co/blog/email-sending-limits">Valley: Gmail and Outlook sending limits</a></li>
+    <li><a href="https://firstsales.io/blog/outlook-5000-sender-rules-2026">FirstSales: Outlook bulk-sender rules</a></li>
+    <li><a href="https://bestexchangerates.com/rates/usd-to-inr/?mybank=XE">USD–INR rate</a></li>
+  </ol>
+</section>
+</main>
+<footer class="wrap">Prepared for the Vera AI founders, 10 Nov 2026. Figures are planning estimates; legal notes are general guidance, not legal advice.</footer>
+
+<script>
+(function(){
+const FX = 92;
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const lakh = n => '₹' + (n/1e5).toFixed(n >= 1e6 ? 1 : 2) + 'L';
+function seg(id, onPick){
+  const root = document.getElementById(id);
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    root.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    onPick(b.dataset.k);
+  });
+}
+
+/* ---------- nav highlight ---------- */
+const links = [...document.querySelectorAll('#navIn a')];
+const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => {
+  es.forEach(en => { if(en.isIntersecting){ links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + en.target.id)); } });
+}, {rootMargin:'-40% 0px -55% 0px'}) : null;
+if(io) document.querySelectorAll('main section').forEach(s => io.observe(s));
+
+/* ---------- benchmark chart ---------- */
+(function(){
+  const rows = [
+    {k:'Smartlead', v:0.74}, {k:'Boomerang', v:1.4}, {k:'Visionary Mktg', v:2.1}, {k:'Instantly', v:3.43}, {k:'Saleshandy', v:3.7}
+  ];
+  const W=520, rowH=36, top=12, left=118, right=56, H = top + rows.length*rowH + 30;
+  const max = 4, x = v => left + v/max*(W-left-right);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Average cold email reply rates across five 2026 datasets, from 0.74% to 3.7%">`;
+  [0,1,2,3,4].forEach(t => { s += `<line x1="${x(t)}" x2="${x(t)}" y1="${top-4}" y2="${top+rows.length*rowH}" stroke="var(--grid)"/><text x="${x(t)}" y="${top+rows.length*rowH+18}" font-size="11" fill="var(--ink-3)" text-anchor="middle" font-family="var(--f-mono)">${t}%</text>`; });
+  rows.forEach((r,i) => {
+    const y = top + i*rowH + 8;
+    s += `<text x="${left-10}" y="${y+14}" font-size="12.5" fill="var(--ink-2)" text-anchor="end">${r.k}</text>`;
+    s += `<rect x="${left}" y="${y}" width="${x(r.v)-left}" height="20" rx="3" fill="var(--ink-3)" fill-opacity=".55"><title>${r.k}: ${r.v}% average reply rate</title></rect>`;
+    s += `<text x="${x(r.v)+6}" y="${y+14}" font-size="12" fill="var(--ink)" font-family="var(--f-mono)">${r.v}%</text>`;
+  });
+  s += `<line x1="${x(2.5)}" x2="${x(2.5)}" y1="${top-6}" y2="${top+rows.length*rowH}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/>`;
+  s += `<text x="${x(2.5)+4}" y="${top+4}" font-size="11.5" fill="var(--accent)" font-weight="600">Plan: 2.5%</text>`;
+  s += `</svg>`;
+  $('#benchChart').innerHTML = s;
+})();
+
+/* ---------- countries ---------- */
+const COUNTRIES = [
+  {k:'US', n:'United States', s:'open', rule:'Cold B2B email allowed without prior consent.', basis:'CAN-SPAM Act', how:'Honest subject line, sender identity, physical address, working opt-out.', verdict:'Open, and the most crowded inbox market. Use for volume once the offer is proven.'},
+  {k:'UK', n:'United Kingdom', s:'open', rule:'Allowed to corporate bodies (Ltd, PLC, LLP). Sole traders and ordinary partnerships count as individuals and need consent.', basis:'PECR regs 21–22 + UK GDPR', how:'Filter out sole traders and non-LLP partnerships. Many clinics run as partnerships, which matters for Vera\'s UK doctor work: use introductions and LinkedIn there.', verdict:'Open for companies. Primary market for lead gen.'},
+  {k:'IE', n:'Ireland', s:'open', rule:'Allowed when the address is used mainly for business and the email relates to that work.', basis:'S.I. 336/2011 + Data Protection Commission guidance', how:'Role-relevant offer, opt-out in every email.', verdict:'Open and under-served. Add alongside the UK.'},
+  {k:'FI', n:'Finland', s:'open', rule:'Allowed if the offer is relevant to the recipient\'s job role, or sent to a generic address with an opt-out.', basis:'Electronic Communication Services Act ch. 24', how:'Tight role targeting; English works for most B2B buyers.', verdict:'Open for role-relevant offers. A good niche-country test.'},
+  {k:'SE', n:'Sweden', s:'open', rule:'Allowed when the email is clearly connected to the recipient\'s professional role; check the NIX register.', basis:'Marketing Practices Act ss. 19, 21', how:'Role-relevant only; never to individual traders without consent.', verdict:'Open for role-relevant offers.'},
+  {k:'FR', n:'France', s:'careful', rule:'Sources disagree. One reading allows role-relevant B2B email; another requires opt-in unless the address is generic (contact@) or the person was told at collection.', basis:'Postal and Electronic Communications Code L34-5, CNIL guidance', how:'Generic addresses or role-relevant with a documented legitimate interest; French copy.', verdict:'Careful. Not a first market.'},
+  {k:'NL', n:'Netherlands', s:'closed', rule:'Opt-in consent required, unless there is a previous business relationship.', basis:'Telecommunications Act art. 11.7', how:'LinkedIn-first; email only after they engage.', verdict:'Consent country. LinkedIn only.'},
+  {k:'BE', n:'Belgium', s:'closed', rule:'Opt-in required unless you email a generic address (info@) or have done business before. Check the Do-Not-Call-Me list for calls.', basis:'Code of Economic Law XII.13, VI.111–115; Royal Decree 4 Apr 2003', how:'LinkedIn plus generic company inboxes.', verdict:'Quiet partly because it is closed to named cold email.'},
+  {k:'CH', n:'Switzerland', s:'closed', rule:'Opt-in consent needed unless there is a previous business relationship; lemlist classes it with Germany as double opt-in.', basis:'Unfair Competition Act (UWG) art. 3', how:'LinkedIn only. Phone numbers marked * in the directory must not be called.', verdict:'Consent country. LinkedIn only.'},
+  {k:'DE', n:'Germany', s:'closed', rule:'Double opt-in, except for existing customers buying similar products.', basis:'UWG §7', how:'Don\'t cold email. Use LinkedIn and events.', verdict:'Avoid for cold email.'},
+  {k:'AU', n:'Australia', s:'careful', rule:'Consent required, but consent can be inferred from a conspicuously published business address when the message relates to the person\'s role.', basis:'Spam Act 2003 (ACMA)', how:'Only addresses published by the business; honour opt-outs fast; identify the sender.', verdict:'Possible with care.'},
+  {k:'CA', n:'Canada', s:'careful', rule:'Consent required. Implied consent applies when the address is conspicuously published, carries no "no solicitation" notice, and the offer fits the role.', basis:'CASL (penalties up to CAD 10M)', how:'Tag every record with its consent basis; skip anything you cannot justify.', verdict:'Possible with care; strict enforcement.'},
+  {k:'IN', n:'India', s:'careful', rule:'Cold B2B email allowed today. DPDP Rules (notified Nov 2025) bind fully from 13 May 2027; a named work email is personal data and consent becomes central.', basis:'DPDP Act 2023 + DPDP Rules 2025; TRAI rules for calls and SMS', how:'Record each contact\'s source now, keep one suppression list, and shift Vera India toward intros and inbound by spring 2027.', verdict:'Open until May 2027, then consent-led. Mainly a Vera issue.'}
+];
+const dotCls = s => s === 'open' ? 'd-open' : s === 'careful' ? 'd-careful' : 'd-closed';
+const verdictTag = s => s === 'open' ? '<span class="tag good">Open with opt-out</span>' : s === 'careful' ? '<span class="tag warn">Conditions apply</span>' : '<span class="tag bad">Consent needed</span>';
+const cc = $('#countryChips');
+cc.innerHTML = COUNTRIES.map((c,i) => `<button type="button" class="chip" data-i="${i}" aria-pressed="${c.k==='BE'}"><span class="dot ${dotCls(c.s)}"></span>${esc(c.n)}</button>`).join('');
+function showCountry(i){
+  const c = COUNTRIES[i];
+  $('#countryPanel').innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h3>${esc(c.n)}</h3>${verdictTag(c.s)}</div>
+  <div class="row"><b>Rule</b><span>${esc(c.rule)}</span></div>
+  <div class="row"><b>Legal basis</b><span>${esc(c.basis)}</span></div>
+  <div class="row"><b>How to work it</b><span>${esc(c.how)}</span></div>
+  <div class="row"><b>Verdict</b><span><b>${esc(c.verdict)}</b></span></div>`;
+}
+cc.addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; cc.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x===b?'true':'false')); showCountry(+b.dataset.i); });
+showCountry(COUNTRIES.findIndex(c => c.k === 'BE'));
+
+/* ---------- signals ---------- */
+const SIGNALS = {
+  lg: [
+    {t:'Company posts SDR / BDR / business-development roles', src:'LinkedIn Jobs, Indeed, career pages via Apify', win:'Act within 3 weeks; drop posts older than ~60 days', angle:'"Meetings while you hire, or instead of hiring."'},
+    {t:'Sales role open 75+ days or reposted', src:'Same scrape, compare posting dates', win:'While still open', angle:'They can\'t hire their way out of the gap. Offer to cover it.'},
+    {t:'New Head of Sales, VP Sales or Head of Growth', src:'Sales Navigator lead alerts (upgrade) or LinkedIn job-change search', win:'First 90 days, when new leaders change vendors', angle:'"Pipeline in your first quarter."'},
+    {t:'Recruiter niche: their target companies hiring in bulk', src:'Job boards, grouped by company and role', win:'Weekly', angle:'The freebie itself: "12 companies hiring X this week."'},
+    {t:'Weak email setup (no DMARC or SPF)', src:'Free DNS lookup in n8n', win:'Any time', angle:'Their outbound is likely landing in spam; your audit shows it.'},
+    {t:'Recently funded', src:'News and free funding alerts', win:'0–60 days after announcement', angle:'Growth targets just got set.'}
+  ],
+  vera: [
+    {t:'New MahaRERA project registration (MMR, Pune)', src:'MahaRERA public register; 2,491 new registrations Apr–Oct 2026', win:'Before ground-breaking', angle:'Site reporting and inventory set up right from day one.'},
+    {t:'MahaRERA deadline extension approved', src:'MahaRERA register; 2,053 extensions Apr–Oct 2026', win:'Within weeks of approval', angle:'The project is late by definition. Lead with tracking and reporting.'},
+    {t:'Hiring site, planning or QS engineers, storekeepers', src:'Naukri and LinkedIn via Apify', win:'While posts are live', angle:'Capacity strain: cut the 2–3 day site report to under a day.'},
+    {t:'Law firm hiring recovery / DRT associates or paralegals', src:'LinkedIn and Naukri', win:'While posts are live', angle:'Volume is rising; show the Recovery Desk demo.'},
+    {t:'Clinic reviews mentioning phones or booking', src:'Google Maps reviews via Apify', win:'Complaint in the last 90 days', angle:'A booking front end that answers at 10 pm.'},
+    {t:'New clinic registered abroad (e.g. UK CQC register)', src:'Public regulator registers', win:'Opening window', angle:'Booking set up before patients arrive.'}
+  ]
+};
+function renderSignals(k){
+  $('#sigCards').innerHTML = SIGNALS[k].map(s => `<article class="card"><h3>${esc(s.t)}</h3><div class="kv"><b>Source</b><span>${esc(s.src)}</span><b>Window</b><span>${esc(s.win)}</span><b>Angle</b><span>${esc(s.angle)}</span></div></article>`).join('');
+}
+seg('sigSeg', renderSignals); renderSignals('lg');
+
+/* ---------- freebies ---------- */
+const FREE = {
+  lg: [
+    ['Three live signals in the email ("3 firms hiring SDRs in your niche this week")','Email 1','Minutes, automated','Proves the engine before any ask','Must be real and current; stale examples kill trust'],
+    ['Domain health check (SPF, DKIM, DMARC) pasted inline','Email 2','Free, automated in n8n','A specific problem they can verify in 30 seconds','Keep it factual; never shame their setup'],
+    ['25-lead sample sheet built to their ICP','Offer in email 2; deliver unasked in email 3 to top accounts','~30 min per account','Reciprocity; it is the first deliverable of a paid engagement','Cap at 20% of accounts or it eats your week'],
+    ['90-second Loom teardown of their outbound or careers page','Email 3, top 20% only','~10 min each','Feels personal; teardown asks report 5–7% reply','Thumbnail image, not a bare link'],
+    ['"First 3 held meetings free" / pay only for held meetings','On the call','Your time','Removes risk for a new agency with no case studies','Define "held" and "qualified" in writing']
+  ],
+  vera: [
+    ['2-hour site-report test: "send one site\'s photos, get the compiled report back"','Email 2 / after the Lodha intro','~1 hour with your pipeline','Directly answers the 2–3 days vs under-a-day pain Lodha named','Client data handling: agree what you keep'],
+    ['RERA delay snapshot for their project from public filings','Email 1 or 2','~20 min','Shows you understand their exposure before they say a word','Public data only; neutral tone'],
+    ['Recovery Desk demo on one anonymised matter (law firms)','After first reply','~1 hour','They see their own workflow running','No client-identifying data'],
+    ['Mock booking page in the clinic\'s branding + after-hours missed-call log','Email 2','~45 min','Makes the lost-patient problem visible','UK partnerships need intros, not cold email'],
+    ['Paid pilot priced at cost for 30 days','On the call','Margin','Converts interest into a decision with a date','Set success metrics before starting']
+  ]
+};
+function renderFree(k){ $('#freeBody').innerHTML = FREE[k].map(r => `<tr>${r.map((c,i) => `<td>${i===0?'<b>'+esc(c)+'</b>':esc(c)}</td>`).join('')}</tr>`).join(''); }
+seg('freeSeg', renderFree); renderFree('lg');
+
+/* ---------- cadence ---------- */
+const CAD = {
+  lg: [
+    {d:1, ch:'l', t:'LinkedIn: view profile, connect without a note', why:'Name recognition before the first email. Notes on invites now get ~2% replies.'},
+    {d:2, ch:'e', t:'Email 1: the signal + 3 live examples, under 80 words, no link', why:'58% of replies come from step one, so the signal and the proof go here.'},
+    {d:4, ch:'l', t:'LinkedIn DM if they accepted: one line on the same signal', why:'Accepted = warm. Reference the email without repeating it.'},
+    {d:6, ch:'e', t:'Email 2: their domain check result, inline', why:'A new angle with a fact they can verify. Offer the 25-lead sample.'},
+    {d:9, ch:'l', t:'LinkedIn: comment on a recent post or send a 30-second voice note', why:'Engagement without another ask.'},
+    {d:11, ch:'e', t:'Email 3: deliver the 25-lead sample (top accounts) or a short case', why:'Give before asking; reciprocity does the work.'},
+    {d:14, ch:'e', t:'Email 4: break-up, "should I close the file?"', why:'An easy no; break-ups often pull late replies.'}
+  ],
+  vera: [
+    {d:1, ch:'l', t:'LinkedIn: connect with founder, MD or project head', why:'Construction and legal buyers check you on LinkedIn first.'},
+    {d:2, ch:'e', t:'Email 1: their RERA event + the site-report claim, under 80 words', why:'The signal is the opener; no attachments.'},
+    {d:4, ch:'l', t:'LinkedIn DM if accepted', why:'Short, references their project by name.'},
+    {d:6, ch:'e', t:'Email 2: offer the 2-hour site-report test', why:'Concrete, bounded, cheap for them to say yes to.'},
+    {d:8, ch:'c', t:'Call, only if they replied, accepted or came via an intro', why:'TRAI complaint rules make cold calling from personal numbers risky.'},
+    {d:10, ch:'c', t:'WhatsApp the sample report, only after they engaged', why:'WhatsApp is the default business channel in India once there is a conversation.'},
+    {d:14, ch:'e', t:'Email 3: break-up, offer a referral path', why:'Ask who else in their network runs sites.'}
+  ]
+};
+let cadKey = 'lg', cadSel = 0;
+function renderCad(){
+  const steps = CAD[cadKey];
+  const rows = [['e','Email'],['l','LinkedIn'],['c', cadKey==='vera' ? 'Call / WhatsApp' : 'Call']];
+  let h = '<div class="ch dh">Day</div>' + Array.from({length:14},(_,i)=>`<div class="dh">${i+1}</div>`).join('');
+  rows.forEach(([ck,label]) => {
+    h += `<div class="ch">${label}</div>`;
+    for(let d=1; d<=14; d++){
+      const idx = steps.findIndex(s => s.d===d && s.ch===ck);
+      h += '<div>' + (idx>=0 ? `<button type="button" class="stepbtn ch-${ck}" data-i="${idx}" aria-pressed="${idx===cadSel}" aria-label="Day ${d}: ${esc(steps[idx].t)}">${d}</button>` : '') + '</div>';
+    }
+  });
+  $('#cadStrip').innerHTML = h;
+  $('#cadList').innerHTML = steps.map((s,i) => `<div class="step ${i===cadSel?'on':''}" data-i="${i}"><span class="d">Day ${s.d}</span><div><div style="font-weight:600;font-size:14px">${esc(s.t)}</div><div class="small muted">${esc(s.why)}</div></div></div>`).join('');
+}
+$('#cadStrip').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; cadSel = +b.dataset.i; renderCad(); });
+$('#cadList').addEventListener('click', e => { const s = e.target.closest('.step'); if(!s) return; cadSel = +s.dataset.i; renderCad(); });
+seg('cadSeg', k => { cadKey = k; cadSel = 0; renderCad(); }); renderCad();
+
+/* ---------- funnels ---------- */
+const FUN = {
+  vera: {title:'Funnel A · Vera acquisition from cold signals', unit:'paid clients / month',
+    desc:'Starts from public MahaRERA events in Maharashtra (about 650 new registrations plus extensions a month in Apr–Oct 2026). Runs alongside the warm-intro lane: ask every Lodha and PRS meeting for two introductions.',
+    start:{label:'Signal events a month', v:650, min:200, max:1500, step:50, note:'MahaRERA: 2,491 new + 2,053 extensions over 7 months.'},
+    stages:[
+      {label:'ICP fit (mid-size, MMR/Pune)', v:.25, min:.1, max:.6, note:'Estimate: drops large developers and one-off projects.'},
+      {label:'Decision-maker reached', v:.70, min:.4, max:.9, note:'Estimate: email or LinkedIn found for the founder or project head.'},
+      {label:'Replies', v:.08, min:.02, max:.2, note:'Signal + multichannel; above the 2.5% list baseline.'},
+      {label:'Positive replies', v:.45, min:.2, max:.7, note:'Estimate: a pain-specific opener earns a higher share.'},
+      {label:'Discovery calls held', v:.75, min:.4, max:.95, note:'Estimate.'},
+      {label:'Free pilot (2-hour report test)', v:.50, min:.2, max:.8, note:'Estimate.'},
+      {label:'Paid client', v:.50, min:.2, max:.8, note:'Estimate: pilots with agreed success metrics convert better.'}
+    ]},
+  lgacq: {title:'Funnel B · Lead-gen agency winning its own clients', unit:'new clients / month',
+    desc:'Recruitment and staffing agencies in the UK, Ireland and US, found through hiring and leadership-change signals. Sent from the two warmed inboxes first, then six new ones.',
+    start:{label:'Signal-matched agencies a month', v:900, min:300, max:2000, step:50, note:'Agencies showing at least one signal that month.'},
+    stages:[
+      {label:'Verified decision-maker', v:.667, min:.4, max:.9, note:'Estimate: owner or head of BD with a verified email.'},
+      {label:'Replies', v:.06, min:.02, max:.15, note:'Signal + email/LinkedIn; blended multichannel reports 7–12%.'},
+      {label:'Positive replies', v:.35, min:.2, max:.6, note:'Estimate.'},
+      {label:'Sales calls booked', v:.60, min:.3, max:.9, note:'Estimate.'},
+      {label:'Calls held', v:.80, min:.5, max:.95, note:'Good show rates run 70–85%.'},
+      {label:'Clients won', v:.25, min:.1, max:.5, note:'Estimate; pay-for-held-meetings terms make yes easier.'}
+    ]},
+  deliv: {title:'Funnel C · What one lead-gen client gets each month', unit:'held meetings / month',
+    desc:'Per client: 3 domains, 9 inboxes at 25 a day, 22 sending days, 5-step sequences, so about 990 new prospects a month. Compare a static list with signal-sourced prospects.',
+    start:{label:'Prospects contacted a month', v:990, min:300, max:2000, step:10, note:'9 inboxes × 25/day × 22 days ÷ 5 steps.'},
+    presets:{list:[.025,.25,.5,.8], signal:[.05,.30,.5,.8]},
+    stages:[
+      {label:'Replies', v:.05, min:.01, max:.12, note:'List 2.5%; signal-led 5% (planning assumption).'},
+      {label:'Positive replies', v:.30, min:.15, max:.5, note:'List 25%; signal 30%.'},
+      {label:'Meetings booked', v:.50, min:.3, max:.8, note:'Matches Instantly\'s ~15% of all replies becoming meetings.'},
+      {label:'Meetings held', v:.80, min:.5, max:.95, note:'Confirm the day before to hold 75–80%.'}
+    ]}
+};
+let funKey = 'vera';
+const fmtPct = v => (v*100).toFixed(v < .1 ? 1 : 0) + '%';
+function funCounts(f){ const out=[f.start.v]; f.stages.forEach(s => out.push(out[out.length-1]*s.v)); return out; }
+function drawFunnel(){
+  const f = FUN[funKey], c = funCounts(f), max = c[0];
+  $('#funTitle').textContent = f.title; $('#funDesc').textContent = f.desc;
+  const last = c[c.length-1];
+  $('#funOut').innerHTML = `≈ <b style="color:var(--good);font-size:16px">${last.toFixed(1)}</b> ${f.unit}`;
+  const labels = [f.start.label].concat(f.stages.map(s => s.label));
+  let h = '';
+  labels.forEach((lb,i) => {
+    if(i>0) h += `<div class="fstep">↓ ${fmtPct(f.stages[i-1].v)} carry on</div>`;
+    const w = Math.max(c[i]/max*100, .6);
+    h += `<div class="frow ${i===labels.length-1?'last':''}"><span class="lbl">${esc(lb)}</span><div class="track"><div class="bar" style="width:${w}%"></div></div><span class="cnt">${c[i] >= 10 ? Math.round(c[i]).toLocaleString('en-IN') : c[i].toFixed(1)}</span></div>`;
+  });
+  $('#funRows').innerHTML = h;
+}
+function buildFunnelCtl(){
+  const f = FUN[funKey];
+  let h = `<div class="ctl"><label for="fs-0">${esc(f.start.label)}</label><output id="fo-0">${f.start.v}</output><input id="fs-0" type="range" min="${f.start.min}" max="${f.start.max}" step="${f.start.step}" value="${f.start.v}"><span class="fnote" style="grid-column:1/-1">${esc(f.start.note)}</span></div>`;
+  f.stages.forEach((s,i) => {
+    h += `<div class="ctl"><label for="fs-${i+1}">${esc(s.label)}</label><output id="fo-${i+1}">${fmtPct(s.v)}</output><input id="fs-${i+1}" type="range" min="${s.min}" max="${s.max}" step="0.005" value="${s.v}"><span class="fnote" style="grid-column:1/-1">${esc(s.note)}</span></div>`;
+  });
+  $('#funCtl').innerHTML = h;
+  $('#funPreset').innerHTML = f.presets ? `<div class="seg" role="group" aria-label="Prospect source" id="dPreset"><button type="button" data-k="list" aria-pressed="false">Static list</button><button type="button" data-k="signal" aria-pressed="true">Signal-sourced</button></div>` : '';
+  if(f.presets) seg('dPreset', k => { f.presets[k].forEach((v,i) => { f.stages[i].v = v; }); buildFunnelCtl(); const b = document.querySelector(`#dPreset [data-k="${k}"]`); document.querySelectorAll('#dPreset button').forEach(x => x.setAttribute('aria-pressed', x===b?'true':'false')); drawFunnel(); });
+}
+$('#funCtl').addEventListener('input', e => {
+  const t = e.target; if(t.type !== 'range') return;
+  const i = +t.id.split('-')[1], f = FUN[funKey];
+  if(i===0){ f.start.v = +t.value; $('#fo-0').textContent = t.value; }
+  else { f.stages[i-1].v = +t.value; $('#fo-'+i).textContent = fmtPct(+t.value); }
+  drawFunnel();
+});
+seg('funSeg', k => { funKey = k; buildFunnelCtl(); drawFunnel(); });
+buildFunnelCtl(); drawFunnel();
+
+/* ---------- costs ---------- */
+const INBOX = 270*1.18, DOM = 14*FX/12;
+const BASE = [
+  {g:'Shared (50% to lead gen)', items:[
+    {t:'Saleshandy Pro, monthly billing ($99)', full:99*FX, lg:99*FX/2},
+    {t:'Apify Starter for signal scrapers ($29)', full:29*FX, lg:29*FX/2},
+    {t:'MillionVerifier, ~5,000 checks ($37 per 10k)', full:37*FX/2, lg:37*FX/4},
+    {t:'Saleshandy Lead Finder, 4,000 credits included', full:0, lg:0}
+  ]},
+  {g:'Lead gen only', items:[
+    {t:'4 domains: 3 sending + 1 website ($14/yr each)', full:4*DOM, lg:4*DOM},
+    {t:'6 new Google Workspace inboxes (₹270 + GST)', full:6*INBOX, lg:6*INBOX},
+    {t:'2 warmed inboxes on the dormant domain', full:2*INBOX, lg:2*INBOX},
+    {t:'n8n, Cal.com, Loom free tiers', full:0, lg:0}
+  ]}
+];
+const UPS = [
+  {id:'u-bench', t:'Pre-warmed client bench (3 domains, 9 inboxes)', amt:9*INBOX+3*DOM, s:'Buys: the first client sends the week they sign instead of a month later. Moves: time to first held meeting.'},
+  {id:'u-sn', t:'Sales Navigator Core, 1 seat ($119.99/mo)', amt:119.99*FX, s:'Buys: leadership-change and hiring alerts, precise filters, 50 InMails. Moves: share of your list that is signal-sourced, so reply rate. India checkout price may be lower.'},
+  {id:'u-wx', t:'Waalaxy Pro, 1 LinkedIn account (~€39)', amt:39*105, s:'Buys: automated invites and follow-ups for one founder. Moves: founder hours (estimate 4–6 a week). Pick this or HeyReach.'},
+  {id:'u-hr', t:'HeyReach Growth, 1 sender ($79)', amt:79*FX, s:'Buys: multi-account LinkedIn with a shared inbox. Moves: LinkedIn volume across founders. Note: LinkedIn removed HeyReach\'s company page in March 2026.'},
+  {id:'u-ann', t:'Switch Saleshandy Pro to annual ($76/mo)', amt:-(99-76)*FX/2, s:'Saves money once both engines have run 60 days. Moves: nothing; buy only after the 9 Jan gate.'},
+  {id:'u-clay', t:'Clay Launch ($185/mo)', amt:185*FX, s:'Buys: enrichment waterfalls and AI research at scale. Moves: research hours. Wait until lead gen passes ~₹2L MRR; n8n + Apify covers this for now.'}
+];
+const LG_BASE = BASE.reduce((a,g) => a + g.items.reduce((b,i) => b + i.lg, 0), 0);
+$('#baseCost').innerHTML = BASE.map(g => `<div class="small muted" style="margin:12px 0 2px;text-transform:uppercase;letter-spacing:.05em;font-size:11.5px">${g.g}</div>` + g.items.map(i => `<div class="cost-row"><span>${esc(i.t)}</span><span class="amt">${i.lg ? inr(i.lg) : '₹0'}</span></div>`).join('')).join('') +
+  `<div class="cost-row" style="font-weight:600"><span>Lead gen at launch</span><span class="amt">${inr(LG_BASE)}</span></div>
+   <p class="small muted" style="margin-top:10px">Run alone, lead gen would carry the full shared lines: ${inr(LG_BASE + BASE[0].items.reduce((a,i)=>a+i.full-i.lg,0))} a month. Sharing saves ${inr(BASE[0].items.reduce((a,i)=>a+i.full-i.lg,0))}. Vera's own share, including 2 secondary domains and 4 inboxes, is about ${inr(BASE[0].items.reduce((a,i)=>a+i.full-i.lg,0) + 2*DOM + 4*INBOX)}.</p>`;
+let picks = {};
+try { picks = JSON.parse(localStorage.getItem('twoEngine.ups') || '{}') || {}; } catch(e){ picks = {}; }
+$('#upList').innerHTML = UPS.map(u => `<label class="up" for="${u.id}"><input type="checkbox" id="${u.id}" ${picks[u.id]?'checked':''}><span><span class="t">${esc(u.t)}</span><br><span class="s">${esc(u.s)}</span></span><span class="amt">${u.amt<0?'−':'+'}${inr(Math.abs(u.amt))}</span></label>`).join('');
+function costTotal(){ return LG_BASE + UPS.reduce((a,u) => a + (document.getElementById(u.id).checked ? u.amt : 0), 0); }
+function renderCost(){
+  const t = costTotal(), cap = 40000;
+  $('#costTotal').textContent = inr(t);
+  const m = $('#costMeter'); m.classList.toggle('over', t > cap); m.querySelector('i').style.width = Math.min(t/cap*100,100) + '%';
+  const both = document.getElementById('u-wx').checked && document.getElementById('u-hr').checked;
+  $('#costNote').textContent = (t > cap ? `${inr(t-cap)} over the ₹40,000 ceiling.` : `${inr(cap-t)} left under the ₹40,000 ceiling.`) + (both ? ' Waalaxy and HeyReach do the same job; pick one.' : '');
+  renderEco();
+}
+$('#upList').addEventListener('change', () => {
+  const p = {}; UPS.forEach(u => { p[u.id] = document.getElementById(u.id).checked; });
+  try { localStorage.setItem('twoEngine.ups', JSON.stringify(p)); } catch(e){}
+  renderCost();
+});
+
+/* ---------- economics ---------- */
+const PER_CLIENT = 9*INBOX + 3*DOM + 1000;
+const PRESETS = {
+  cons:{n:0.5, arpa:450, churn:0.25, hrs:25, vera:0.6},
+  base:{n:1, arpa:1100, churn:0.15, hrs:25, vera:0.6},
+  up:{n:1.5, arpa:1600, churn:0.10, hrs:30, vera:0.5}
+};
+const MONTHS = ['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'];
+const E = {n:$('#e-new'), arpa:$('#e-arpa'), churn:$('#e-churn'), hrs:$('#e-hrs'), vera:$('#e-vera')};
+function setPreset(k){ const p = PRESETS[k]; E.n.value=p.n; E.arpa.value=p.arpa; E.churn.value=p.churn; E.hrs.value=p.hrs; E.vera.value=p.vera; renderEco(); }
+function model(){
+  const n=+E.n.value, arpa=+E.arpa.value, ch=+E.churn.value, hrs=+E.hrs.value, vs=+E.vera.value;
+  const avail = 3*hrs*4.33*(1-vs);
+  const cap = Math.max(0, (avail - 35)/25);
+  const fixed = costTotal();
+  let c=0, cum=0, be=null; const rows=[];
+  MONTHS.forEach((m,i) => {
+    const add = i===0 ? 0 : (i===1 ? Math.min(n,0.5) : n);
+    c = Math.min(cap, c*(1-ch) + add);
+    const rev = c*arpa*FX, cost = fixed + c*PER_CLIENT;
+    cum += rev - cost; if(be===null && rev >= cost && rev>0) be = m;
+    rows.push({m, c, rev, cost, cum});
+  });
+  return {rows, cap, avail, be};
+}
+function renderEco(){
+  if(!E.n.value) return;
+  $('#o-new').textContent = (+E.n.value).toFixed(2).replace(/\.?0+$/,'');
+  $('#o-arpa').textContent = '$' + (+E.arpa.value).toLocaleString('en-US') + ' · ' + lakh(E.arpa.value*FX);
+  $('#o-churn').textContent = Math.round(E.churn.value*100) + '%';
+  $('#o-hrs').textContent = E.hrs.value + ' h';
+  $('#o-vera').textContent = Math.round(E.vera.value*100) + '%';
+  const r = model(), jun = r.rows[6], nov = r.rows[11];
+  $('#ecoRead').innerHTML = [
+    ['MRR, June 2027', lakh(jun.rev)],
+    ['Net to June 2027', (jun.cum<0?'−':'') + lakh(Math.abs(jun.cum))],
+    ['Client capacity', r.cap.toFixed(1)],
+    ['Covers its costs from', r.be || 'not within 12 months']
+  ].map(([k,v]) => `<div class="ro"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
+  drawEco(r.rows);
+}
+function drawEco(rows){
+  const W=560, H=300, L=52, R=14, T=18, B=34;
+  const maxV = Math.max(...rows.map(r => Math.max(r.rev, r.cost)), 50000);
+  const step = niceStep(maxV/4), yMax = Math.ceil(maxV/step)*step;
+  const x = i => L + i*(W-L-R)/(rows.length-1), y = v => T + (1 - v/yMax)*(H-T-B);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lead-gen monthly revenue and cost from December 2026 to November 2027">`;
+  for(let v=0; v<=yMax+1; v+=step){ s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${L-8}" y="${y(v)+4}" font-size="12.5" fill="var(--ink-3)" text-anchor="end" font-family="var(--f-mono)">${(v/1e5).toFixed(v%1e5?1:0)}L</text>`; }
+  rows.forEach((r,i) => { s += `<text x="${x(i)}" y="${H-12}" font-size="12.5" fill="var(--ink-3)" text-anchor="middle">${r.m}</text>`; });
+  const path = k => rows.map((r,i) => (i?'L':'M') + x(i).toFixed(1) + ' ' + y(r[k]).toFixed(1)).join(' ');
+  s += `<path d="${path('rev')} L${x(rows.length-1)} ${y(0)} L${x(0)} ${y(0)} Z" fill="var(--accent)" fill-opacity=".10"/>`;
+  s += `<path d="${path('cost')}" fill="none" stroke="var(--ink-3)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  s += `<path d="${path('rev')}" fill="none" stroke="var(--accent)" stroke-width="2.25"/>`;
+  const lr = rows[rows.length-1];
+  s += `<circle cx="${x(rows.length-1)}" cy="${y(lr.rev)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  s += `<text x="${x(rows.length-1)-6}" y="${y(lr.rev)-10}" font-size="13" fill="var(--ink)" text-anchor="end" font-weight="600">Revenue ${lakh(lr.rev)}</text>`;
+  s += `<text x="${x(rows.length-1)-6}" y="${Math.min(y(lr.cost)+16, H-B-4)}" font-size="13" fill="var(--ink-2)" text-anchor="end">Cost ${lakh(lr.cost)}</text>`;
+  rows.forEach((r,i) => { const w=(W-L-R)/(rows.length-1); s += `<rect class="hov" data-i="${i}" x="${x(i)-w/2}" y="${T}" width="${w}" height="${H-T-B}" fill="transparent"/>`; });
+  s += `<line id="ecoX" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="var(--ink-3)" stroke-width="1" visibility="hidden"/></svg><div class="tip" id="ecoTip" hidden></div>`;
+  const box = $('#ecoChart'); box.innerHTML = s;
+  const svg = box.querySelector('svg'), tip = $('#ecoTip'), xl = $('#ecoX');
+  function show(i){
+    const r = rows[i];
+    xl.setAttribute('x1', x(i)); xl.setAttribute('x2', x(i)); xl.setAttribute('visibility','visible');
+    tip.innerHTML = `<div class="t">${r.m} ${i===0?'2026':'2027'}</div><div class="r"><span>Clients</span><span>${r.c.toFixed(1)}</span></div><div class="r"><span>Revenue</span><span>${inr(r.rev)}</span></div><div class="r"><span>Cost</span><span>${inr(r.cost)}</span></div><div class="r"><span>Cumulative net</span><span>${r.cum<0?'−':''}${inr(Math.abs(r.cum))}</span></div>`;
+    tip.hidden = false;
+    const bw = box.clientWidth, px = x(i)/W*bw;
+    tip.style.left = Math.min(Math.max(px + 12, 0), bw - 190) + 'px'; tip.style.top = '8px';
+    if(px > bw*0.6) tip.style.left = Math.max(px - 200, 0) + 'px';
+  }
+  svg.addEventListener('mousemove', e => { const t = e.target.closest('.hov'); if(t) show(+t.dataset.i); });
+  svg.addEventListener('mouseleave', () => { tip.hidden = true; xl.setAttribute('visibility','hidden'); });
+  svg.addEventListener('touchstart', e => { const t = e.target.closest('.hov'); if(t) show(+t.dataset.i); }, {passive:true});
+}
+function niceStep(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; }
+Object.values(E).forEach(el => el.addEventListener('input', () => { document.querySelectorAll('#scSeg button').forEach(b => b.setAttribute('aria-pressed','false')); renderEco(); }));
+seg('scSeg', setPreset);
+setPreset('base');
+renderCost();
+
+/* ---------- journey timeline ---------- */
+(function(){
+  const items = [
+    {lane:0, r:0, a:'2026-11-11', b:'2026-11-14', t:'Domains, DNS, warmup start'},
+    {lane:0, r:1, a:'2026-11-17', b:'2026-11-30', t:'Signal scrapers in n8n + Apify'},
+    {lane:0, r:2, a:'2026-12-01', b:'2026-12-28', t:'Client bench warming'},
+    {lane:1, r:0, a:'2026-11-16', b:'2026-11-30', t:'Lodha + PRS follow-ups, ask for intros'},
+    {lane:1, r:1, a:'2026-12-01', b:'2027-02-08', t:'Vera cold sequences, ramping'},
+    {lane:2, r:0, a:'2026-11-17', b:'2026-12-07', t:'Offer test on 2 warmed inboxes'},
+    {lane:2, r:1, a:'2026-12-08', b:'2027-02-08', t:'Full lead-gen campaigns'},
+    {lane:2, r:2, a:'2027-01-01', b:'2027-02-08', t:'Founding clients delivered'}
+  ];
+  const gates = [{d:'2026-12-01', t:'Deliverability'}, {d:'2026-12-25', t:'Offer'}, {d:'2027-01-09', t:'Go / stop'}, {d:'2027-02-08', t:'Scale'}];
+  const lanes = ['Infra and signals','Vera sales','Lead gen'];
+  const W=860, L=130, R=20, T=46, laneH=76, H = T + lanes.length*laneH + 52;
+  const t0 = Date.parse('2026-11-10'), t1 = Date.parse('2027-02-12');
+  const X = d => L + (Date.parse(d)-t0)/(t1-t0)*(W-L-R);
+  const MO = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const lab = d => MO.at(Number(d.slice(5,7))-1) + ' ' + Number(d.slice(8));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="90-day plan from 11 November 2026 to 8 February 2027 with four gates">`;
+  ['2026-11-16','2026-12-01','2026-12-16','2027-01-01','2027-01-16','2027-02-01'].forEach(d => { s += `<line x1="${X(d)}" x2="${X(d)}" y1="${T-6}" y2="${T+lanes.length*laneH}" stroke="var(--grid)"/><text x="${X(d)}" y="${T-14}" font-size="11" fill="var(--ink-3)" text-anchor="middle" font-family="var(--f-mono)">${lab(d)}</text>`; });
+  lanes.forEach((ln,i) => { const y = T + i*laneH; s += `<line x1="${L}" x2="${W-R}" y1="${y+laneH}" y2="${y+laneH}" stroke="var(--grid)"/><text x="12" y="${y+laneH/2+4}" font-size="12.5" fill="var(--ink)" font-weight="600">${ln}</text>`; });
+  const gy = T + lanes.length*laneH;
+  gates.forEach(g => {
+    const gx = X(g.d);
+    s += `<line x1="${gx}" x2="${gx}" y1="${T-4}" y2="${gy+8}" stroke="var(--good)" stroke-opacity=".55" stroke-width="1.25" stroke-dasharray="3 3"/>`;
+    s += `<path d="M${gx} ${gy+8}l7 7l-7 7l-7 -7z" fill="var(--good)"/>`;
+    s += `<text x="${gx}" y="${gy+38}" font-size="11" fill="var(--ink)" text-anchor="middle" font-weight="600">${g.t}</text><text x="${gx}" y="${gy+50}" font-size="10.5" fill="var(--ink-3)" text-anchor="middle" font-family="var(--f-mono)">${lab(g.d)}</text>`;
+  });
+  items.forEach(it => {
+    const y = T + it.lane*laneH + 6 + it.r*22;
+    const col = it.lane===1 ? 'var(--accent)' : it.lane===2 ? 'var(--signal)' : 'var(--ink-3)';
+    s += `<rect x="${X(it.a)}" y="${y}" width="${Math.max(X(it.b)-X(it.a),6)}" height="16" rx="4" fill="${col}" fill-opacity=".18" stroke="${col}"><title>${esc(it.t)}: ${lab(it.a)} to ${lab(it.b)}</title></rect>`;
+    s += `<text x="${X(it.a)+6}" y="${y+12}" font-size="11.5" fill="var(--ink)" paint-order="stroke" stroke="var(--surface)" stroke-width="3" stroke-linejoin="round">${esc(it.t)}</text>`;
+  });
+  s += '</svg>';
+  $('#tl').innerHTML = s;
+})();
+
+/* ---------- checklist ---------- */
+const WEEKS = [
+  ['Week of 11 Nov', [
+    ['Infra','Pick the lead-gen brand name; buy 3 sending domains + 1 website domain'],
+    ['Infra','SPF, DKIM, DMARC on every domain; start warmup on 6 new inboxes'],
+    ['Infra','Dormant domain: blacklist check, re-verify DNS, redirect to the lead-gen site; get your co-founder\'s OK'],
+    ['Vera','Check whether Vera\'s 3 warming inboxes are on the main domain; if yes, buy 2 secondary domains'],
+    ['All','Write down hours split, lead-gen ownership and revenue split'],
+    ['Lead gen','Write the one-line offer and founding-client terms (pay per held meeting)']
+  ]],
+  ['Week of 17 Nov', [
+    ['Lead gen','Start the offer test: 2 warmed inboxes, 10–15/day each, ~200 UK/IE recruitment agencies'],
+    ['Infra','n8n + Apify: job-post scraper, MahaRERA watcher, DMARC checker'],
+    ['Vera','Post-Diwali Lodha and PRS follow-ups; ask each for two introductions']
+  ]],
+  ['Week of 24 Nov', [
+    ['Lead gen','One-page site live: offer, process, guarantee, booking link'],
+    ['Lead gen','Freebie templates: domain check, 25-lead sample, Loom script'],
+    ['Infra','Buy Saleshandy Starter (monthly); set up a workspace per brand']
+  ]],
+  ['Weeks of 1 and 8 Dec', [
+    ['Vera','Vera cold sequences start at 5–10/day per inbox'],
+    ['Infra','Weekly deliverability check: bounce, placement, blacklists'],
+    ['Lead gen','New inboxes go live; move to Saleshandy Pro'],
+    ['Infra','Buy and warm one client bench (3 domains, 9 inboxes)'],
+    ['All','LinkedIn: 15–20 invites a day per founder, each on an assigned engine']
+  ]],
+  ['Late Dec to Feb', [
+    ['All','25 Dec offer gate; 9 Jan go/stop gate; 8 Feb scale gate'],
+    ['Lead gen','Founding clients onboarded onto the bench; weekly reports'],
+    ['Vera','Plan for DPDP: source records and one suppression list before May 2027']
+  ]]
+];
+let done = {};
+try { done = JSON.parse(localStorage.getItem('twoEngine.checks') || '{}') || {}; } catch(e){ done = {}; }
+const tagFor = o => o==='Vera' ? 'vera' : o==='Lead gen' ? 'lg' : '';
+$('#checklist').innerHTML = WEEKS.map((w,wi) => `<div class="week"><h3>${w[0]}</h3>${w[1].map((it,ii) => { const id=`ck-${wi}-${ii}`; return `<label class="check ${done[id]?'done':''}" for="${id}"><input type="checkbox" id="${id}" ${done[id]?'checked':''}><span>${esc(it[1])}</span><span class="tag ${tagFor(it[0])}">${it[0]}</span></label>`; }).join('')}</div>`).join('');
+$('#checklist').addEventListener('change', e => {
+  const t = e.target; if(t.type !== 'checkbox') return;
+  done[t.id] = t.checked; t.closest('.check').classList.toggle('done', t.checked);
+  try { localStorage.setItem('twoEngine.checks', JSON.stringify(done)); } catch(err){}
+});
+})();
+</script>
+
+</body></html>
