@@ -1,0 +1,67 @@
+.lt-scene { position: absolute; left: 0; top: 0; width: 640px; height: 520px; transform-origin: 0 0; z-index: 1; }
+.lt-wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 2; }
+.lt-wires path { fill: none; stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 3 4; opacity: .55; transition: opacity .25s, stroke-width .25s; }
+.lt-wires path.hot { opacity: 1; stroke-width: 2.2; stroke-dasharray: none; }
+.lt-wires circle { fill: var(--accent); }
+.lt-signal, .lt-stack i {
+  position: absolute; left: 0; top: 70px; width: 236px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 24px 50px -30px rgba(18,19,21,.35);
+}
+.lt-signal { padding: 14px 16px; z-index: 3; }
+.lt-stack i { height: 300px; }
+.lt-stack i:nth-child(1) { transform: translate(14px, -14px) rotate(3deg); opacity: .5; }
+.lt-stack i:nth-child(2) { transform: translate(7px, -7px) rotate(1.5deg); opacity: .8; }
+.lt-sh { display: flex; justify-content: space-between; font-size: .72rem; color: var(--ink-3); }
+.lt-live { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.lt-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.lt-signal dl { margin-top: 10px; display: grid; gap: 4px; }
+.lt-signal dl div { padding: 5px 8px; border-radius: 8px; transition: background .25s; }
+.lt-signal dl div.hot { background: var(--accent-soft); }
+.lt-signal dt { font-size: .66rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); }
+.lt-signal dd { font-size: .84rem; font-weight: 500; }
+.lt-signal.swap { animation: lt-swap .5s ease; }
+@keyframes lt-swap { from { opacity: 0; transform: translateY(-10px); } }
+.lt-count { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: .74rem; color: var(--ink-3); }
+.lt-count b { color: var(--ink); }
+.lt-letter {
+  position: absolute; left: 270px; top: 10px; width: 370px; padding: 20px 22px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 40px 80px -40px rgba(18,19,21,.4); transform-origin: 50% 50%; z-index: 1;
+}
+.lt-meta { display: grid; gap: 3px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: .78rem; color: var(--ink-2); }
+.lt-meta span { display: inline-block; width: 54px; color: var(--ink-3); }
+.lt-body { padding-top: 14px; font-size: 1.06rem; line-height: 1.5; letter-spacing: -.01em; }
+.lt-body p + p { margin-top: 10px; }
+.lt-body t, .lt-meta t { color: var(--accent); border-bottom: 1.5px solid #c9d2ff; cursor: default; transition: background .2s; border-radius: 2px; }
+.lt-body t.hot, .lt-meta t.hot { background: var(--accent-soft); }
+.lt-body t.typing::after, .lt-meta t.typing::after { content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 1px; vertical-align: -2px; background: var(--accent); animation: lt-caret .8s steps(1) infinite; }
+@keyframes lt-caret { 50% { opacity: 0; } }
+.lt-sign { font-weight: 600; }
+.lt-sign small { font-weight: 400; color: var(--ink-3); font-size: .85rem; }
+.lt-flap { position: absolute; left: 0; right: 0; top: 0; height: 55%; background: #ebe8e1; clip-path: polygon(0 0, 100% 0, 50% 100%); opacity: 0; transform: scaleY(-1); transform-origin: top; pointer-events: none; }
+.lt-flap::after { content: ""; position: absolute; left: 50%; bottom: 14%; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: var(--accent); }
+.lt-sent { position: absolute; left: 50%; bottom: -44px; transform: translateX(-50%); white-space: nowrap; font-size: .78rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 6px 12px; border-radius: 999px; opacity: 0; }
+.lt-thread { position: absolute; left: 160px; top: 150px; width: 460px; display: grid; gap: 10px; opacity: 0; z-index: 2; }
+.lt-bubble { max-width: 78%; padding: 12px 16px; border-radius: 18px; font-size: 1.05rem; }
+.lt-bubble.me { justify-self: end; background: var(--band); color: var(--ink-2); border-bottom-right-radius: 6px; }
+.lt-bubble.them { justify-self: start; background: var(--accent); color: #fff; border-bottom-left-radius: 6px; font-size: 1.25rem; opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; }
+.lt-bubble.them b { display: block; font-size: .72rem; letter-spacing: .05em; text-transform: uppercase; opacity: .75; }
+.lt-bubble.them.on { opacity: 1; transform: none; }
+.lt-typing { justify-self: start; display: flex; gap: 5px; padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); transition: opacity .2s; }
+.lt-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3); animation: lt-dot 1s ease-in-out infinite; }
+.lt-typing i:nth-child(2) { animation-delay: .15s; } .lt-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes lt-dot { 30% { transform: translateY(-4px); opacity: .5; } }
+.lt-lead {
+  position: absolute; left: 220px; top: 140px; width: 400px; padding: 20px 22px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: 20px;
+  box-shadow: 0 40px 80px -36px rgba(47,76,255,.55); opacity: 0; z-index: 3;
+}
+.lt-lh { display: flex; justify-content: space-between; align-items: center; }
+.lt-lh span { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 4px 9px; border-radius: 999px; }
+.lt-lh em { font-size: .8rem; font-weight: 600; }
+.lt-lead b { display: block; margin-top: 14px; font-size: 1.5rem; letter-spacing: -.03em; }
+.lt-lead p { color: var(--ink-2); font-size: .92rem; }
+.lt-lead .q { margin-top: 10px; color: var(--ink); font-size: 1.05rem; }
+.lt-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: .85rem; font-weight: 600; color: var(--accent); }
+@media (max-width: 960px) {
+  .lt-signal, .lt-stack, .lt-wires { display: none; }
+  .lt-thread, .lt-lead { left: 270px; width: 370px; }
+}

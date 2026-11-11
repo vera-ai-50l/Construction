@@ -1,0 +1,17 @@
+.concept-city .cstage { background: radial-gradient(ellipse at 66% 55%, #fdfcf9 0%, var(--bg) 60%); }
+.ct-tip {
+  position: absolute; left: 0; top: 0; z-index: 2; padding: 8px 12px; border-radius: 12px; background: var(--ink); color: #fff;
+  font-size: .78rem; pointer-events: none; opacity: 0; transition: opacity .15s; white-space: nowrap;
+}
+.ct-tip b { display: block; font-size: .85rem; }
+.ct-tip span { opacity: .7; }
+.ct-tip.hiring span { opacity: 1; color: #9fb0ff; }
+.ct-cards { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.ct-card {
+  position: absolute; left: 0; top: 0; width: 230px; padding: 10px 12px; border-radius: 14px; background: var(--surface);
+  border: 1.5px solid var(--accent); box-shadow: 0 20px 40px -20px rgba(47,76,255,.5); opacity: 0; font-size: .78rem;
+}
+.ct-card span { font-size: .64rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.ct-card b { display: block; font-size: .9rem; }
+.ct-card p { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 960px) { .ct-card { width: 180px; } }

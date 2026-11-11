@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kyre | Concept: The Live Inbox</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="concept.css">
+<link rel="stylesheet" href="inbox.css">
+</head>
+<body class="concept-inbox">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a href="../" class="logo" aria-label="Kyre home">kyre<span>.</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="../#how">How it works</a>
+      <a href="../#pricing">Pricing</a>
+      <a href="../#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-dark btn-sm js-book" href="#">Book a call</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="cstory" id="cstory" style="height: 370vh" aria-label="How Kyre finds your interested leads">
+    <div class="cstage" id="cstage">
+      <div class="ib-scene" id="ibScene" aria-hidden="true">
+        <div class="ib-box" data-i="0"></div><div class="ib-box" data-i="1"></div><div class="ib-box" data-i="2"></div>
+        <div class="ib-box" data-i="3"></div><div class="ib-box" data-i="5"></div>
+        <div class="ib-box" data-i="6"></div><div class="ib-box" data-i="7"></div><div class="ib-box" data-i="8"></div>
+        <div class="ib-app" id="ibApp">
+          <div class="ib-bar"><i></i><i></i><i></i><span>Replies · jamie@acmetalent.co</span><em class="ib-live">Live</em></div>
+          <div class="ib-body">
+            <div class="ib-stream">
+              <div class="ib-head">Incoming <span class="ib-pause">Paused</span></div>
+              <div class="ib-list" id="ibList"></div>
+              <div class="ib-handled"><b id="ibHandled">36</b> handled by Kyre <span>out of office, not now, unsubscribes</span></div>
+            </div>
+            <div class="ib-leads">
+              <div class="ib-head">Your leads</div>
+              <div class="ib-leadlist" id="ibLeads"></div>
+              <div class="ib-billed"><span>Billed this month</span><b><span id="ibBilled">12</span> leads</b><small>Only interested replies count</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chero" id="chero">
+        <div class="wrap">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="dot"></span>Pay-per-lead outbound for companies that hire</p>
+            <h1>Interested leads, <em>or you don't pay.</em></h1>
+            <p class="lede">Kyre runs cold outreach for recruitment agencies, staffing firms and companies that are hiring. You pay per interested lead. No retainer. No setup fee.</p>
+            <div class="cta-row">
+              <a class="btn btn-accent js-book" href="#">Book a 15-minute call</a>
+              <a class="btn btn-ghost" href="../#how">How it works</a>
+            </div>
+            <ul class="proof"><li>No retainer</li><li>No upfront fee</li><li>Billed per interested lead</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccap" id="ccap" aria-hidden="true">
+        <div class="cap-card" style="margin-left: max(24px, calc((100vw - 1160px) / 2 + 24px))">
+          <div class="caps">
+            <div class="cap"><span class="k">01 · Sorted</span><span class="n">51</span><h3>replies, read for you</h3><p>Out of office, not now, unsubscribe: Kyre answers or clears them, so your inbox only holds conversations.</p></div>
+            <div class="cap"><span class="k">02 · In your name</span><span class="n">9</span><h3>mailboxes sending</h3><p>New mailboxes in your company&#x27;s name, warmed for 2 to 4 weeks, each sending a careful 25 a day.</p></div>
+            <div class="cap"><span class="k">03 · Yours</span><span class="n">15</span><h3>interested leads</h3><p>Only replies that say yes reach you. You pay per lead, and only for these.</p></div>
+          </div>
+          <div class="seg"><i></i><i></i><i></i></div>
+          <p class="cap-note">An illustrative month for one client.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cend">
+    <div class="wrap">
+      <h2>Your next hires and clients <em>are already out there.</em></h2>
+      <div class="cta-row">
+        <a class="btn btn-accent js-book" href="#">Book a 15-minute call</a>
+        <a class="btn btn-ghost" href="index.html">See all concepts</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<span class="concept-tag">Concept · The Live Inbox</span>
+<nav class="look-switch" aria-label="Concepts"><span>Concept</span><a href="../?style=tiles">Globe</a><a href="sieve.html">The Sieve</a><a href="inbox.html" aria-current="true">The Live Inbox</a><a href="letter.html">The Letter</a><a href="city.html">Signal City</a><a href="index.html">All options</a></nav>
+
+<script src="../contact.js"></script>
+<script src="common.js"></script>
+<script src="inbox.js"></script>
+</body>
+</html>

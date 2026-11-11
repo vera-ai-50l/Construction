@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kyre | Pick a hero</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  .gal { padding: 120px 0 120px; }
+  .gal h1 { font-size: clamp(2.2rem, 4.4vw, 3.4rem); max-width: 16ch; }
+  .gal .lede { max-width: 56ch; }
+  .group { margin-top: 64px; }
+  .group > h2 { font-size: 1.05rem; letter-spacing: -0.01em; display: flex; align-items: baseline; gap: 12px; }
+  .group > h2 span { font-weight: 500; color: var(--ink-3); font-size: .9rem; }
+  .grid { margin-top: 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+  .opt-card { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; transition: border-color .2s, transform .2s, box-shadow .2s; }
+  .opt-card:hover { border-color: var(--accent); transform: translateY(-3px); box-shadow: 0 30px 60px -30px rgba(47,76,255,.4); }
+  .shot { position: relative; aspect-ratio: 16 / 10; background: var(--band); overflow: hidden; border-bottom: 1px solid var(--line); }
+  .shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .35s; }
+  .shot img + img { opacity: 0; }
+  .opt-card:hover .shot img + img { opacity: 1; }
+  .shot .lbl { position: absolute; left: 10px; bottom: 10px; z-index: 1; font-size: .7rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); background: rgba(255,255,255,.88); padding: 4px 8px; border-radius: 999px; }
+  .meta { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .meta .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .meta h3 { font-size: 1.2rem; }
+  .meta .code { font-size: .75rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .meta p { color: var(--ink-2); font-size: .94rem; }
+  .meta .how { margin-top: auto; padding-top: 10px; font-size: .82rem; color: var(--ink-3); }
+  .pick { margin-top: 72px; padding: 28px 30px; border-radius: 20px; background: var(--dark); color: #fff; }
+  .pick h2 { font-size: 1.4rem; }
+  .pick p { margin-top: 8px; color: rgba(255,255,255,.7); max-width: 60ch; }
+  @media (hover: none) { .shot img + img { opacity: 0 !important; } }
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="wrap nav-in">
+    <a href="../" class="logo" aria-label="Kyre home">kyre<span>.</span></a>
+    <nav class="nav-links" aria-label="Sections"><a href="#globe">Globe looks</a><a href="#concepts">New concepts</a></nav>
+    <a class="btn btn-dark btn-sm" href="../">Live site</a>
+  </div>
+</header>
+
+<main class="gal">
+  <div class="wrap">
+    <p class="eyebrow"><span class="dot"></span>Choose the hero</p>
+    <h1>Nine ways to tell <em>the Kyre story.</em></h1>
+    <p class="lede">Each one is a working page. Open it, scroll through it, play with it. Hover a card to see a later frame. When you've picked, tell me the letter code and I'll make it the real homepage.</p>
+
+    <section class="group" id="concepts">
+      <h2>New concepts <span>Different technique and a different story in each</span></h2>
+      <div class="grid">
+        <a class="opt-card" href="sieve.html">
+          <div class="shot"><img src="thumbs/sieve-a.jpg" alt="" loading="lazy"><img src="thumbs/sieve-b.jpg" alt="" loading="lazy"><span class="lbl">Physics</span></div>
+          <div class="meta"><div class="top"><h3>The Sieve</h3><span class="code">Option A</span></div>
+            <p>Thousands of company chips pour into a machine and drop through three gates: hiring now, replied, interested. Rejects slide off; only leads land in your tray.</p>
+            <p class="how">Push the stream around with your mouse. Scroll to travel down the machine.</p></div>
+        </a>
+        <a class="opt-card" href="inbox.html">
+          <div class="shot"><img src="thumbs/inbox-a.jpg" alt="" loading="lazy"><img src="thumbs/inbox-b.jpg" alt="" loading="lazy"><span class="lbl">Product UI</span></div>
+          <div class="meta"><div class="top"><h3>The Live Inbox</h3><span class="code">Option B</span></div>
+            <p>A real-looking reply inbox runs on its own. Kyre tags every reply; noise is handled, interested replies fly into Your leads and the bill ticks up.</p>
+            <p class="how">Hover the inbox to pause it. Scroll to zoom out to the nine warmed mailboxes.</p></div>
+        </a>
+        <a class="opt-card" href="letter.html">
+          <div class="shot"><img src="thumbs/letter-a.jpg" alt="" loading="lazy"><img src="thumbs/letter-b.jpg" alt="" loading="lazy"><span class="lbl">Kinetic type</span></div>
+          <div class="meta"><div class="top"><h3>The Letter</h3><span class="code">Option C</span></div>
+            <p>One personal email writes itself live. Every blue word is wired to the hiring signal it came from, and it rewrites for a new company every few seconds.</p>
+            <p class="how">Hover a blue word to see its source. Scroll: sealed, sent, a reply, a lead.</p></div>
+        </a>
+        <a class="opt-card" href="city.html">
+          <div class="shot"><img src="thumbs/city-a.jpg" alt="" loading="lazy"><img src="thumbs/city-b.jpg" alt="" loading="lazy"><span class="lbl">Isometric</span></div>
+          <div class="meta"><div class="top"><h3>Signal City</h3><span class="code">Option D</span></div>
+            <p>Your market as a small city of companies around Kyre's blue tower. A scan finds who's hiring, paper planes fly out, replies fly back, and the interested ones rise.</p>
+            <p class="how">Hover any building to see who it is. Scroll to run the month.</p></div>
+        </a>
+      </div>
+    </section>
+
+    <section class="group" id="globe">
+      <h2>Globe looks <span>The same scroll story, five different particles</span></h2>
+      <div class="grid">
+        <a class="opt-card" href="../?style=tiles">
+          <div class="shot"><img src="thumbs/tiles-a.jpg" alt="" loading="lazy"><img src="thumbs/tiles-b.jpg" alt="" loading="lazy"><span class="lbl">3D globe</span></div>
+          <div class="meta"><div class="top"><h3>Company tiles</h3><span class="code">Option E</span></div><p>Small company cards form the globe. Currently live.</p></div>
+        </a>
+        <a class="opt-card" href="../?style=network">
+          <div class="shot"><img src="thumbs/network-a.jpg" alt="" loading="lazy"><img src="thumbs/network-b.jpg" alt="" loading="lazy"><span class="lbl">3D globe</span></div>
+          <div class="meta"><div class="top"><h3>Network</h3><span class="code">Option F</span></div><p>Glowing nodes joined by lines, with arcs for each email.</p></div>
+        </a>
+        <a class="opt-card" href="../?style=names">
+          <div class="shot"><img src="thumbs/names-a.jpg" alt="" loading="lazy"><img src="thumbs/names-b.jpg" alt="" loading="lazy"><span class="lbl">3D globe</span></div>
+          <div class="meta"><div class="top"><h3>Company names</h3><span class="code">Option G</span></div><p>The globe is made of company names.</p></div>
+        </a>
+        <a class="opt-card" href="../?style=people">
+          <div class="shot"><img src="thumbs/people-a.jpg" alt="" loading="lazy"><img src="thumbs/people-b.jpg" alt="" loading="lazy"><span class="lbl">3D globe</span></div>
+          <div class="meta"><div class="top"><h3>People</h3><span class="code">Option H</span></div><p>Initial avatars of the people you'd reach.</p></div>
+        </a>
+        <a class="opt-card" href="../?style=envelopes">
+          <div class="shot"><img src="thumbs/envelopes-a.jpg" alt="" loading="lazy"><img src="thumbs/envelopes-b.jpg" alt="" loading="lazy"><span class="lbl">3D globe</span></div>
+          <div class="meta"><div class="top"><h3>Envelopes</h3><span class="code">Option I</span></div><p>Every point is an email waiting to go out.</p></div>
+        </a>
+      </div>
+    </section>
+
+    <div class="pick">
+      <h2>Picked one?</h2>
+      <p>Send me the option letter, for example "C". You can also mix, like "the Letter's hero with the City's ending". I'll make it the homepage and remove the rest.</p>
+    </div>
+  </div>
+</main>
+</body>
+</html>

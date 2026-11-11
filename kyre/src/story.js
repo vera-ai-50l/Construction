@@ -789,7 +789,7 @@ function switcher() {
     u.searchParams.set("style", s);
     u.searchParams.delete("compare");
     return `<a href="${u.pathname}${u.search}"${s === STYLE ? ' aria-current="true"' : ""}>${LABELS[s]}</a>`;
-  }).join("");
+  }).join("") + `<a href="concepts/index.html">All options</a>`;
   document.body.appendChild(bar);
 }
 

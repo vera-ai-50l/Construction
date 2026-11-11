@@ -16,3 +16,16 @@ NODE_PATH=../website/node_modules npx esbuild@0.24.2 src/story.js --bundle --min
 ```
 
 If WebGL is unavailable, the page falls back to the plain hero and a text version of the story.
+
+## Hero concepts (for choosing)
+
+`concepts/index.html` is a gallery of every hero option, with thumbnails. Four standalone concepts live in `concepts/`:
+
+| Option | Page | Technique |
+| --- | --- | --- |
+| A | `sieve.html` | 2D canvas physics: company chips fall through three gates |
+| B | `inbox.html` | DOM product UI: a live reply inbox, nine warmed mailboxes |
+| C | `letter.html` | Kinetic type: an email written live from a hiring signal |
+| D | `city.html` | Isometric canvas: a city of companies, planes out and back |
+
+Each concept is `name.visual.html` (stage markup) + `name.css` + `name.js`, assembled into `name.html` by `python3 build_pages.py` (run in `concepts/`; edit captions there). `common.js` holds the shared scroll/caption logic. Options E to I are the globe looks on the homepage (`?style=`).

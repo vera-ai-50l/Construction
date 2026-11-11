@@ -1,0 +1,32 @@
+/* Shared layout for the Kyre concept pages: a pinned stage with the hero copy and a caption card. */
+.cstory { position: relative; margin-top: -69px; }
+.cstage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.cstage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.chero { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; padding-top: 69px; pointer-events: none; }
+.chero a, .chero button { pointer-events: auto; }
+.chero.gone a { pointer-events: none; }
+.chero .hero-copy { max-width: 520px; }
+.chero h1 { font-size: clamp(2.4rem, 4.6vw, 4rem); }
+.chero .lede { max-width: 40ch; font-size: 1.05rem; }
+.ccap { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; pointer-events: none; opacity: 0; }
+.ccap .cap-card { width: 340px; }
+.cend { padding: 120px 0 140px; text-align: center; }
+.cend h2 { max-width: 18ch; margin: 0 auto; }
+.cend .cta-row { justify-content: center; }
+.concept-tag {
+  position: fixed; top: 82px; right: 18px; z-index: 30; font-size: .75rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ink-3); background: rgba(255,255,255,.8); border: 1px solid var(--line);
+  padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(8px);
+}
+@media (max-width: 960px) {
+  .chero { align-items: flex-end; padding-bottom: 32px; }
+  .chero .proof, .chero .btn-ghost { display: none; }
+  .ccap { align-items: flex-end; }
+  .ccap .cap-card { margin: 0 12px 16px; width: auto; flex: 1; }
+  .concept-tag { display: none; }
+}
+@media (max-width: 960px) {
+  /* leave room for the concept switcher pinned at the bottom */
+  .chero { padding-bottom: 84px; }
+  .ccap .cap-card { margin-bottom: 78px; }
+}

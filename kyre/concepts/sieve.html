@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kyre | Concept: The Sieve</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="concept.css">
+<link rel="stylesheet" href="sieve.css">
+</head>
+<body class="concept-sieve">
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a href="../" class="logo" aria-label="Kyre home">kyre<span>.</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="../#how">How it works</a>
+      <a href="../#pricing">Pricing</a>
+      <a href="../#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-dark btn-sm js-book" href="#">Book a call</a>
+  </div>
+</header>
+
+<main id="top">
+  <section class="cstory" id="cstory" style="height: 460vh" aria-label="How Kyre finds your interested leads">
+    <div class="cstage" id="cstage">
+      <canvas id="sieve" aria-hidden="true"></canvas>
+      <div class="sv-tray" id="svTray" aria-hidden="true">
+        <div class="sv-tray-head"><b>Your leads</b><span>Billed per lead</span></div>
+        <div class="sv-list" id="svList"></div>
+      </div>
+      <div class="sv-hint" id="svHint" aria-hidden="true">Move your mouse through the stream</div>
+
+      <div class="chero" id="chero">
+        <div class="wrap">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="dot"></span>Pay-per-lead outbound for companies that hire</p>
+            <h1>Interested leads, <em>or you don't pay.</em></h1>
+            <p class="lede">Kyre runs cold outreach for recruitment agencies, staffing firms and companies that are hiring. You pay per interested lead. No retainer. No setup fee.</p>
+            <div class="cta-row">
+              <a class="btn btn-accent js-book" href="#">Book a 15-minute call</a>
+              <a class="btn btn-ghost" href="../#how">How it works</a>
+            </div>
+            <ul class="proof"><li>No retainer</li><li>No upfront fee</li><li>Billed per interested lead</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccap" id="ccap" aria-hidden="true">
+        <div class="cap-card" style="margin-left: max(24px, calc((100vw - 1160px) / 2 + 24px))">
+          <div class="caps">
+            <div class="cap"><span class="k">01 · Signals</span><span class="n">1,020</span><h3>are hiring right now</h3><p>Twelve thousand companies go in. Only the ones hiring this month get through the first gate.</p></div>
+            <div class="cap"><span class="k">02 · Replies</span><span class="n">51</span><h3>write back</h3><p>Every company that gets through hears from you personally. The ones who reply drop to the next gate.</p></div>
+            <div class="cap"><span class="k">03 · Interested</span><span class="n">15</span><h3>say yes</h3><p>Out of office, not now and unsubscribe slide off. Only real interest gets through.</p></div>
+            <div class="cap"><span class="k">04 · Your tray</span><span class="n">15</span><h3>leads, handed to you</h3><p>That&#x27;s what lands with you, and that&#x27;s all you pay for.</p></div>
+          </div>
+          <div class="seg"><i></i><i></i><i></i><i></i></div>
+          <p class="cap-note">An illustrative month for one client.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cend">
+    <div class="wrap">
+      <h2>Your next hires and clients <em>are already out there.</em></h2>
+      <div class="cta-row">
+        <a class="btn btn-accent js-book" href="#">Book a 15-minute call</a>
+        <a class="btn btn-ghost" href="index.html">See all concepts</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<span class="concept-tag">Concept · The Sieve</span>
+<nav class="look-switch" aria-label="Concepts"><span>Concept</span><a href="../?style=tiles">Globe</a><a href="sieve.html" aria-current="true">The Sieve</a><a href="inbox.html">The Live Inbox</a><a href="letter.html">The Letter</a><a href="city.html">Signal City</a><a href="index.html">All options</a></nav>
+
+<script src="../contact.js"></script>
+<script src="common.js"></script>
+<script src="sieve.js"></script>
+</body>
+</html>
