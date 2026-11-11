@@ -176,3 +176,47 @@ h3 { font-size: 1.2rem; letter-spacing: -0.02em; font-weight: 600; }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+/* ---------- contact options + booking window ---------- */
+.opts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; text-align: left; }
+.opts.inline { width: 100%; max-width: 520px; margin: 0 auto; }
+.opt {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-radius: 16px; border: 1px solid var(--line); background: var(--surface);
+  transition: border-color .2s ease, transform .2s ease;
+}
+.opt:hover { border-color: #c9c5bc; }
+.opt.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.opt.primary:hover { background: #2238e0; }
+.opt-ic {
+  flex: none; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--band);
+}
+.opt.primary .opt-ic { background: rgba(255,255,255,.16); }
+.opt svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.opt-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.opt-tx b { font-weight: 600; }
+.opt-tx span { font-size: 0.88rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.opt.primary .opt-tx span { color: rgba(255,255,255,.8); }
+.opt-go { flex: none; opacity: .7; }
+
+.book {
+  position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(18,19,21,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.book[hidden] { display: none; }
+.book-panel {
+  width: 100%; max-width: 480px; background: var(--bg); border-radius: 24px; padding: 26px;
+  box-shadow: 0 40px 80px -30px rgba(0,0,0,.5); animation: book-in .25s ease;
+}
+.book-head { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.book-head h2 { font-size: 1.6rem; }
+.book-head p { margin-top: 6px; color: var(--ink-2); font-size: 0.95rem; }
+.book-x {
+  flex: none; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface);
+  font-size: 1.4rem; line-height: 1; cursor: pointer; color: var(--ink);
+}
+.book-foot { margin-top: 16px; font-size: 0.85rem; color: var(--ink-3); }
+@keyframes book-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (max-width: 560px) { .book { align-items: flex-end; } .book-panel { border-radius: 24px 24px 18px 18px; } }
+@media (prefers-reduced-motion: reduce) { .book-panel { animation: none; } }
