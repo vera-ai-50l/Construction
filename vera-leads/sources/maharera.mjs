@@ -1,7 +1,8 @@
 // MahaRERA public project search -> three Vera signals:
 //   maharera_new        a project registered recently: set up site reporting from day one
 //   maharera_extension  completion date extended (an Extension Certificate on the card): the project is late
-//   maharera_deadline   75-100% built (the search's completion-percentage filter): the last stretch, pressure on progress and cost
+//   maharera_deadline   75-100% built (the search's completion-percentage filter): the last stretch, pressure on progress and cost.
+//                       Off by default (config nearlyDoneSearch): the filter returns no projects on the live site (Nov 2026).
 //
 // The parser does not depend on MahaRERA's exact class names. It finds every registration number
 // (P51800012345), works out which repeating HTML block holds one project each, and reads fields
@@ -174,7 +175,7 @@ export function parseSearchPage(html, baseUrl = 'https://maharera.maharashtra.go
 export function pageInfo(html) {
   const t = htmlToText(html).replace(/\s+/g, ' ')
   const num = re => { const m = t.match(re); return m ? +m[1].replace(/,/g, '') : null }
-  return { total: num(/Showing\s+(?:Final\s+)?([\d,]+)\s+Results?/i), pages: num(/Pages?\s+\d+\s+of\s+([\d,]+)/i) }
+  return { total: num(/Showing\s+(?:Final\s+)?([\d,]+)\s+Results?/i), pages: num(/Pages?\s+\d+\s+of\s+([\d,]+)/i), none: /No Records Found/i.test(t) }
 }
 
 export function regionOf(...places) {
@@ -258,7 +259,7 @@ async function getPage(url, { browser }) {
 
 // Weekly read of MahaRERA for MMR and Pune:
 //   1. the newest pages of each district (new registrations; results are listed oldest first)
-//   2. the completion-percentage search, 75-100% built (projects in their last stretch)
+//   2. the completion-percentage search, 75-100% built (projects in their last stretch), only when nearlyDoneSearch is on
 // Extension certificates are picked up from every card read in either step.
 export async function run(db, { pages, browser, files = [], debug = false, now = today() } = {}) {
   const cfg = config.maharera
@@ -275,13 +276,14 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     n++
     let html = await getPage(url, { browser })
     let got = parseSearchPage(html)
-    const incomplete = h => { const i = pageInfo(h); return i.total == null || (i.total > 0 && i.pages == null) }
+    // "No Records Found" is a finished answer (e.g. an empty last page), not a half-loaded one: don't re-read it.
+    const incomplete = h => { const i = pageInfo(h); return !i.none && (i.total == null || (i.total > 0 && i.pages == null)) }
     for (let tries = 0; tries < 2 && incomplete(html) && (browser || got.length); tries++) { // half-loaded page: wait and read again
       await sleep(8000)
       html = await getPage(url, { browser })
       got = parseSearchPage(html)
     }
-    if (!got.length && !browser && pageInfo(html).total == null && await hasPlaywright()) {
+    if (!got.length && !browser && pageInfo(html).total == null && !pageInfo(html).none && await hasPlaywright()) {
       log('No results from a plain request; switching to the browser (Playwright).')
       browser = true
       html = await getPage(url, { browser })
@@ -328,9 +330,11 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
       if (!first.info.pages) { log(`${name}: could not read the page count; skipped this week's newest pages.`); continue }
       const last = first.info.pages
       const span = code ? newPages : newPages * Object.keys(cfg.districts).length
-      let readCount = 0
-      for (let p = last; p >= Math.max(1, last - span + 1); p--) {
+      let readCount = 0, lo = Math.max(1, last - span + 1)
+      for (let p = last; p >= lo; p--) {
         const r = p === 1 ? first : await read(searchUrl({ district: code, page: p }))
+        // MahaRERA's page count can be one too high (Raigarh, Nov 2026: "542 pages", page 542 empty).
+        if (p === last && !r.got.length && r.info.none && p > 1) { lo = Math.max(1, lo - 1); continue }
         readCount++
         const got = keep(code, r.got)
         got.forEach(x => { x.tail = true })
@@ -345,7 +349,8 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     //    the district has, so an ignored filter flags nothing. Newest pages first: fast-moving projects.
     const variants = [{ completionPercentages: cfg.nearlyDone }, { [`project_completion_percentage[${cfg.nearlyDone}]`]: cfg.nearlyDone }]
     let chosen = null
-    for (const [code, name] of scopes) {
+    if (!cfg.nearlyDoneSearch) log('Nearly-done search is off: MahaRERA\'s completion filters return no projects (see config.mjs). Extensions are still read from every card.')
+    for (const [code, name] of cfg.nearlyDoneSearch ? scopes : []) {
       const total = totals[code]
       if (!total) continue
       let first = null
