@@ -225,9 +225,10 @@ export function ingestProjects(db, projects, { firstRun = false, now = today() }
 
 // ---------- fetching ----------
 export function searchUrl({ district = 0, page = 1, from = '', to = '' } = {}) {
+  // Same parameters, in the same order, as the address that worked on the live site.
   const q = new URLSearchParams({
     project_name: '', project_location: '', project_completion_date: '', project_state: '27', project_district: String(district),
-    carpetAreas: '', completionPercentages: '', project_division: '', completionDate_from: from, completionDate_to: to, page: String(page), op: '',
+    carpetAreas: '', completionDate_from: from, completionDate_to: to, page: String(page),
   })
   return `${config.maharera.searchUrl}?${q}`
 }
@@ -250,6 +251,8 @@ async function getPage(url, { browser }) {
   const pg = await chrome.newPage()
   try {
     await pg.goto(url, { waitUntil: 'networkidle', timeout: 90000 })
+    // Give the results a moment to appear if the page is slow.
+    await pg.waitForFunction(() => /Showing|No record|Pages\s*\d/i.test(document.body?.innerText || ''), null, { timeout: 20000 }).catch(() => {})
     return await pg.content()
   } finally { await pg.close() }
 }
@@ -273,6 +276,11 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     n++
     let html = await getPage(url, { browser })
     let got = parseSearchPage(html)
+    if (!got.length && pageInfo(html).total == null) { // nothing and no result count: retry once, slowly
+      await sleep(10000)
+      html = await getPage(url, { browser })
+      got = parseSearchPage(html)
+    }
     if (!got.length && !browser && pageInfo(html).total == null && await hasPlaywright()) {
       log('No results from a plain request; switching to the browser (Playwright).')
       browser = true
@@ -289,6 +297,9 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
   try {
     const state = await read(searchUrl())
     if (!state.got.length) {
+      const fs2 = path.join(DATA, 'debug', 'maharera-page1.html')
+      const said = htmlToText(fs.readFileSync(fs2, 'utf8')).replace(/\s+/g, ' ').slice(0, 300)
+      log(`Address: ${searchUrl()}\nThe page said: ${said || '(empty page)'}`)
       log(browser ? 'No projects on the MahaRERA search page. Send data/debug/maharera-page1.html to whoever maintains this.'
         : 'No projects found. Install the browser: npm i playwright && npx playwright install chromium')
       return { projects: 0, new: 0, extension: 0, deadline: 0, pagesRead: n }
