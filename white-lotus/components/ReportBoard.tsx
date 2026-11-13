@@ -183,7 +183,7 @@ function Email({ report: r, to }: { report: Report; to: string[] }) {
         </div>
 
         <h2 className="mt-7 text-3xl font-semibold tracking-[-0.03em]">
-          White Lotus International Hospital <span className="serif font-normal text-teal">· weekly summary</span>
+          Weekly summary <span className="serif font-normal text-teal">· HR and staffing</span>
         </h2>
         <p className="mt-1 text-[13px] text-ink-3">
           {s.from} – {s.to} (week to date) · built automatically from three sources · sample data

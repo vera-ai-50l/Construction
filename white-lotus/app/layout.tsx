@@ -7,8 +7,8 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono'
 const instrument = Instrument_Serif({ subsets: ['latin'], weight: '400', style: 'italic', variable: '--font-instrument', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'White Lotus × Vera: staffing, HR assistant, recruitment and weekly report',
-  description: 'Working demos for White Lotus International Hospital: a daily ward staffing summary, an HR assistant that answers from approved policy, a recruitment assistant, and a weekly report.',
+  title: 'Vera for hospital HR: staffing, HR assistant, recruitment and weekly report',
+  description: 'Working demos for hospital HR teams: a daily ward staffing summary, an HR assistant that answers from approved policy, a recruitment assistant, and a weekly report.',
   robots: { index: false, follow: false },
 }
 

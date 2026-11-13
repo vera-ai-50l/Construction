@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { RecruitBoard } from '@/components/RecruitBoard'
 
-export const metadata: Metadata = { title: 'Recruitment assistant · White Lotus' }
+export const metadata: Metadata = { title: 'Recruitment assistant · Vera' }
 
 const BEFORE = [
   ['ClockCounterClockwise', 'A nurse messages about a job at 9 PM and hears back the next afternoon, if at all.'],

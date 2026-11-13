@@ -84,7 +84,7 @@ export function StaffingBoard() {
     const blob = new Blob([toCsv(sampleWeek())], { type: 'text/csv' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = 'white-lotus-sample-roster.csv'
+    a.download = 'sample-roster.csv'
     a.click()
     URL.revokeObjectURL(a.href)
   }

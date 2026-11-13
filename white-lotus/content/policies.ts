@@ -1,5 +1,5 @@
 // Approved HR documents the employee assistant may answer from.
-// SAMPLE TEXT written for this demo. In a pilot these are replaced by White Lotus's own
+// SAMPLE TEXT written for this demo. In a pilot these are replaced by the hospital's own
 // approved policies, and HR reviews every answer before staff use it.
 // Each section is one retrievable chunk; keep sections short and self-contained.
 

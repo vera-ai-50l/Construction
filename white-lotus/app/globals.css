@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* White Lotus demo: silver-white ground, near-black ink, deep teal accent.
+/* Hospital HR demo: silver-white ground, near-black ink, deep teal accent.
    Red, amber and green are reserved for staffing state and never used decoratively. */
 @theme {
   --color-ground: #f6f7f7;

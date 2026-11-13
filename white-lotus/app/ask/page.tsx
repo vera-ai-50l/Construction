@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { AskBoard } from '@/components/AskBoard'
 
-export const metadata: Metadata = { title: 'HR assistant · White Lotus' }
+export const metadata: Metadata = { title: 'HR assistant · Vera' }
 
 const BEFORE = [
   ['PhoneCall', 'A nurse calls or messages HR: “How many PL can I carry forward?”'],

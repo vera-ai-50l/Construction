@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { ReportBoard } from '@/components/ReportBoard'
 
-export const metadata: Metadata = { title: 'Weekly report · White Lotus' }
+export const metadata: Metadata = { title: 'Weekly report · Vera' }
 
 const BEFORE = [
   ['Files', 'On Monday someone opens the attendance sheet, the hiring tracker and the HR inbox.'],

@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { StaffingBoard } from '@/components/StaffingBoard'
 
-export const metadata: Metadata = { title: 'Staffing summary · White Lotus' }
+export const metadata: Metadata = { title: 'Staffing summary · Vera' }
 
 const BEFORE = [
   ['7:00', 'Shift starts. Absences reach ward in-charges as calls and WhatsApp messages.'],

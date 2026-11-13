@@ -83,7 +83,7 @@ export function RecruitBoard() {
   function start() {
     setStarted(true)
     say('Hi, I saw the nursing jobs post. Are you hiring?')
-    bot('Hello! Thank you for your interest in White Lotus International Hospital. We have these openings. Which role are you applying for?')
+    bot('Hello! Thank you for your interest in joining our hospital. We have these openings. Which role are you applying for?')
   }
 
   function restart() {
@@ -224,7 +224,7 @@ export function RecruitBoard() {
                 <Icon name="Briefcase" size={16} weight="regular" />
               </span>
               <span className="flex-1">
-                <span className="block text-[14px] font-medium">White Lotus Careers</span>
+                <span className="block text-[14px] font-medium">Hospital Careers</span>
                 <span className="block text-[11px] text-white/70">{typing ? 'typing…' : 'Replies in seconds, any hour'}</span>
               </span>
               {started && (

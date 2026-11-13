@@ -86,7 +86,7 @@ export function buildReport() {
   attention.push(`${hr.asked - HR_LOG.topics.reduce((s, t) => s + t.asked, 0)} staff questions were not covered by any policy, led by ${top.map((t) => `${t.theme.toLowerCase()} (${t.count})`).join(' and ')}. Adding these to the FAQ lets the assistant answer them next time.`)
 
   const whatsapp = [
-    `White Lotus · weekly summary, ${staffing.from} – ${staffing.to}`,
+    `Weekly HR and staffing summary, ${staffing.from} – ${staffing.to}`,
     `Staffing: ${staffing.belowTotal} ward-shifts below minimum out of ${staffing.wardShifts}. Attendance ${staffing.attendance}%.${worst?.count ? ` Most gaps: ${worst.ward} (${worst.count}).` : ''}`,
     `Hiring: ${p.n} applications, ${p.complete} complete, ${p.booked} interviews booked, ${p.review} for HR review.`,
     `HR questions: ${hr.asked} asked, ${hr.rate}% answered without HR.`,

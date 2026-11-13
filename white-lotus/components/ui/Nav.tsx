@@ -28,8 +28,8 @@ export function Nav() {
       <header className="pointer-events-none fixed print:hidden inset-x-0 top-0 z-40 flex justify-center px-4 pt-4 md:pt-6">
         <nav className="pointer-events-auto flex w-full max-w-max items-center gap-1 rounded-full bg-card/80 p-1.5 pl-5 shadow-[0_12px_40px_-18px_rgba(16,40,40,0.35)] ring-1 ring-ink/[0.07] backdrop-blur-xl">
           <Link href="/" className="mr-2 flex items-baseline gap-2 text-ink">
-            <span className="text-[15px] font-semibold tracking-tight">White Lotus</span>
-            <span className="serif text-[15px] text-teal">× Vera</span>
+            <span className="text-[15px] font-semibold tracking-tight">Vera</span>
+            <span className="serif text-[15px] text-teal">for hospital HR</span>
           </Link>
           <ul className="hidden items-center md:flex">
             {LINKS.map((l) => {

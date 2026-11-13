@@ -74,7 +74,7 @@ export default function Home() {
           <div className="relative mx-auto grid max-w-[1200px] items-center gap-16 md:grid-cols-[1.05fr_1fr]">
             <div>
               <Reveal>
-                <Eyebrow>Pilot demo · White Lotus International Hospital</Eyebrow>
+                <Eyebrow>Working demo · for hospital HR teams</Eyebrow>
               </Reveal>
               <Reveal delay={80}>
                 <h1 className="mt-7 text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink sm:text-6xl md:text-[4.6rem]">
@@ -202,7 +202,7 @@ export default function Home() {
               ))}
             </ul>
             <p className="mt-16 border-t border-white/10 pt-8 text-xs leading-relaxed text-white/40">
-              Prepared by Vera AI for White Lotus International Hospital, November 2026. Everything on these pages is sample data: {sampleWeek().length.toLocaleString('en-IN')} shift records with staff IDs only, {chunks.length} example HR policy sections and example candidates. Time saved is measured on your own data once we start.
+              Prepared by Vera AI, November 2026. Everything on these pages is sample data: {sampleWeek().length.toLocaleString('en-IN')} shift records with staff IDs only, {chunks.length} example HR policy sections and example candidates. Time saved is measured on your own data once we start.
             </p>
           </div>
         </section>
