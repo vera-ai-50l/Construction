@@ -7,7 +7,7 @@
 Sell to **mid-size construction contractors and developers in MMR and Pune** through two lanes at once:
 
 1. **Warm lane (first claim on time):** every Lodha conversation ends with a request for 2–3 introductions to mid-size contractors on their sites. Warm intros close faster than anything cold.
-2. **Cold signal lane:** each Monday, `vera-leads` finds firms with a public reason to care **this month**: a new MahaRERA project, a completion date extended, a deadline close, or a hiring push for site staff. The first email names that event.
+2. **Cold signal lane:** each Monday, `vera-leads` finds firms with a public reason to care **this month**: a new MahaRERA project, a completion date extended, a project in its last stretch, or a hiring push for site staff. The first email names that event.
 
 Lead with a free, two-hour proof (their own site record from one day of WhatsApp messages), then a free one-package material check, then a paid pilot.
 
@@ -31,8 +31,8 @@ The pain we sell to, in their words: site reports arrive late and in different f
 | Signal (vera-leads finds it) | Why now | First line (auto-written) | Best freebie |
 |---|---|---|---|
 | New MahaRERA registration | Before the first pour, process is still being set | "Saw *Sai Shraddha Heights* come up on MahaRERA in Thane. Congratulations on the launch." | 2-hour site-record test |
-| Completion date extended | The project is late by definition; the MD wants control | "Saw the MahaRERA completion date for *Green Acres II* has moved to March 2027." | Material check on one package |
-| Completion due within 6 months, or past | Last stretch, where delay and overrun cost most | "*Raj Residency* is due for completion on MahaRERA by February 2027." | Material check on one package |
+| Completion date extended (extension certificate on MahaRERA) | The project is late by definition; the MD wants control | "Saw the MahaRERA completion date for *Green Acres II* has moved to a later date." | Material check on one package |
+| 75–100% built on MahaRERA | Last stretch, where delay and overrun cost most | "Saw *Raj Residency* is past 75% complete on MahaRERA." | Material check on one package |
 | Hiring site, planning, billing, QS or stores staff | More sites than the team can report on | "Saw *Raj Constructions* is hiring for 3 site roles in Mumbai, including a site engineer." | 2-hour site-record test |
 
 Tone for MahaRERA signals: public facts, neutral, never "your project is late". Congratulate launches; state dates plainly.
@@ -85,7 +85,7 @@ With the merge fields filled in, this comes to 65–80 words. Example, for a com
 
 > Hi Sunil,
 >
-> Saw the MahaRERA completion date for Green Acres Phase II has moved to March 2027. When timelines stretch, the MD usually wants site updates faster.
+> Saw the MahaRERA completion date for Green Acres Phase II has moved to a later date. When timelines stretch, the MD usually wants site updates faster.
 >
 > Vera turns your site team's WhatsApp messages and challan photos into a daily site record by next morning, with material checked against work done.
 >

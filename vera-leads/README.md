@@ -10,7 +10,7 @@ Strategy and email copy: [`docs/vera-outreach.md`](../docs/vera-outreach.md).
 |---|---|---|---|
 | New MahaRERA registration | MahaRERA project search | A project is about to start | "Saw *Sai Shraddha Heights* come up on MahaRERA in Thane." |
 | Completion date extended | MahaRERA (Extension Certificate on the project) | The project is late | "Saw the MahaRERA completion date for *Green Acres II* has moved to a later date." |
-| Completion near or past | MahaRERA (completion within 6 months) | Pressure on progress and cost | "*Raj Residency* is due for completion on MahaRERA by February 2027." |
+| Nearly complete | MahaRERA (75–100% built, via the completion-percentage search) | The last stretch: pressure on progress and cost | "Saw *Raj Residency* is past 75% complete on MahaRERA." |
 | Hiring site, planning, billing, QS or stores staff | Naukri / LinkedIn Jobs via Apify | More sites than the team can report on | "Saw *Raj Constructions* is hiring for 3 site roles in Mumbai, including a site engineer." |
 
 Left out automatically: Lodha/Macrotech (warm intro only), large developers and EPC firms (too big for Vera today, see `config.mjs`), recruitment agencies posting on others' behalf, non-construction employers, posts older than 45 days.
@@ -41,11 +41,11 @@ npx playwright install chromium
 node vera-leads.mjs maharera --pages 1 --debug
 ```
 
-It prints a line per district (Thane, Mumbai Suburban, Mumbai City, Raigarh, Palghar, Pune) with how many projects are listed and how many are due in the next 6 months. If a line looks wrong, send `data/debug/` to whoever maintains this.
+It prints a line per district (Thane, Mumbai Suburban, Mumbai City, Raigarh, Palghar, Pune) with how many projects are listed and how many are 75–100% built. If a line looks wrong, send `data/debug/` to whoever maintains this.
 
 How it reads MahaRERA (the list shows no dates except "Last Modified"):
 - **New projects:** results are listed oldest first, so it reads each district's last 5 pages. The first run is a baseline (only projects modified in the last 60 days count as new); after that, anything on those pages that wasn't there last week is new.
-- **Due soon:** the search's own completion-date filter, today to 6 months out, up to 30 pages per district.
+- **Nearly complete:** the search's completion-percentage filter (75–100% built), newest 30 pages per district. The completion-date filter is ignored by the site when passed in the address, so it isn't used.
 - **Extended:** any project card with an Extension Certificate. Dated by "Last Modified", so old extensions score close to zero.
 
 ## Every Monday (about 45 minutes)

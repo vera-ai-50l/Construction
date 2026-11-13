@@ -224,11 +224,11 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
   let dueWorks = true
   const realFetch = globalThis.fetch
   globalThis.fetch = async u => {
-    const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, from = q.get('completionDate_from')
+    const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, pct = q.get('project_completion_percentage[75-100]')
     urls.push(String(u))
     let html
     if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
-    else if (d === '517' && dueWorks && from && /^\d{4}-\d{2}-\d{2}$/.test(from)) html = live.page(due, { total: 1, pages: 1 })
+    else if (d === '517' && dueWorks && pct === '75-100') html = live.page(due, { total: 1, pages: 1 })
     else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: 3, current: pg })
     else html = live.page([], { total: 0, pages: 1 })
     return new Response(html, { status: 200 })
@@ -238,11 +238,10 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     assert.equal(c1.new, 1, 'first run: only the newest-page project modified in the last 60 days')
     assert.equal(c1.extension, 1)
     assert.equal(c1.deadline, 1)
-    assert.ok(urls.some(u => /completionDate_from=2026-11-13&completionDate_to=2027-05-12/.test(u)), 'tried the date formats until one narrowed the results')
-    const dl = db.signals.find(s => s.type === 'maharera_deadline')
-    assert.equal(dl.completion, '2027-05-12')
+    assert.ok(urls.some(u => /completionPercentages=75-100/.test(u)) && urls.some(u => /project_completion_percentage%5B75-100%5D=75-100/.test(u)), 'tried both filter spellings until one narrowed the results')
+    assert.ok(!urls.some(u => /page=1&completionPercentages/.test(u) && /project_district=0/.test(u)), 'default address unchanged')
     const top = scoreAll(db, NOW).find(a => a.key === companyKey('DEADLINE CONSTRUCTIONS'))
-    assert.match(mergeFields(top, top.top).signalLine, /Final Stretch is due for completion on MahaRERA by May 2027/)
+    assert.equal(mergeFields(top, top.top).signalLine, 'Saw Final Stretch is past 75% complete on MahaRERA.')
     assert.ok(!db.accounts[companyKey('NAGPUR HOMES')], 'statewide page is only a check, not a source')
 
     thane[3].push(P('P51700000303', 'BRAND NEW', 'FIRSTBRICK BUILDERS', '2026-11-12'))
@@ -250,7 +249,7 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     assert.equal(c2.new, 1, 'second run: only the project that was not there last week')
     assert.ok(db.signals.some(s => s.type === 'maharera_new' && s.project === 'BRAND NEW'))
 
-    // If the site ignores the date filter (returns the whole district), nothing is flagged as due.
+    // If the site ignores the percentage filter (returns the whole district), nothing is flagged.
     dueWorks = false
     const before = db.signals.filter(s => s.type === 'maharera_deadline').length
     const c3 = await runMaharera(db, { browser: false, now: '2026-11-27' })

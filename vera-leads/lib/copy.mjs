@@ -28,7 +28,9 @@ export function mergeFields(account, sig) {
       f.angle = 'When timelines stretch, the MD usually wants site updates faster.'
       break
     case 'maharera_deadline':
-      f.signalLine = `${project || 'Your project'} is due for completion on MahaRERA by ${monthYear(sig.completion) || 'soon'}.`
+      f.signalLine = sig.completion
+        ? `${project || 'Your project'} is due for completion on MahaRERA by ${monthYear(sig.completion)}.`
+        : `Saw ${project || 'your project'} is past 75% complete on MahaRERA.`
       f.angle = 'The last stretch is where delays and material overruns cost the most.'
       break
     case 'hiring': {

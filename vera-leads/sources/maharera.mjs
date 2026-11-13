@@ -1,7 +1,7 @@
 // MahaRERA public project search -> three Vera signals:
 //   maharera_new        a project registered recently: set up site reporting from day one
 //   maharera_extension  completion date extended (an Extension Certificate on the card): the project is late
-//   maharera_deadline   completion due within 6 months (the search's completion-date filter): pressure on progress and cost
+//   maharera_deadline   75-100% built (the search's completion-percentage filter): the last stretch, pressure on progress and cost
 //
 // The parser does not depend on MahaRERA's exact class names. It finds every registration number
 // (P51800012345), works out which repeating HTML block holds one project each, and reads fields
@@ -203,7 +203,7 @@ export function ingestProjects(db, projects, { firstRun = false, now = today() }
     const regAge = daysBetween(p.registered, now)
     const unseen = !db._knownRegs?.has(p.regNo)
     const tailNew = p.tail && !p.registered && (firstRun ? daysBetween(p.modified, now) <= 60 : unseen)
-    if (regAge <= 60 || tailNew || (!p.registered && !p.tail && !p.dueBy && !firstRun && unseen)) {
+    if (regAge <= 60 || tailNew || (!p.registered && !p.tail && !p.nearlyDone && !firstRun && unseen)) {
       if (addSignal(db, a, { ...base, type: 'maharera_new', key: p.regNo, date: p.registered || (firstRun ? p.modified : now) || now, title: `New MahaRERA project: ${p.project || p.regNo}`, detail: `Registered ${p.registered || 'recently'} (${p.regNo})` })) c.new++
     }
     // Extended: a revised completion date, or an Extension Certificate on the card. Dated by "Last Modified",
@@ -216,24 +216,23 @@ export function ingestProjects(db, projects, { firstRun = false, now = today() }
     const left = due ? -daysBetween(due, now) : Infinity
     if (due && left <= cfg.deadlineWindowDays && !/complet/i.test(p.status)) {
       if (addSignal(db, a, { ...base, type: 'maharera_deadline', key: p.regNo + ':' + due.slice(0, 7), date: now, title: `${left < 0 ? 'Past' : 'Near'} completion date: ${p.project || p.regNo}`, detail: left < 0 ? `Completion date ${due} has passed` : `Completion due ${due}, ${left} days away`, completion: due })) c.deadline++
-    } else if (!due && p.dueBy) {
-      if (addSignal(db, a, { ...base, type: 'maharera_deadline', key: p.regNo + ':due', date: now, title: `Near completion date: ${p.project || p.regNo}`, detail: `Completion due by ${p.dueBy} (MahaRERA completion-date search)`, completion: p.dueBy })) c.deadline++
+    } else if (!due && p.nearlyDone) {
+      if (addSignal(db, a, { ...base, type: 'maharera_deadline', key: p.regNo + ':final', date: now, stage: 'final', title: `Nearly complete: ${p.project || p.regNo}`, detail: `${config.maharera.nearlyDone}% built (MahaRERA completion-percentage search)` })) c.deadline++
     }
   }
   return c
 }
 
 // ---------- fetching ----------
-export function searchUrl({ district = 0, page = 1, from = '', to = '', completion = '' } = {}) {
+export function searchUrl({ district = 0, page = 1, extra = {} } = {}) {
   // Same parameters, in the same order, as the address that worked on the live site.
   const q = new URLSearchParams({
-    project_name: '', project_location: '', project_completion_date: completion, project_state: '27', project_district: String(district),
-    carpetAreas: '', completionDate_from: from, completionDate_to: to, page: String(page),
+    project_name: '', project_location: '', project_completion_date: '', project_state: '27', project_district: String(district),
+    carpetAreas: '', completionDate_from: '', completionDate_to: '', page: String(page),
   })
+  for (const [k, v] of Object.entries(extra)) q.set(k, v) // only added when asked, so the default address stays the one that works
   return `${config.maharera.searchUrl}?${q}`
 }
-export const fmtDate = (iso, f) => { const [y, m, d] = iso.split('-'); return f.replace('YYYY', y).replace('MM', m).replace('DD', d) }
-const addDays = (iso, n) => new Date(Date.parse(iso) + n * 864e5).toISOString().slice(0, 10)
 
 const hasPlaywright = () => import('playwright').then(() => true, () => false)
 let chrome = null, lastHit = 0
@@ -259,7 +258,7 @@ async function getPage(url, { browser }) {
 
 // Weekly read of MahaRERA for MMR and Pune:
 //   1. the newest pages of each district (new registrations; results are listed oldest first)
-//   2. the completion-date search, today to today + dueWindowDays (projects due soon)
+//   2. the completion-percentage search, 75-100% built (projects in their last stretch)
 // Extension certificates are picked up from every card read in either step.
 export async function run(db, { pages, browser, files = [], debug = false, now = today() } = {}) {
   const cfg = config.maharera
@@ -319,7 +318,12 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     // 1. Newest pages. Results are oldest first, so the newest are on the last pages.
     const totals = {}
     for (const [code, name] of scopes) {
-      const first = code === scopes[0][0] && code ? firstD : code ? await read(searchUrl({ district: code })) : state
+      let first = code === scopes[0][0] && code ? firstD : code ? await read(searchUrl({ district: code })) : state
+      for (let i = 0; i < 2 && !first.info.pages; i++) { // slow district (often Mumbai Suburban): wait longer and read again
+        log(`${name}: page count missing; reading again in 20 seconds`)
+        await sleep(20000)
+        first = await read(searchUrl({ district: code }))
+      }
       totals[code] = first.info.total
       if (!first.info.pages) { log(`${name}: could not read the page count; skipped this week's newest pages.`); continue }
       const last = first.info.pages
@@ -336,32 +340,31 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
       log(`${name}: ${first.info.total} projects listed; read the newest ${readCount} page(s)`)
     }
 
-    // 2. Due soon, via the search's completion-date filter. The filter is only trusted when it returns
-    //    fewer projects than the district has in total; otherwise it was ignored and nothing is flagged.
-    const from = now, to = addDays(now, cfg.dueWindowDays)
-    const variants = cfg.dueDateFormats.flatMap(f => [
-      { f, q: { from: fmtDate(from, f), to: fmtDate(to, f) } },
-      { f, q: { completion: fmtDate(to, f) } },
-    ])
+    // 2. Nearly done: the completion-percentage filter (75-100% built). Two spellings are tried: the one in the
+    //    site's own page links and the one its search form posts. Trusted only if it returns fewer projects than
+    //    the district has, so an ignored filter flags nothing. Newest pages first: fast-moving projects.
+    const variants = [{ completionPercentages: cfg.nearlyDone }, { [`project_completion_percentage[${cfg.nearlyDone}]`]: cfg.nearlyDone }]
     let chosen = null
     for (const [code, name] of scopes) {
       const total = totals[code]
       if (!total) continue
       let first = null
       for (const v of chosen ? [chosen] : variants) {
-        const r = await read(searchUrl({ district: code, ...v.q }))
-        if (r.info.total != null && r.info.total > 0 && r.info.total < total) { chosen = v; first = r; break }
+        const r = await read(searchUrl({ district: code, extra: v }))
+        if (r.info.total != null && r.info.total > 0 && r.info.total < total && r.info.pages) { chosen = v; first = r; break }
       }
-      if (!chosen) { log('The completion-date filter did not narrow the results; skipping projects due soon this week.'); break }
-      if (!first) { log(`${name}: completion-date filter had no effect; skipped.`); continue }
-      const last = Math.min(first.info.pages || 1, duePages)
-      for (let p = 1; p <= last; p++) {
-        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p, ...chosen.q }))
+      if (!chosen) { log('The completion-percentage filter did not narrow the results; skipping nearly-done projects this week.'); break }
+      if (!first) { log(`${name}: completion-percentage filter had no effect; skipped.`); continue }
+      const last = first.info.pages
+      let readCount = 0
+      for (let p = last; p >= Math.max(1, last - duePages + 1); p--) {
+        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p, extra: chosen }))
+        readCount++
         const got = keep(code, r.got)
-        got.forEach(x => { x.dueBy = to })
+        got.forEach(x => { x.nearlyDone = true })
         all.push(...got)
       }
-      log(`${name}: ${first.info.total} of ${total} projects due by ${to}; read ${last} page(s)`)
+      log(`${name}: ${first.info.total} of ${total} projects are ${cfg.nearlyDone}% built; read the newest ${readCount} page(s)`)
     }
   } finally {
     if (chrome) { await chrome.close(); chrome = null }

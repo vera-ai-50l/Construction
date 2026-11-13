@@ -37,16 +37,15 @@ export const config = {
     // The public project search (checked against the live site, Nov 2026). Results are oldest first,
     // 10 per page, and show no dates except "Last Modified". So the tool reads:
     //   new projects:  the last pages of each district (newest registrations)
-    //   due soon:      the search's own completion-date filter, today to today + dueWindowDays
+    //   nearly done:   the search's completion-percentage filter (75-100% built), newest pages first.
+    //                  The completion-date filter is ignored when passed in the address (checked live), so it isn't used.
     //   extended:      any card with an Extension Certificate link (not "N/A")
     searchUrl: process.env.MAHARERA_URL || 'https://maharera.maharashtra.gov.in/projects-search-result',
     // MahaRERA's district codes, from the search form.
     districts: { 517: 'Thane', 518: 'Mumbai Suburban', 519: 'Mumbai City', 520: 'Raigarh', 990: 'Palghar', 521: 'Pune' },
     newPages: 5, // last pages per district read each week for new registrations
-    duePages: 30, // pages per district read from the completion-date search
-    dueWindowDays: 180,
-    // The completion-date filter's format isn't documented; these are tried in order and the one that narrows the results is used.
-    dueDateFormats: ['DD-MM-YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'],
+    duePages: 30, // pages per district read from the 75-100% search
+    nearlyDone: '75-100',
     gapMs: 3000, // pause between pages; be gentle with a government site
     // Registration numbers look like P51800012345. Newer formats are allowed for.
     regNo: /\b(P[A-Z]?\d{10,14}|PR\d{10,14})\b/g,
