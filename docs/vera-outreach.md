@@ -11,7 +11,7 @@ Sell to **mid-size construction contractors and developers in MMR and Pune** thr
 
 Lead with a free, two-hour proof (their own site record from one day of WhatsApp messages), then a free one-package material check, then a paid pilot.
 
-At the memo's planning rates the cold lane adds **about one paying client a month** from early 2027. Volume is limited by signals, not inboxes, so quality of the first line matters more than sending more.
+At the memo's planning rates the cold lane adds **about one paying client a month** from early 2027. Signal firms always go first; Saleshandy Lead Finder lists fill the rest of the 150 a week the three cold inboxes can carry.
 
 **Gate (Vera's own):** by **15 Jan 2027**, 600 firms contacted with at least **6 positive replies and 3 site-record tests run**. Below that, change the opener or the offer once before adding volume.
 
@@ -160,13 +160,32 @@ The three inboxes on **getveraai.com** (Shivam, Rishiraj, Aditya) are the main b
 
 | Inboxes | Use | Daily cap per inbox |
 |---|---|---|
-| 3 on getveraai.com | Warm intros, replies, follow-ups with engaged firms, top-account emails | 15 |
-| 4 new, on 2 secondary domains (similar name, redirecting to getveraai.com) | Cold sequences from `saleshandy.csv` | Ramp 5–10 → 15 → 25 |
+| 3 on getveraai.com (already running) | Replies, warm intros, follow-ups with firms that replied. No cold lists. | 15 |
+| 3 new cold inboxes on 1 secondary domain (similar name, redirecting to getveraai.com) | Cold sequences: `saleshandy.csv` and `saleshandy-list.csv` | Ramp to 30 |
 
-- Buy the 2 secondary domains and 4 Google Workspace inboxes this week. SPF, DKIM and DMARC on each (same steps as getveraai.com), and warm for 4–6 weeks before full volume.
+- Buy 1 secondary domain and 3 Google Workspace inboxes this week (about ₹1,100 a month plus about ₹800 a year). SPF, DKIM and DMARC on each, same steps as getveraai.com.
+- Ramp per cold inbox: weeks 1–3 warm-up only, then 5–10 a day, 15, 20, and 30 by about week 6. 30 is a ceiling, not a start.
+- At 30 a day: 3 × 30 × 5 days = **450 sends a week**. A 3-email sequence uses 3 sends per person, so that is **150 new people a week** (about 650 a month). `vera-leads export` is capped at 150 for this reason (`perExport` in `config.mjs`).
+- Two sources fill those 150: signal firms first (`saleshandy.csv`), then Saleshandy Lead Finder lists (`saleshandy-list.csv`). Keep them as two separate sequences so you can see which one gets replies.
 - Saleshandy: one workspace for Vera, separate from Kyre. Plain text, open tracking off, no links in email 1, sender is a real founder.
-- Hard limits: bounce under 2% (the tool exports only verified emails), spam complaints under 0.1%. Any campaign over 2% bounce is paused.
-- Monthly capacity at full ramp: about 3,200 emails, or about 1,000 new firms on a 3-email sequence. That is more than the signals produce, so spare capacity goes to warm follow-ups, not more cold volume.
+- Hard limits: bounce under 2% (the tool exports only verified emails), spam complaints under 0.1%. Any campaign over 2% bounce is paused. If the cold domain gets burned, getveraai.com is untouched: buy a new one and carry on.
+- To grow later, add a second secondary domain with 2–3 more inboxes. Don't push existing inboxes past 30.
+
+### Lead Finder lists (no signal)
+
+Filter Lead Finder to construction or real estate, Mumbai, Thane, Navi Mumbai and Pune, 11–500 employees, titles MD, Director, Founder, Owner, Partner. Export as CSV, then:
+
+```bash
+node vera-leads.mjs contacts leadfinder-list.csv --list
+node vera-leads.mjs verify
+node vera-leads.mjs export
+```
+
+List firms go through the same checks as signal firms: verified email only, Lodha and the large developers removed, opt-outs, and the 90-day rule. If a list firm also has a MahaRERA or hiring signal, it gets the signal email instead. Their first line is neutral, since there is no event to name:
+
+> Came across Desai Buildtech while looking at construction firms in Thane. On most sites, the office hears about problems days after they happen.
+
+Expect fewer replies than the signal sequence. If the list sequence is under 1% replies after 300 people, stop buying lists and put the capacity back into signals and LinkedIn.
 
 ## 6. Expected numbers (memo's Funnel A)
 
@@ -187,7 +206,7 @@ Hiring signals add firms on top. Treat these as estimates until the first 600 co
 
 | When | What | Who |
 |---|---|---|
-| Monday, 45 min | `node vera-leads.mjs weekly`; find MDs for `needs-contacts.csv` in Lead Finder or LinkedIn; import, verify, export; upload to Saleshandy | Vera engine owner |
+| Monday, 1 hour | `node vera-leads.mjs weekly`; find MDs for `needs-contacts.csv` in Lead Finder or LinkedIn; import one Lead Finder list with `--list`; verify, export; upload `saleshandy.csv` and `saleshandy-list.csv` to their two sequences | Vera engine owner |
 | Daily | Replies the same day. Vera threads come before any Kyre task. | Whoever's inbox |
 | Daily, 10 min | 15–20 LinkedIn invites from `linkedin.csv`, for the founder assigned to Vera that week | Assigned founder |
 | As they come | Book calls within 24 hours; run 2-hour tests the same day | Founder on the call |
@@ -208,7 +227,7 @@ Hiring signals add firms on top. Treat these as estimates until the first 600 co
 
 | Week | Do |
 |---|---|
-| 13–16 Nov | Buy 2 secondary domains and 4 inboxes; DNS; start warm-up. Saleshandy Starter (monthly) with a Vera workspace. Apify and MillionVerifier accounts. First `vera-leads` run: check MahaRERA page 1 (`--pages 1 --debug`). |
+| 13–16 Nov | Buy 1 secondary domain and 3 inboxes; DNS; start warm-up. Saleshandy Starter (monthly) with a Vera workspace. Apify and MillionVerifier accounts. First `vera-leads` run: check MahaRERA page 1 (`--pages 1 --debug`). |
 | 17–23 Nov | Lodha follow-up and intro ask. First full run: aim for 200 scored firms and 100 verified MDs. LinkedIn connects begin (manual). |
 | 24–30 Nov | Sample site record and sample material check (fictional data) ready to send. Sequence set up in Saleshandy and test emails checked for Primary inbox. |
 | 1–14 Dec | Deliverability gate (bounce under 2%, no blacklist, test emails in Primary). Cold sequences start at 5–10 a day per inbox, then ramp. |

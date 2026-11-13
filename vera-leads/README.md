@@ -56,6 +56,7 @@ That runs MahaRERA, hiring, website emails, verification and the export. Then:
    node vera-leads.mjs export
    ```
 2. **`saleshandy.csv`**: upload to the Vera *cold* sequence (secondary-domain inboxes). Map `Signal Line`, `Angle` and `Project` to custom fields of the same name. Nothing in it is unverified.
+   **`saleshandy-list.csv`**: people from your own Lead Finder lists (below). Same columns; upload to a separate sequence so you can compare replies.
 3. **`linkedin.csv`**: day-1 connection requests for the founder whose week it is.
 4. **`catch-all.csv`**: the verifier could not confirm these. Skip, or send at most 10 a day from the main-domain inboxes.
 5. Opt-outs and bounces from Saleshandy, every week:
@@ -64,6 +65,18 @@ That runs MahaRERA, hiring, website emails, verification and the export. Then:
    ```
    Share `data/suppression.txt` with the Kyre side; the memo asks for one list across both.
 
+### Lead Finder lists (firms without a signal)
+
+Build a list in Lead Finder (construction, MMR/Pune, MD/Director/Owner), export it, then:
+
+```bash
+node vera-leads.mjs contacts leadfinder-list.csv --list
+node vera-leads.mjs verify
+node vera-leads.mjs export
+```
+
+Each firm gets a `list` signal so it can be exported, with a neutral first line ("Came across X while looking at construction firms in Thane."). If the firm also has a real signal, the signal wins. The weekly cap (150, sized for 3 inboxes at 30 a day on a 3-email sequence) goes to signal firms first; lists fill the rest. List firms with no verified email are dropped, not added to `needs-contacts.csv`.
+
 Exported people are logged, so nobody is emailed again within 90 days, and a firm already in a sequence is skipped.
 
 ## Commands
@@ -71,7 +84,7 @@ Exported people are logged, so nobody is emailed again within 90 days, and a fir
 ```
 maharera [--pages N] [--browser] [--file a.html ...] [--debug]
 hiring   [--board naukri|linkedin] [--file dataset.json ...]
-contacts <file.csv>       import people (Lead Finder, Apollo, LinkedIn sheet)
+contacts <file.csv> [--list]  import people; --list exports them even without a signal
 enrich   [--limit 50]     public emails and phones from company websites
 verify   [--limit 500]    MillionVerifier; refuses to run if DNS is broken
 top      [--n 25]         best firms and why
@@ -85,7 +98,7 @@ status
 
 ## Tuning
 
-All in `config.mjs`: regions, keywords, job boards and actors, the do-not-contact lists, signal weights, the export score (30), batch cap (150), and the 90-day re-contact rule.
+All in `config.mjs`: regions, keywords, job boards and actors, the do-not-contact lists, signal weights, the export score (30), weekly cap of new people (150), and the 90-day re-contact rule.
 
 Apify cost: 8 keywords × 4 cities = 32 small runs a week, roughly 3,000 job posts, about $1–3 a week on most Naukri actors. Cut keywords or cities in `config.mjs` if needed.
 

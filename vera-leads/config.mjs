@@ -69,6 +69,7 @@ export const config = {
       maharera_deadline: 25,
       hiring: 25,
       manual: 20,
+      list: 30, // imported from a Lead Finder list you chose: no event, but enough to clear the export score
     },
     bonus: {
       inRegion: 15, // MMR or Pune
@@ -83,7 +84,9 @@ export const config = {
   // ---------- Outreach rules ----------
   outreach: {
     recontactAfterDays: 90, // never email the same person twice within this
-    perExport: 150, // cap a batch so a bad list can't burn a domain
+    // New people per weekly export, signal firms first, Lead Finder lists fill the rest.
+    // 3 inboxes x 30 a day x 5 days = 450 sends a week; a 3-email sequence = 150 new people a week.
+    perExport: 150,
     // MillionVerifier results we accept for cold email. "catch_all" goes to its own file.
     acceptResults: ['ok'],
     // India DPDP Rules bind fully from this date; plan to move toward intros and inbound before it.

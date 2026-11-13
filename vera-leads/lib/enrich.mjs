@@ -4,16 +4,21 @@ import dns from 'node:dns/promises'
 import path from 'node:path'
 import fs from 'node:fs'
 import { config } from '../config.mjs'
-import { upsertAccount, upsertContact } from './store.mjs'
+import { addSignal, upsertAccount, upsertContact } from './store.mjs'
+import { regionOf } from '../sources/maharera.mjs'
 import { companyKey, daysBetween, domainOf, htmlToText, log, parseCSV, pick, politeFetch, today } from './util.mjs'
 
 const ROLE_LOCAL = /^(info|contact|enquir|inquir|sales|admin|office|hr|careers|jobs|support|hello|mail|accounts|marketing|projects|purchase|team)\b/i
 
 // ---------- import a contacts CSV ----------
-export function importContacts(db, file) {
+// Without --list: people for firms the signals already found (needs-contacts.csv).
+// With --list: a list you built yourself (Lead Finder filtered to construction, MMR/Pune). Every firm in it
+// becomes exportable even without a signal, and goes to saleshandy-list.csv with a neutral first line.
+export function importContacts(db, file, { list = false } = {}) {
   const rows = parseCSV(fs.readFileSync(file, 'utf8'))
   const src = path.basename(file)
   const c = { rows: rows.length, added: 0, matched: 0, newAccounts: 0, skipped: 0 }
+  if (list) c.listFirms = 0
   const byDomain = new Map(Object.values(db.accounts).filter(a => a.domain).map(a => [a.domain, a]))
   for (const r of rows) {
     const email = String(pick(r, 'Email', 'Email Address', 'Work Email', 'Business Email', 'email')).toLowerCase()
@@ -28,6 +33,10 @@ export function importContacts(db, file) {
       if (domain) byDomain.set(domain, a)
     }
     if (a && domain && !a.domain) { a.domain = domain; byDomain.set(domain, a) }
+    const city = pick(r, 'City', 'Company City', 'Person City', 'Location', 'Company Location')
+    if (a && city && !a.city) a.city = city
+    if (a && !a.region) a.region = regionOf(a.city, city)
+    if (a && list && addSignal(db, a, { type: 'list', key: src, source: 'list:' + src, date: today(), title: 'From list ' + src, location: city })) c.listFirms++
     upsertContact(db, {
       email, linkedin,
       first: pick(r, 'First Name', 'FirstName', 'first_name', 'Given Name'),

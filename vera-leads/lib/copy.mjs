@@ -40,6 +40,13 @@ export function mergeFields(account, sig) {
       f.angle = 'Usually that means more sites than the team can report on.'
       break
     }
+    case 'list': {
+      const city = cityOf(account.city || sig.location)
+      f.signalLine = `Came across ${company} while looking at construction firms${city ? ' in ' + city : ''}.`
+      f.angle = 'On most sites, the office hears about problems days after they happen.'
+      f.sourceUrl = ''
+      break
+    }
     default:
       f.signalLine = sig.title || ''
   }

@@ -166,6 +166,25 @@ t('export: only verified decision-makers, suppression and 90-day rule respected'
   assert.equal(next.saleshandy.length, 0, 'same firm must not be exported again within 90 days')
 })
 
+t('Lead Finder lists: exported without a signal, after signal firms, same exclusions', () => {
+  const db2 = openStore()
+  const c = importContacts(db2, path.join(FX, 'leadfinder-list.csv'), { list: true })
+  assert.equal(c.listFirms, 4)
+  for (const e of ['kiran@desaibuildtech.in', 'neha@kulkarniconstructions.com', 'ajay@godrejproperties.example']) db2.contacts[e].verify = { result: 'ok', at: NOW }
+  const out = buildExport(db2, { now: NOW })
+  const emails = out.list.map(r => r.Email).sort()
+  assert.deepEqual(emails, ['kiran@desaibuildtech.in', 'neha@kulkarniconstructions.com'], 'got ' + emails.join(','))
+  const desai = out.list.find(r => r.Email.startsWith('kiran'))
+  assert.equal(desai['Signal Line'], 'Came across Desai Buildtech while looking at construction firms in Thane.')
+  assert.equal(db2.accounts[companyKey('Desai Buildtech Pvt Ltd')].region, 'mmr')
+  assert.ok(!out.list.some(r => /patil/i.test(r.Email)), 'a firm with a real signal stays in the signal lane')
+  assert.ok(!out.needs.some(r => /Kulkarni|Desai/.test(r.Company)), 'list firms do not crowd needs-contacts')
+  assert.equal(buildExport(db2, { now: NOW, limit: 1 }).list.length, 1, 'lists only fill what is left of the cap')
+  const files = writeExport(db2, out, { now: NOW })
+  assert.equal(parseCSV(fs.readFileSync(files.list, 'utf8')).length, 2)
+  assert.equal(buildExport(db2, { now: '2026-11-20' }).list.length, 0, '90-day rule applies to lists too')
+})
+
 console.log(`\n${n - failed}/${n} passed`)
 fs.rmSync(tmp, { recursive: true, force: true })
 process.exit(failed ? 1 : 0)

@@ -52,7 +52,9 @@ export function scoreAll(db, now = today()) {
     a._verified = verified.has(a.key)
     a.blocked = blockedReason(a)
     a.score = a.blocked || !sigs.length ? 0 : scoreAccount(a, sigs, { now })
-    a.top = sigs.length ? topSignal(sigs, now) : null
+    // Open on a real event when there is one; a list import is only the fallback.
+    const events = sigs.filter(g => g.type !== 'list')
+    a.top = sigs.length ? topSignal(events.length ? events : sigs, now) : null
     a.signalCount = sigs.length
     rows.push(a)
   }

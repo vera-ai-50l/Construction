@@ -1,5 +1,6 @@
 // Weekly export: the files the team actually works from.
 //   saleshandy.csv      verified decision-makers at high-scoring firms, with the signal first line. Upload to Saleshandy.
+//   saleshandy-list.csv verified people from Lead Finder lists (contacts --list) with no signal. Fills what is left of the weekly cap.
 //   catch-all.csv       addresses the verifier could not confirm. Low volume from main inboxes only, or skip.
 //   linkedin.csv        people to connect with on day 1 (and firms where LinkedIn is the only route).
 //   needs-contacts.csv  high-scoring firms with no usable email yet: find the MD in Lead Finder or on LinkedIn.
@@ -33,7 +34,8 @@ export function buildExport(db, { now = today(), min = config.score.minToExport,
   const contactsBy = new Map()
   for (const c of Object.values(db.contacts)) if (c.account) (contactsBy.get(c.account) || contactsBy.set(c.account, []).get(c.account)).push(c)
 
-  const out = { saleshandy: [], catchAll: [], linkedin: [], needs: [], accounts: [] }
+  const out = { saleshandy: [], list: [], catchAll: [], linkedin: [], needs: [], accounts: [] }
+  const listRows = []
   const blocked = { relationship: 0, too_large: 0 }
   for (const a of ranked) {
     if (a.blocked) { blocked[a.blocked]++; continue }
@@ -53,6 +55,7 @@ export function buildExport(db, { now = today(), min = config.score.minToExport,
       LinkedIn: c.linkedin || '', City: a.city || a.district || '', 'Signal Line': mf.signalLine, Angle: mf.angle, Project: mf.project,
       'Signal Type': mf.signalType, Score: a.score, 'Source URL': mf.sourceUrl, 'Contact Source': c.source || '', account: a.key, email: c.email,
     })
+    if (a.top.type === 'list') { if (ok) listRows.push(row(ok)); continue } // list firms: verified email or nothing
     if (ok && out.saleshandy.length < limit) out.saleshandy.push(row(ok))
     else if (ca) out.catchAll.push(row(ca))
     else if (!ok) out.needs.push({ Company: mf.company, Score: a.score, City: a.city || a.district || '', 'Signal Line': mf.signalLine, Project: mf.project, Domain: a.domain || '', Phone: a.phone || '', 'Have Emails': people.filter(c => c.email).length, ...Object.fromEntries(Object.entries(searchLinks(a)).map(([k, v]) => [k === 'google' ? 'Google' : 'LinkedIn People', v])) })
@@ -60,6 +63,8 @@ export function buildExport(db, { now = today(), min = config.score.minToExport,
     const li = people.find(c => c.linkedin && isBuyer(c.title)) || people.find(c => c.linkedin)
     if (li) out.linkedin.push({ Name: [li.first, li.last].filter(Boolean).join(' '), 'Job Title': li.title || '', Company: mf.company, LinkedIn: li.linkedin, 'Signal Line': mf.signalLine, 'In Email Batch': ok ? 'yes' : 'no' })
   }
+  // Signal firms take the weekly cap first; list firms fill what is left.
+  out.list = listRows.slice(0, Math.max(0, limit - out.saleshandy.length))
   out.blocked = blocked
   return out
 }
@@ -70,11 +75,15 @@ export function writeExport(db, out, { dryRun = false, now = today() } = {}) {
   const w = (name, rows, cols) => { fs.writeFileSync(path.join(dir, name), toCSV(rows, cols)); return path.join(dir, name) }
   const files = {
     saleshandy: w('saleshandy.csv', out.saleshandy, SH_COLS),
+    list: w('saleshandy-list.csv', out.list, SH_COLS),
     catchAll: w('catch-all.csv', out.catchAll, SH_COLS),
     linkedin: w('linkedin.csv', out.linkedin),
     needs: w('needs-contacts.csv', out.needs),
     accounts: w('accounts.csv', out.accounts),
   }
-  if (!dryRun) markSent(db, out.saleshandy.map(r => ({ ...r, segment: 'construction' })), path.relative(OUT, files.saleshandy))
+  if (!dryRun) {
+    markSent(db, out.saleshandy.map(r => ({ ...r, segment: 'construction' })), path.relative(OUT, files.saleshandy))
+    markSent(db, out.list.map(r => ({ ...r, segment: 'construction' })), path.relative(OUT, files.list))
+  }
   return files
 }
