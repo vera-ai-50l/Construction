@@ -10,7 +10,7 @@ Strategy and email copy: [`docs/vera-outreach.md`](../docs/vera-outreach.md).
 |---|---|---|---|
 | New MahaRERA registration | MahaRERA project search | A project is about to start | "Saw *Sai Shraddha Heights* come up on MahaRERA in Thane." |
 | Completion date extended | MahaRERA (Extension Certificate on the project) | The project is late | "Saw the MahaRERA completion date for *Green Acres II* has moved to a later date." |
-| Nearly complete | MahaRERA (75–100% built, via the completion-percentage search) | The last stretch: pressure on progress and cost | "Saw *Raj Residency* is past 75% complete on MahaRERA." |
+| Nearly complete (off: MahaRERA's filter is broken) | MahaRERA (75–100% built, via the completion-percentage search) | The last stretch: pressure on progress and cost | "Saw *Raj Residency* is past 75% complete on MahaRERA." |
 | Hiring site, planning, billing, QS or stores staff | Naukri / LinkedIn Jobs via Apify | More sites than the team can report on | "Saw *Raj Constructions* is hiring for 3 site roles in Mumbai, including a site engineer." |
 
 Left out automatically: Lodha/Macrotech (warm intro only), large developers and EPC firms (too big for Vera today, see `config.mjs`), recruitment agencies posting on others' behalf, non-construction employers, posts older than 45 days.
@@ -21,12 +21,14 @@ Each firm gets a score: signal strength, halved every 45 days, plus points for b
 
 Needs Node 20+ and, for MahaRERA, Playwright (below).
 
-```bash
-export APIFY_TOKEN=...           # Apify Console > Settings > API & Integrations
-export MILLIONVERIFIER_KEY=...   # MillionVerifier > API
+Put the keys in `vera-leads/.env` (git-ignored, read automatically on every run, also on Windows):
+
+```
+APIFY_TOKEN=...           # Apify Console > Settings > API & Integrations
+MILLIONVERIFIER_KEY=...   # MillionVerifier > API
 ```
 
-Put these in a `.env` you `source`, never in git.
+Never commit it or paste the keys anywhere else.
 
 **MahaRERA needs a browser.** Its results page is built with JavaScript, so install Playwright once:
 
@@ -41,12 +43,12 @@ npx playwright install chromium
 node vera-leads.mjs maharera --pages 1 --debug
 ```
 
-It prints a line per district (Thane, Mumbai Suburban, Mumbai City, Raigarh, Palghar, Pune) with how many projects are listed and how many are 75–100% built. If a line looks wrong, send `data/debug/` to whoever maintains this.
+It prints a line per district (Thane, Mumbai Suburban, Mumbai City, Raigarh, Pune, Palghar) with how many projects are listed. If a line looks wrong, send `data/debug/` to whoever maintains this.
 
 How it reads MahaRERA (the list shows no dates except "Last Modified"):
-- **New projects:** results are listed oldest first, so it reads each district's last 5 pages. The first run is a baseline (only projects modified in the last 60 days count as new); after that, anything on those pages that wasn't there last week is new.
-- **Nearly complete:** the search's completion-percentage filter (75–100% built), newest 30 pages per district. The completion-date filter is ignored by the site when passed in the address, so it isn't used.
+- **New projects:** results are listed oldest first, so it reads each district's last 5 pages. The first run is a baseline (only projects modified in the last 60 days count as new); after that, anything on those pages that wasn't there last week is new. If the last page is empty (the site's page count is sometimes one too high, as with Raigarh), it reads the page before it instead.
 - **Extended:** any project card with an Extension Certificate. Dated by "Last Modified", so old extensions score close to zero.
+- **Nearly complete: off.** Checked on 13 Nov 2026 through MahaRERA's own search form: the completion-percentage filter (every band) and the completion-date filter both return "No Records Found" for all of Maharashtra, and both are ignored when passed in the address. The code is kept behind `nearlyDoneSearch` in `config.mjs` in case the site fixes it. The signal below is listed for that case only.
 
 ## Every Monday (about 45 minutes)
 
@@ -107,7 +109,7 @@ status
 
 All in `config.mjs`: regions, keywords, job boards and actors, the do-not-contact lists, signal weights, the export score (30), weekly cap of new people (150), and the 90-day re-contact rule.
 
-Apify cost: 8 keywords × 4 cities = 32 small runs a week, roughly 3,000 job posts, about $1–3 a week on most Naukri actors. Cut keywords or cities in `config.mjs` if needed.
+Apify cost: 8 keywords × 4 cities = 32 small runs a week, up to 3,200 job posts. The default Naukri actor (`valig/naukri-jobs-scraper`) charges about $0.0004 a job, so roughly $1.30 a week. Check the price before swapping actors: some charge 25× that. Cut keywords or cities in `config.mjs` if needed.
 
 ## Data and privacy
 

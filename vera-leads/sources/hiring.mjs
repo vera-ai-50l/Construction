@@ -10,16 +10,24 @@ import { addSignal, upsertAccount } from '../lib/store.mjs'
 import { companyKey, daysBetween, log, parseDate, pick, today } from '../lib/util.mjs'
 import { regionOf } from './maharera.mjs'
 
+// Some actors return the company and locations as objects ({ name, websiteUrl }, [{ label }]).
+const label = v => (v && typeof v === 'object' ? v.name || v.label || v.city || '' : v)
+
 export function normaliseJob(j, now = new Date()) {
   const loc = pick(j, 'location', 'jobLocation', 'locations', 'place', 'city')
+  const co = pick(j, 'companyName', 'company', 'company_name', 'employer', 'hiringOrganization', 'organization')
+  const coObj = co && typeof co === 'object' ? co : {}
   return {
     title: String(pick(j, 'title', 'jobTitle', 'designation', 'position', 'name')).trim(),
-    company: String(pick(j, 'companyName', 'company', 'company_name', 'employer', 'hiringOrganization', 'organization') || '').replace(/\s+/g, ' ').trim(),
-    location: Array.isArray(loc) ? loc.join(', ') : String(loc || ''),
+    company: String(label(co) || '').replace(/\s+/g, ' ').trim(),
+    location: Array.isArray(loc) ? loc.map(label).filter(Boolean).join(', ') : String(label(loc) || ''),
     url: pick(j, 'jobUrl', 'url', 'link', 'jdURL', 'applyUrl', 'jobLink'),
     posted: parseDate(pick(j, 'postedAt', 'postedDate', 'createdDate', 'datePosted', 'date', 'posted', 'footerPlaceholderLabel', 'publishedAt', 'createdAt'), now),
-    website: pick(j, 'companyWebsite', 'companyUrl', 'website'),
+    website: pick(j, 'companyWebsite', 'companyUrl', 'website') || coObj.websiteUrl || '',
     companyLinkedin: pick(j, 'companyLinkedinUrl', 'companyLinkedIn', 'companyLink'),
+    industry: String(pick(j, 'industry') || ''),
+    // Naukri marks posts by placement consultants; "hiringFor" means the post is on someone else's behalf.
+    consultant: j.consultant === true || !!coObj.hiringFor,
     id: String(pick(j, 'jobId', 'id', 'jobID') || ''),
   }
 }
@@ -32,8 +40,9 @@ export function isStaffing(company) {
 // Keep a post only if it is clearly a construction employer: either the company name says so,
 // or the role only exists on a construction site.
 const SITE_ONLY_ROLE = /site|quantity|\bqs\b|store|billing|civil|structural|shuttering|formwork|rcc/i
+const CONSTRUCTION_INDUSTRY = /construct|real estate|infrastructure|civil/i
 export function isConstruction(job) {
-  return config.hiring.industryMatch.test(job.company) || SITE_ONLY_ROLE.test(job.title)
+  return config.hiring.industryMatch.test(job.company) || SITE_ONLY_ROLE.test(job.title) || CONSTRUCTION_INDUSTRY.test(job.industry || '')
 }
 
 // Group jobs by company and add one signal per job. Returns counts.
@@ -47,7 +56,7 @@ export function ingestJobs(db, rawJobs, { now = today() } = {}) {
     if (!j.company) { c.dropped.noCompany++; continue }
     if (!cfg.roleMatch.test(j.title)) { c.dropped.role++; continue }
     if (j.posted && daysBetween(j.posted, now) > cfg.maxAgeDays) { c.dropped.old++; continue }
-    if (isStaffing(j.company)) { c.dropped.staffing++; continue }
+    if (j.consultant || isStaffing(j.company)) { c.dropped.staffing++; continue }
     if (!isConstruction(j)) { c.dropped.notConstruction++; continue }
     const dupe = (j.id || j.url || j.title + j.location) + j.company
     if (seenJob.has(dupe)) continue
@@ -76,12 +85,13 @@ export function ingestJobs(db, rawJobs, { now = today() } = {}) {
 }
 
 function naukriInput(keyword, location) {
-  // Covers the common Naukri actor input shapes; unknown keys are ignored by most actors.
-  return { keyword, location, searches: [{ keyword, location }], maxItems: config.hiring.maxPerSearch, maxItemsPerKeyword: config.hiring.maxPerSearch, freshness: 30 }
+  // Input of valig/naukri-jobs-scraper (the default actor): newest first, last 30 days, company posts only
+  // (jobPostType 1 leaves out placement consultants). If you swap actors, match its input here.
+  return { keywords: keyword, location, sort: 'f', jobAge: '30', jobPostType: ['1'], limit: config.hiring.maxPerSearch }
 }
 function linkedinInput(keyword, location) {
   const u = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(keyword)}&location=${encodeURIComponent(location + ', India')}&f_TPR=r2592000`
-  return { urls: [u], count: config.hiring.maxPerSearch, scrapeCompany: true }
+  return { urls: [u], limitPerSource: config.hiring.maxPerSearch, scrapeCompany: true } // curious_coder/linkedin-jobs-scraper input (Nov 2026)
 }
 
 export async function run(db, { board = 'naukri', files = [] } = {}) {

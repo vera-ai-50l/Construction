@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Vera lead finder: construction contractors and developers in MMR and Pune, found by public signals.
 // Run `node vera-leads.mjs help` for commands. See README.md for the weekly routine.
+import './lib/env.mjs' // first, so .env is loaded before config.mjs reads it
 import { config } from './config.mjs'
 import { buildExport, writeExport } from './lib/export.mjs'
 import { enrichWebsites, importContacts, verifyContacts } from './lib/enrich.mjs'

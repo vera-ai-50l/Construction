@@ -37,14 +37,17 @@ export const config = {
     // The public project search (checked against the live site, Nov 2026). Results are oldest first,
     // 10 per page, and show no dates except "Last Modified". So the tool reads:
     //   new projects:  the last pages of each district (newest registrations)
-    //   nearly done:   the search's completion-percentage filter (75-100% built), newest pages first.
-    //                  The completion-date filter is ignored when passed in the address (checked live), so it isn't used.
+    //   nearly done:   OFF. Checked live on 13 Nov 2026 through the site's own search form: the completion-
+    //                  percentage filter (every band) and the completion-date filter both return "No Records
+    //                  Found" for all of Maharashtra, and are ignored when passed in the address. Set
+    //                  nearlyDoneSearch to true to try the percentage filter again if MahaRERA fixes it.
     //   extended:      any card with an Extension Certificate link (not "N/A")
     searchUrl: process.env.MAHARERA_URL || 'https://maharera.maharashtra.gov.in/projects-search-result',
     // MahaRERA's district codes, from the search form.
     districts: { 517: 'Thane', 518: 'Mumbai Suburban', 519: 'Mumbai City', 520: 'Raigarh', 990: 'Palghar', 521: 'Pune' },
     newPages: 5, // last pages per district read each week for new registrations
-    duePages: 30, // pages per district read from the 75-100% search
+    nearlyDoneSearch: false, // see above: MahaRERA's completion filters are broken on the site itself
+    duePages: 30, // pages per district read from the 75-100% search, when it is on
     nearlyDone: '75-100',
     gapMs: 3000, // pause between pages; be gentle with a government site
     // Registration numbers look like P51800012345. Newer formats are allowed for.
@@ -54,8 +57,10 @@ export const config = {
   },
 
   hiring: {
-    // Apify actors. Swap for any Naukri or LinkedIn Jobs actor; the normaliser reads common field names.
-    naukriActor: process.env.NAUKRI_ACTOR || 'muhammadafzal/naukri-jobs-scraper',
+    // Apify actors. The normaliser reads common field names; the actor's input is built in sources/hiring.mjs.
+    // valig/naukri-jobs-scraper (checked Nov 2026): ~13,600 users, about $0.0004 a job, so 32 searches of
+    // up to 100 jobs cost about $1.30. The earlier default charged $0.01 a job (about $32 a week).
+    naukriActor: process.env.NAUKRI_ACTOR || 'valig/naukri-jobs-scraper',
     linkedinActor: process.env.LINKEDIN_JOBS_ACTOR || 'curious_coder/linkedin-jobs-scraper',
     maxPerSearch: 100,
     maxAgeDays: 45, // drop posts older than this

@@ -104,6 +104,20 @@ t('hiring: keeps site roles at construction firms, drops recruiters, IT, old pos
   assert.equal(normaliseJob(items[1], new Date(NOW)).posted, '2026-11-10')
 })
 
+t('hiring: reads actors that return company and locations as objects', () => {
+  const j = normaliseJob({
+    id: '1', title: 'Billing Engineer', url: 'https://www.naukri.com/job-listings-1', createdDate: Date.parse('2026-11-08'),
+    company: { name: 'Kadam Buildcon', websiteUrl: 'https://kadambuildcon.in' }, industry: 'Engineering & Construction', consultant: false,
+    locations: [{ label: 'Thane' }, { label: 'Mumbai (All Areas)' }],
+  }, new Date(NOW))
+  assert.equal(j.company, 'Kadam Buildcon')
+  assert.equal(j.location, 'Thane, Mumbai (All Areas)')
+  assert.equal(j.website, 'https://kadambuildcon.in')
+  assert.equal(j.posted, '2026-11-08')
+  const c = ingestJobs(db, [{ title: 'Site Engineer', company: { name: 'Apex Builders' }, consultant: true, locations: [{ label: 'Pune' }] }], { now: NOW })
+  assert.equal(c.dropped.staffing, 1, 'consultant posts are dropped')
+})
+
 t('contacts import matches firms by name and domain', () => {
   const c = importContacts(db, path.join(FX, 'leadfinder.csv'))
   assert.equal(c.added, 6)
@@ -194,7 +208,7 @@ t('MahaRERA live layout: place, last modified, extension certificate, totals', (
     { reg: 'P51800099902', project: 'HARBOUR VIEW', promoter: 'KEYSTONE REALTORS', place: 'Kurla', district: 'Mumbai Suburban', modified: '2026-08-02', ext: true, id: 902 },
     { reg: 'P52300099903', project: 'GREEN NOOK', promoter: 'SAHYADRI DEVELOPERS ASHTI', place: 'Ashti', district: 'Beed', modified: '2019-01-01', id: 903 },
   ], { total: 50013, pages: 5002 })
-  assert.deepEqual(pageInfo(html), { total: 50013, pages: 5002 })
+  assert.deepEqual(pageInfo(html), { total: 50013, pages: 5002, none: false })
   const p = parseSearchPage(html)
   assert.equal(p.length, 3)
   assert.deepEqual(p.map(x => [x.project, x.promoter, x.taluka, x.district, x.modified, x.extCert]), [
@@ -221,7 +235,8 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
   }
   const due = [P('P51700000401', 'FINAL STRETCH', 'DEADLINE CONSTRUCTIONS', '2026-06-01')]
   const urls = []
-  let dueWorks = true
+  let dueWorks = true, thanePages = 3
+  config.maharera.nearlyDoneSearch = true
   const realFetch = globalThis.fetch
   globalThis.fetch = async u => {
     const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, pct = q.get('project_completion_percentage[75-100]')
@@ -229,7 +244,8 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     let html
     if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
     else if (d === '517' && dueWorks && pct === '75-100') html = live.page(due, { total: 1, pages: 1 })
-    else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: 3, current: pg })
+    else if (d === '517' && thane[pg] === 'empty') html = '<html><body><p>Registered Projects MAHARASHTRA Thane</p><p>Search Record</p><p>No Records Found</p></body></html>'
+    else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: thanePages, current: pg })
     else html = live.page([], { total: 0, pages: 1 })
     return new Response(html, { status: 200 })
   }
@@ -255,6 +271,20 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     const c3 = await runMaharera(db, { browser: false, now: '2026-11-27' })
     assert.equal(c3.deadline, 0)
     assert.equal(db.signals.filter(s => s.type === 'maharera_deadline').length, before)
+
+    // Default (filters broken on the site): no percentage search at all.
+    // And MahaRERA's page count one too high: the empty "last" page is skipped and the page before it read.
+    config.maharera.nearlyDoneSearch = false
+    config.maharera.newPages = 1
+    urls.length = 0
+    thanePages = 4
+    thane[4] = 'empty'
+    thane[3].push(P('P51700000304', 'LATE ENTRY', 'SECONDLOOK BUILDERS', '2026-11-25'))
+    const c4 = await runMaharera(db, { browser: false, now: '2026-12-04' })
+    assert.ok(!urls.some(u => /completion_?percentage/i.test(u)), 'no percentage search when it is off')
+    assert.ok(urls.some(u => /project_district=517/.test(u) && /page=3\b/.test(u)), 'read the page before the empty last page')
+    assert.equal(c4.new, 1)
+    assert.ok(db.signals.some(s => s.type === 'maharera_new' && s.project === 'LATE ENTRY'))
   } finally {
     globalThis.fetch = realFetch
     Object.assign(config.maharera, old)
