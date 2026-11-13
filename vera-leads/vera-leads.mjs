@@ -14,10 +14,10 @@ import fs from 'node:fs'
 const HELP = `
 Vera lead finder (construction, MMR and Pune)
 
-  node vera-leads.mjs maharera [--pages 40] [--browser] [--file page.html ...] [--debug]
-      Read the MahaRERA project search. Signals: new registration, completion extended, completion near or past.
-      --browser renders pages in Chromium if the plain fetch gets no results.
-      --file parses pages you saved from your own browser instead of fetching.
+  node vera-leads.mjs maharera [--pages N] [--file page.html ...] [--debug]
+      Read MahaRERA for Thane, Mumbai, Raigad, Palghar and Pune: the newest pages (new projects), the
+      completion-date search (due in 6 months) and extension certificates. Uses Playwright when installed.
+      --pages caps pages per district for a quick check. --file parses pages you saved yourself.
 
   node vera-leads.mjs hiring [--board naukri|linkedin] [--file items.json ...]
       Job posts for site, planning, billing, QS and stores roles via Apify (APIFY_TOKEN),
@@ -43,7 +43,7 @@ Vera lead finder (construction, MMR and Pune)
   node vera-leads.mjs suppress <email | @domain | file.csv>
       Add opt-outs and bounces to the do-not-contact list. Share this file with the Kyre side too.
 
-  node vera-leads.mjs weekly [--browser]
+  node vera-leads.mjs weekly
       maharera + hiring + enrich + verify + export, in that order. Steps without a key are skipped.
 
   node vera-leads.mjs status
@@ -75,7 +75,7 @@ async function main() {
   try {
     switch (cmd) {
       case 'maharera':
-        console.log('MahaRERA:', fmt(await maharera.run(db, { pages: o.pages, browser: !!o.browser, files: o.file, debug: !!o.debug })))
+        console.log('MahaRERA:', fmt(await maharera.run(db, { pages: o.pages, browser: o.browser ? true : undefined, files: o.file, debug: !!o.debug })))
         break
       case 'hiring':
         console.log('Hiring:', fmt(await hiring.run(db, { board: o.board || 'naukri', files: o.file })))
@@ -119,7 +119,7 @@ async function main() {
       }
       case 'weekly': {
         const step = async (name, fn) => { try { console.log(name + ':', fmt(await fn())) } catch (e) { console.log(`${name}: skipped (${e.message})`) } }
-        await step('MahaRERA', () => maharera.run(db, { browser: !!o.browser }))
+        await step('MahaRERA', () => maharera.run(db, { browser: o.browser ? true : undefined }))
         saveStore(db)
         if (process.env.APIFY_TOKEN) await step('Hiring', () => hiring.run(db, {}))
         else console.log('Hiring: skipped (APIFY_TOKEN not set)')

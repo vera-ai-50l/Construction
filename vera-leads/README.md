@@ -9,7 +9,7 @@ Strategy and email copy: [`docs/vera-outreach.md`](../docs/vera-outreach.md).
 | Signal | Where | What it means | Opening line it writes |
 |---|---|---|---|
 | New MahaRERA registration | MahaRERA project search | A project is about to start | "Saw *Sai Shraddha Heights* come up on MahaRERA in Thane." |
-| Completion date extended | MahaRERA (revised completion date) | The project is late | "Saw the MahaRERA completion date for *Green Acres II* has moved to March 2027." |
+| Completion date extended | MahaRERA (Extension Certificate on the project) | The project is late | "Saw the MahaRERA completion date for *Green Acres II* has moved to a later date." |
 | Completion near or past | MahaRERA (completion within 6 months) | Pressure on progress and cost | "*Raj Residency* is due for completion on MahaRERA by February 2027." |
 | Hiring site, planning, billing, QS or stores staff | Naukri / LinkedIn Jobs via Apify | More sites than the team can report on | "Saw *Raj Constructions* is hiring for 3 site roles in Mumbai, including a site engineer." |
 
@@ -19,7 +19,7 @@ Each firm gets a score: signal strength, halved every 45 days, plus points for b
 
 ## Setup (once)
 
-Needs Node 20+. No `npm install` needed unless you use `--browser` (then `npm i playwright`).
+Needs Node 20+ and, for MahaRERA, Playwright (below).
 
 ```bash
 export APIFY_TOKEN=...           # Apify Console > Settings > API & Integrations
@@ -28,18 +28,25 @@ export MILLIONVERIFIER_KEY=...   # MillionVerifier > API
 
 Put these in a `.env` you `source`, never in git.
 
-**First run: check MahaRERA once.** This was built without access to the live site, so check the parser on page 1:
+**MahaRERA needs a browser.** Its results page is built with JavaScript, so install Playwright once:
+
+```bash
+npm i playwright
+npx playwright install chromium
+```
+
+**First run: a quick check.** One page per district:
 
 ```bash
 node vera-leads.mjs maharera --pages 1 --debug
 ```
 
-- Projects found: good, run it in full.
-- `0 projects`: try `--browser` (renders the page in Chromium).
-- Still 0: open MahaRERA in your browser, search, save each results page (Ctrl+S), then `node vera-leads.mjs maharera --file page1.html page2.html`. Send `data/debug/maharera-page1.html` to whoever maintains this and the parser can be adjusted in minutes.
-- If MahaRERA's search address has changed, set `MAHARERA_URL` (with `{page}` where the page number goes).
+It prints a line per district (Thane, Mumbai Suburban, Mumbai City, Raigarh, Palghar, Pune) with how many projects are listed and how many are due in the next 6 months. If a line looks wrong, send `data/debug/` to whoever maintains this.
 
-The first MahaRERA run is a baseline: projects with a registration date in the last 60 days count as new; the rest are remembered so next week's new ones stand out.
+How it reads MahaRERA (the list shows no dates except "Last Modified"):
+- **New projects:** results are listed oldest first, so it reads each district's last 5 pages. The first run is a baseline (only projects modified in the last 60 days count as new); after that, anything on those pages that wasn't there last week is new.
+- **Due soon:** the search's own completion-date filter, today to 6 months out, up to 30 pages per district.
+- **Extended:** any project card with an Extension Certificate. Dated by "Last Modified", so old extensions score close to zero.
 
 ## Every Monday (about 45 minutes)
 
@@ -82,7 +89,7 @@ Exported people are logged, so nobody is emailed again within 90 days, and a fir
 ## Commands
 
 ```
-maharera [--pages N] [--browser] [--file a.html ...] [--debug]
+maharera [--pages N] [--file a.html ...] [--debug]
 hiring   [--board naukri|linkedin] [--file dataset.json ...]
 contacts <file.csv> [--list]  import people; --list exports them even without a signal
 enrich   [--limit 50]     public emails and phones from company websites
@@ -90,7 +97,7 @@ verify   [--limit 500]    MillionVerifier; refuses to run if DNS is broken
 top      [--n 25]         best firms and why
 export   [--dry-run] [--min 30] [--limit 150]
 suppress <email | @domain | file.csv>
-weekly   [--browser] [--dry-run]
+weekly   [--dry-run]
 status
 ```
 
@@ -106,7 +113,7 @@ Apify cost: 8 keywords × 4 cities = 32 small runs a week, roughly 3,000 job pos
 
 - Everything lives in `data/` (firms, contacts, signals, what was exported, opt-outs) and `out/`. Both are git-ignored: they hold personal data and must never be committed.
 - Every signal keeps its source URL and the date it was seen, and every contact keeps where it came from. This is the record India's DPDP Rules will expect from **13 May 2027**.
-- Be gentle with MahaRERA: one page every 3 seconds, stops after 3 pages with nothing new.
+- Be gentle with MahaRERA: one page every 3 seconds, about 200 pages a week across the six districts, and it stops reading a district's newest pages once it reaches last week's projects.
 
 ## Tests
 

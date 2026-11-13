@@ -12,7 +12,9 @@ process.env.VERA_QUIET = '1'
 
 const FX = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures')
 const NOW = '2026-11-13'
-const { parseSearchPage, ingestProjects, regionOf } = await import('../sources/maharera.mjs')
+const { parseSearchPage, ingestProjects, regionOf, pageInfo, run: runMaharera } = await import('../sources/maharera.mjs')
+const live = await import('./fixtures/maharera-live.mjs')
+const { config } = await import('../config.mjs')
 const { ingestJobs, normaliseJob } = await import('../sources/hiring.mjs')
 const { importContacts, emailsOnPage, isBuyer } = await import('../lib/enrich.mjs')
 const { buildExport, writeExport } = await import('../lib/export.mjs')
@@ -23,6 +25,7 @@ const { companyKey, prettyCompany, parseDate, parseCSV, toCSV } = await import('
 
 let n = 0, failed = 0
 const t = (name, fn) => { n++; try { fn(); console.log('ok  ', name) } catch (e) { failed++; console.log('FAIL', name, '\n     ', e.message) } }
+const ta = async (name, fn) => { n++; try { await fn(); console.log('ok  ', name) } catch (e) { failed++; console.log('FAIL', name, '\n     ', e.message) } }
 
 t('company keys merge legal-suffix variants', () => {
   assert.equal(companyKey('SHREE SAI DEVELOPERS AND BUILDERS PRIVATE LIMITED'), companyKey('Shree Sai Developers and Builders Pvt Ltd'))
@@ -183,6 +186,72 @@ t('Lead Finder lists: exported without a signal, after signal firms, same exclus
   const files = writeExport(db2, out, { now: NOW })
   assert.equal(parseCSV(fs.readFileSync(files.list, 'utf8')).length, 2)
   assert.equal(buildExport(db2, { now: '2026-11-20' }).list.length, 0, '90-day rule applies to lists too')
+})
+
+t('MahaRERA live layout: place, last modified, extension certificate, totals', () => {
+  const html = live.page([
+    { reg: 'P51700099901', project: 'SKYLINE NEST', promoter: 'ORBIT HOMES LLP', place: 'Kalyan', district: 'Thane', modified: '2026-10-20', id: 901 },
+    { reg: 'P51800099902', project: 'HARBOUR VIEW', promoter: 'KEYSTONE REALTORS', place: 'Kurla', district: 'Mumbai Suburban', modified: '2026-08-02', ext: true, id: 902 },
+    { reg: 'P52300099903', project: 'GREEN NOOK', promoter: 'SAHYADRI DEVELOPERS ASHTI', place: 'Ashti', district: 'Beed', modified: '2019-01-01', id: 903 },
+  ], { total: 50013, pages: 5002 })
+  assert.deepEqual(pageInfo(html), { total: 50013, pages: 5002 })
+  const p = parseSearchPage(html)
+  assert.equal(p.length, 3)
+  assert.deepEqual(p.map(x => [x.project, x.promoter, x.taluka, x.district, x.modified, x.extCert]), [
+    ['SKYLINE NEST', 'ORBIT HOMES LLP', 'Kalyan', 'Thane', '2026-10-20', false],
+    ['HARBOUR VIEW', 'KEYSTONE REALTORS', 'Kurla', 'Mumbai Suburban', '2026-08-02', true],
+    ['GREEN NOOK', 'SAHYADRI DEVELOPERS ASHTI', 'Ashti', 'Beed', '2019-01-01', false], // footer text must not leak in
+  ])
+  assert.equal(p[0].url, 'https://maharerait.maharashtra.gov.in/public/project/view/901')
+})
+
+await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseline then new', async () => {
+  const { openStore: open } = await import('../lib/store.mjs')
+  const db = open()
+  for (const k of Object.keys(db.accounts)) delete db.accounts[k]
+  db.signals.length = 0
+  const old = { ...config.maharera }
+  config.maharera.gapMs = 0
+  config.maharera.districts = { 517: 'Thane', 521: 'Pune' }
+  const P = (reg, project, promoter, modified, extra = {}) => ({ reg, project, promoter, place: 'Thane', district: 'Thane', modified, id: +reg.slice(-4), ...extra })
+  const thane = { // page 3 is the newest
+    1: [P('P51700000101', 'OLD COURT', 'VINTAGE BUILDERS', '2018-01-01')],
+    2: [P('P51700000201', 'MID TOWERS', 'MIDWAY INFRA', '2026-03-01', { ext: true })],
+    3: [P('P51700000301', 'FRESH HEIGHTS', 'NEWLEAF DEVELOPERS', '2026-10-25'), P('P51700000302', 'QUIET PARK', 'STILL WATERS REALTY', '2025-02-01')],
+  }
+  const due = [P('P51700000401', 'FINAL STRETCH', 'DEADLINE CONSTRUCTIONS', '2026-06-01')]
+  const urls = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = async u => {
+    const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, from = q.get('completionDate_from')
+    urls.push(String(u))
+    let html
+    if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
+    else if (d === '517' && from && /^\d{2}-\d{2}-\d{4}$/.test(from)) html = live.page(due, { total: 1, pages: 1 })
+    else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: 3, current: pg })
+    else html = live.page([], { total: 0, pages: 1 })
+    return new Response(html, { status: 200 })
+  }
+  try {
+    const c1 = await runMaharera(db, { browser: false, now: NOW })
+    assert.equal(c1.new, 1, 'first run: only the newest-page project modified in the last 60 days')
+    assert.equal(c1.extension, 1)
+    assert.equal(c1.deadline, 1)
+    assert.ok(urls.some(u => /completionDate_from=13-11-2026&completionDate_to=12-05-2027/.test(u)), 'tried the date formats until one narrowed the results')
+    const dl = db.signals.find(s => s.type === 'maharera_deadline')
+    assert.equal(dl.completion, '2027-05-12')
+    const top = scoreAll(db, NOW).find(a => a.key === companyKey('DEADLINE CONSTRUCTIONS'))
+    assert.match(mergeFields(top, top.top).signalLine, /Final Stretch is due for completion on MahaRERA by May 2027/)
+    assert.ok(!db.accounts[companyKey('NAGPUR HOMES')], 'statewide page is only a check, not a source')
+
+    thane[3].push(P('P51700000303', 'BRAND NEW', 'FIRSTBRICK BUILDERS', '2026-11-12'))
+    const c2 = await runMaharera(db, { browser: false, now: '2026-11-20' })
+    assert.equal(c2.new, 1, 'second run: only the project that was not there last week')
+    assert.ok(db.signals.some(s => s.type === 'maharera_new' && s.project === 'BRAND NEW'))
+  } finally {
+    globalThis.fetch = realFetch
+    Object.assign(config.maharera, old)
+  }
 })
 
 console.log(`\n${n - failed}/${n} passed`)

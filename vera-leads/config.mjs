@@ -11,7 +11,7 @@ export const config = {
 
   // Regions we work. Rows outside these districts are kept but score lower.
   regions: {
-    mmr: ['mumbai city', 'mumbai suburban', 'mumbai', 'thane', 'palghar', 'raigad', 'navi mumbai', 'kalyan', 'bhiwandi', 'panvel', 'vasai', 'virar', 'mira bhayandar', 'mira road', 'dombivli', 'ulhasnagar', 'ambernath', 'badlapur'],
+    mmr: ['mumbai city', 'mumbai suburban', 'mumbai', 'thane', 'palghar', 'raigad', 'raigarh', 'navi mumbai', 'kalyan', 'bhiwandi', 'panvel', 'vasai', 'virar', 'mira bhayandar', 'mira road', 'dombivli', 'ulhasnagar', 'ambernath', 'badlapur'],
     pune: ['pune', 'pimpri', 'chinchwad', 'hinjewadi', 'wakad', 'kharadi', 'hadapsar', 'baner', 'wagholi', 'talegaon', 'chakan'],
   },
 
@@ -34,10 +34,19 @@ export const config = {
 
   // ---------- Signals ----------
   maharera: {
-    // The public project search. Check the live page once and adjust the query string if MahaRERA changes it.
-    // {page} is replaced with 1, 2, 3...
-    searchUrl: process.env.MAHARERA_URL || 'https://maharera.maharashtra.gov.in/projects-search-result?project_name=&project_location=&project_completion_date=&project_state=27&project_district=0&carpetAreas=&completionDate_from=&completionDate_to=&page={page}',
-    maxPages: 40,
+    // The public project search (checked against the live site, Nov 2026). Results are oldest first,
+    // 10 per page, and show no dates except "Last Modified". So the tool reads:
+    //   new projects:  the last pages of each district (newest registrations)
+    //   due soon:      the search's own completion-date filter, today to today + dueWindowDays
+    //   extended:      any card with an Extension Certificate link (not "N/A")
+    searchUrl: process.env.MAHARERA_URL || 'https://maharera.maharashtra.gov.in/projects-search-result',
+    // MahaRERA's district codes, from the search form.
+    districts: { 517: 'Thane', 518: 'Mumbai Suburban', 519: 'Mumbai City', 520: 'Raigarh', 990: 'Palghar', 521: 'Pune' },
+    newPages: 5, // last pages per district read each week for new registrations
+    duePages: 30, // pages per district read from the completion-date search
+    dueWindowDays: 180,
+    // The completion-date filter's format isn't documented; these are tried in order and the one that narrows the results is used.
+    dueDateFormats: ['DD-MM-YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'],
     gapMs: 3000, // pause between pages; be gentle with a government site
     // Registration numbers look like P51800012345. Newer formats are allowed for.
     regNo: /\b(P[A-Z]?\d{10,14}|PR\d{10,14})\b/g,
