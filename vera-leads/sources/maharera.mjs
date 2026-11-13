@@ -182,7 +182,8 @@ export function ingestProjects(db, projects, { firstRun = false, now = today() }
     if (regAge <= 60 || (!p.registered && !firstRun && !db._knownRegs?.has(p.regNo))) {
       if (addSignal(db, a, { ...base, type: 'maharera_new', key: p.regNo, date: p.registered || now, title: `New MahaRERA project: ${p.project || p.regNo}`, detail: `Registered ${p.registered || 'recently'} (${p.regNo})` })) c.new++
     }
-    if ((p.revised && p.revised !== p.completion) || p.extensionMentioned) {
+    // Only a real revised date counts. The word "extension" appears on every live MahaRERA card (a link), so text alone is not a signal.
+    if (p.revised && p.revised !== p.completion) {
       const d = p.revised || p.modified || now
       if (addSignal(db, a, { ...base, type: 'maharera_extension', key: p.regNo + ':' + (p.revised || 'ext'), date: p.modified || now, title: `Completion extended: ${p.project || p.regNo}`, detail: `Completion moved ${p.completion || '?'} to ${p.revised || '?'}`, completion: d })) c.extension++
     }
