@@ -224,10 +224,10 @@ export function ingestProjects(db, projects, { firstRun = false, now = today() }
 }
 
 // ---------- fetching ----------
-export function searchUrl({ district = 0, page = 1, from = '', to = '' } = {}) {
+export function searchUrl({ district = 0, page = 1, from = '', to = '', completion = '' } = {}) {
   // Same parameters, in the same order, as the address that worked on the live site.
   const q = new URLSearchParams({
-    project_name: '', project_location: '', project_completion_date: '', project_state: '27', project_district: String(district),
+    project_name: '', project_location: '', project_completion_date: completion, project_state: '27', project_district: String(district),
     carpetAreas: '', completionDate_from: from, completionDate_to: to, page: String(page),
   })
   return `${config.maharera.searchUrl}?${q}`
@@ -276,8 +276,9 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     n++
     let html = await getPage(url, { browser })
     let got = parseSearchPage(html)
-    if (!got.length && pageInfo(html).total == null) { // nothing and no result count: retry once, slowly
-      await sleep(10000)
+    const incomplete = h => { const i = pageInfo(h); return i.total == null || (i.total > 0 && i.pages == null) }
+    for (let tries = 0; tries < 2 && incomplete(html) && (browser || got.length); tries++) { // half-loaded page: wait and read again
+      await sleep(8000)
       html = await getPage(url, { browser })
       got = parseSearchPage(html)
     }
@@ -315,10 +316,13 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
     }
     const keep = (code, list) => (code ? list : list.filter(x => names.has(String(x.district).toLowerCase())))
 
-    // 1. Newest pages.
+    // 1. Newest pages. Results are oldest first, so the newest are on the last pages.
+    const totals = {}
     for (const [code, name] of scopes) {
       const first = code === scopes[0][0] && code ? firstD : code ? await read(searchUrl({ district: code })) : state
-      const last = first.info.pages || 1
+      totals[code] = first.info.total
+      if (!first.info.pages) { log(`${name}: could not read the page count; skipped this week's newest pages.`); continue }
+      const last = first.info.pages
       const span = code ? newPages : newPages * Object.keys(cfg.districts).length
       let readCount = 0
       for (let p = last; p >= Math.max(1, last - span + 1); p--) {
@@ -329,30 +333,35 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
         all.push(...got)
         if (!firstRun && !r.got.some(x => !db._knownRegs.has(x.regNo))) break // reached last week's projects
       }
-      log(`${name}: ${first.info.total ?? '?'} projects listed; read the newest ${readCount} page(s)`)
+      log(`${name}: ${first.info.total} projects listed; read the newest ${readCount} page(s)`)
     }
 
-    // 2. Due soon, via the completion-date filter. Find the date format the site accepts.
+    // 2. Due soon, via the search's completion-date filter. The filter is only trusted when it returns
+    //    fewer projects than the district has in total; otherwise it was ignored and nothing is flagged.
     const from = now, to = addDays(now, cfg.dueWindowDays)
-    let format = null
+    const variants = cfg.dueDateFormats.flatMap(f => [
+      { f, q: { from: fmtDate(from, f), to: fmtDate(to, f) } },
+      { f, q: { completion: fmtDate(to, f) } },
+    ])
+    let chosen = null
     for (const [code, name] of scopes) {
-      const total = code === scopes[0][0] && code ? firstD.info.total : null
+      const total = totals[code]
+      if (!total) continue
       let first = null
-      for (const f of format ? [format] : cfg.dueDateFormats) {
-        const r = await read(searchUrl({ district: code, from: fmtDate(from, f), to: fmtDate(to, f) }))
-        const narrowed = r.info.total != null && (total == null || r.info.total < total) && r.info.total < (state.info.total || Infinity)
-        if (narrowed && (format || r.info.total > 0)) { format = f; first = r; break }
+      for (const v of chosen ? [chosen] : variants) {
+        const r = await read(searchUrl({ district: code, ...v.q }))
+        if (r.info.total != null && r.info.total > 0 && r.info.total < total) { chosen = v; first = r; break }
       }
-      if (!format) { log('The completion-date filter did not narrow the results in any date format; skipping projects due soon.'); break }
-      if (!first) continue
+      if (!chosen) { log('The completion-date filter did not narrow the results; skipping projects due soon this week.'); break }
+      if (!first) { log(`${name}: completion-date filter had no effect; skipped.`); continue }
       const last = Math.min(first.info.pages || 1, duePages)
       for (let p = 1; p <= last; p++) {
-        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p, from: fmtDate(from, format), to: fmtDate(to, format) }))
+        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p, ...chosen.q }))
         const got = keep(code, r.got)
         got.forEach(x => { x.dueBy = to })
         all.push(...got)
       }
-      log(`${name}: ${first.info.total} projects due by ${to}; read ${last} page(s)`)
+      log(`${name}: ${first.info.total} of ${total} projects due by ${to}; read ${last} page(s)`)
     }
   } finally {
     if (chrome) { await chrome.close(); chrome = null }

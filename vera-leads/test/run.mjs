@@ -221,13 +221,14 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
   }
   const due = [P('P51700000401', 'FINAL STRETCH', 'DEADLINE CONSTRUCTIONS', '2026-06-01')]
   const urls = []
+  let dueWorks = true
   const realFetch = globalThis.fetch
   globalThis.fetch = async u => {
     const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, from = q.get('completionDate_from')
     urls.push(String(u))
     let html
     if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
-    else if (d === '517' && from && /^\d{2}-\d{2}-\d{4}$/.test(from)) html = live.page(due, { total: 1, pages: 1 })
+    else if (d === '517' && dueWorks && from && /^\d{4}-\d{2}-\d{2}$/.test(from)) html = live.page(due, { total: 1, pages: 1 })
     else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: 3, current: pg })
     else html = live.page([], { total: 0, pages: 1 })
     return new Response(html, { status: 200 })
@@ -237,7 +238,7 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     assert.equal(c1.new, 1, 'first run: only the newest-page project modified in the last 60 days')
     assert.equal(c1.extension, 1)
     assert.equal(c1.deadline, 1)
-    assert.ok(urls.some(u => /completionDate_from=13-11-2026&completionDate_to=12-05-2027/.test(u)), 'tried the date formats until one narrowed the results')
+    assert.ok(urls.some(u => /completionDate_from=2026-11-13&completionDate_to=2027-05-12/.test(u)), 'tried the date formats until one narrowed the results')
     const dl = db.signals.find(s => s.type === 'maharera_deadline')
     assert.equal(dl.completion, '2027-05-12')
     const top = scoreAll(db, NOW).find(a => a.key === companyKey('DEADLINE CONSTRUCTIONS'))
@@ -248,6 +249,13 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     const c2 = await runMaharera(db, { browser: false, now: '2026-11-20' })
     assert.equal(c2.new, 1, 'second run: only the project that was not there last week')
     assert.ok(db.signals.some(s => s.type === 'maharera_new' && s.project === 'BRAND NEW'))
+
+    // If the site ignores the date filter (returns the whole district), nothing is flagged as due.
+    dueWorks = false
+    const before = db.signals.filter(s => s.type === 'maharera_deadline').length
+    const c3 = await runMaharera(db, { browser: false, now: '2026-11-27' })
+    assert.equal(c3.deadline, 0)
+    assert.equal(db.signals.filter(s => s.type === 'maharera_deadline').length, before)
   } finally {
     globalThis.fetch = realFetch
     Object.assign(config.maharera, old)
