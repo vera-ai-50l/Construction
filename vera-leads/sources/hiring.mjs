@@ -37,12 +37,49 @@ export function isStaffing(company) {
   return config.doNotContact.staffing.some(w => k.includes(w))
 }
 
-// Keep a post only if it is clearly a construction employer: either the company name says so,
-// or the role only exists on a construction site.
-const SITE_ONLY_ROLE = /site|quantity|\bqs\b|store|billing|civil|structural|shuttering|formwork|rcc/i
-const CONSTRUCTION_INDUSTRY = /construct|real estate|infrastructure|civil/i
+// Naukri's industry for the employer decides when it is given (it nearly always is). Equipment and material
+// makers, and co-working operators, sit under construction-sounding industries but are not our buyers.
+const CONSTRUCTION_INDUSTRY = /construct|real estate|infrastructure|civil/i // not "Architecture / Interior Design": design studios don't run sites
+const NOT_A_BUILDER = /equipment|material|machinery|co-?working/i
+export function industryVerdict(industry) {
+  if (!industry) return null
+  return CONSTRUCTION_INDUSTRY.test(industry) && !NOT_A_BUILDER.test(industry)
+}
+
+// No industry given: the company name says construction, or the role only exists on a building site.
+// ("Store keeper" is not one: retailers, caterers and clinics hire them too.)
+const SITE_ONLY_ROLE = /site|quantity|\bqs\b|civil|structural|shuttering|formwork|rcc/i
+// Naukri tags some developers' posts "Real Estate (Co-working)" (seen live: Ajmera Realty, Puranik Builders),
+// so a builder's own name overrides those sub-labels.
+const BUILDER_NAME = /construct|builder|developer|realty|buildcon|infra\b/i
 export function isConstruction(job) {
-  return config.hiring.industryMatch.test(job.company) || SITE_ONLY_ROLE.test(job.title) || CONSTRUCTION_INDUSTRY.test(job.industry || '')
+  const v = industryVerdict(job.industry)
+  if (v === false && CONSTRUCTION_INDUSTRY.test(job.industry) && BUILDER_NAME.test(job.company)) return true
+  if (v != null) return v
+  return config.hiring.industryMatch.test(job.company) || SITE_ONLY_ROLE.test(job.title)
+}
+
+// At an employer Naukri lists as construction, broader site titles count too
+// ("Junior Engineer - Finishing", "QC Engineer", "Project Head", "Purchase Manager").
+const SITE_ROLE_AT_BUILDER = /\b(site|project|quality|qc|qa|planning|purchase|procurement|execution|finishing|mep|electrical|plumbing|hvac|bim|safety)\b.*\b(engineer|supervisor|manager|coordinator|head|incharge|in-charge|lead|executive|officer)\b|\b(junior|senior|sr|jr)\.?\s+(engineer|supervisor)\b|\b(foreman|supervisor|project head|project coordinator)\b/i
+// Office roles that mention projects or engineering ("Sales Manager - Industrial Projects") are not site roles.
+const OFFICE_ROLE = /\b(sales|marketing|business development|bde|human resources?|hr|recruit\w*|talent|accounts?|accountant|finance|admin\w*|telecaller|customer)\b/i
+export function isSiteRole(job) {
+  if (OFFICE_ROLE.test(job.title)) return false
+  return config.hiring.roleMatch.test(job.title) || (industryVerdict(job.industry) === true && SITE_ROLE_AT_BUILDER.test(job.title))
+}
+
+// Recruiters that don't say so: a company posting 3+ jobs, fewer than half of them under a construction
+// industry (seen live: one "solutions" firm posting site engineers next to software and banking-process jobs).
+export function undeclaredRecruiters(jobs) {
+  const per = new Map()
+  for (const j of jobs) {
+    if (!j.company || !j.industry) continue
+    const k = companyKey(j.company), p = per.get(k) || per.set(k, { all: 0, builder: 0 }).get(k)
+    p.all++
+    if (CONSTRUCTION_INDUSTRY.test(j.industry)) p.builder++ // any construction-sounding label counts here
+  }
+  return new Set([...per].filter(([, p]) => p.all >= 3 && p.builder / p.all < 0.5).map(([k]) => k))
 }
 
 // Group jobs by company and add one signal per job. Returns counts.
@@ -51,12 +88,13 @@ export function ingestJobs(db, rawJobs, { now = today() } = {}) {
   const c = { jobs: rawJobs.length, kept: 0, companies: 0, dropped: { role: 0, old: 0, staffing: 0, notConstruction: 0, noCompany: 0 } }
   const seenJob = new Set()
   const byCo = new Map()
-  for (const raw of rawJobs) {
-    const j = normaliseJob(raw, new Date(now))
+  const jobs = rawJobs.map(raw => normaliseJob(raw, new Date(now)))
+  const recruiters = undeclaredRecruiters(jobs)
+  for (const j of jobs) {
     if (!j.company) { c.dropped.noCompany++; continue }
-    if (!cfg.roleMatch.test(j.title)) { c.dropped.role++; continue }
+    if (!isSiteRole(j)) { c.dropped.role++; continue }
     if (j.posted && daysBetween(j.posted, now) > cfg.maxAgeDays) { c.dropped.old++; continue }
-    if (j.consultant || isStaffing(j.company)) { c.dropped.staffing++; continue }
+    if (j.consultant || isStaffing(j.company) || recruiters.has(companyKey(j.company))) { c.dropped.staffing++; continue }
     if (!isConstruction(j)) { c.dropped.notConstruction++; continue }
     const dupe = (j.id || j.url || j.title + j.location) + j.company
     if (seenJob.has(dupe)) continue

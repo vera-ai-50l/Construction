@@ -18,7 +18,7 @@ const { config } = await import('../config.mjs')
 const { ingestJobs, normaliseJob } = await import('../sources/hiring.mjs')
 const { importContacts, emailsOnPage, isBuyer } = await import('../lib/enrich.mjs')
 const { buildExport, writeExport } = await import('../lib/export.mjs')
-const { scoreAll } = await import('../lib/score.mjs')
+const { scoreAll, blockedReason } = await import('../lib/score.mjs')
 const { mergeFields, roleShort } = await import('../lib/copy.mjs')
 const { openStore, saveStore, addSuppression } = await import('../lib/store.mjs')
 const { companyKey, prettyCompany, parseDate, parseCSV, toCSV } = await import('../lib/util.mjs')
@@ -116,6 +116,58 @@ t('hiring: reads actors that return company and locations as objects', () => {
   assert.equal(j.posted, '2026-11-08')
   const c = ingestJobs(db, [{ title: 'Site Engineer', company: { name: 'Apex Builders' }, consultant: true, locations: [{ label: 'Pune' }] }], { now: NOW })
   assert.equal(c.dropped.staffing, 1, 'consultant posts are dropped')
+})
+
+t('hiring: Naukri industry decides; store roles and site-sounding titles elsewhere are not construction', () => {
+  const job = (title, company, industry) => ({ id: title + company, title, company: { name: company }, industry, createdDate: Date.parse('2026-11-08'), locations: [{ label: 'Mumbai (All Areas)' }] })
+  const c = ingestJobs(db, [
+    job('Lenskart Store Executive', 'Lenskart', 'Retail'), // seen live
+    job('Asst. Store Keeper', 'Sodexo', 'Hotels & Restaurants'), // seen live
+    job('Planning Engineer', 'Bharati Vidyapeeth University', 'Education / Training'), // seen live
+    job('Site Engineer', 'Shapers Cement Works', 'Building Material (Cement)'),
+    job('Store Keeper', 'Wellcare Physio Clinic', ''), // no industry: "store" alone no longer means a building site
+    job('Store Keeper', 'Patil Constructions', ''), // ...but the company name still can
+    job('Junior Engineer - Finishing', 'Rajlaxmi Developers', 'Real Estate'), // seen live, used to be dropped
+    job('Quality Control Engineer', 'Rajlaxmi Developers', 'Engineering & Construction'),
+    job('Senior Human Resource Manager', 'Pragati Infra', 'Engineering & Construction'), // seen live
+    job('Sales Manager - Industrial Projects & Engineering', 'Beck Engineering', 'Engineering & Construction'), // seen live
+    job('Junior Engineer - MEPF', 'SSA Architects', 'Architecture / Interior Design'), // design studio, not a site
+  ], { now: NOW })
+  assert.equal(c.dropped.notConstruction, 5)
+  assert.equal(c.dropped.role, 3) // HR, sales, and the design studio's title (broad site titles only count at builders)
+  assert.ok(!db.accounts[companyKey('SSA Architects')] && !db.accounts[companyKey('Pragati Infra')])
+  assert.equal(db.accounts[companyKey('Rajlaxmi Developers')].openRoles, 2)
+  assert.ok(db.accounts[companyKey('Patil Constructions')])
+  assert.ok(!db.accounts[companyKey('Lenskart')] && !db.accounts[companyKey('Sodexo')])
+
+  // A recruiter that doesn't say so: mostly IT and banking posts, a few labelled construction.
+  const r = ingestJobs(db, [
+    job('Site Engineer', 'Shashi Solution', 'Engineering & Construction'),
+    job('Project Manager-Construction', 'Shashi Solution', 'Engineering & Construction'),
+    job('Prompt Engineer', 'Shashi Solution', 'IT Services & Consulting'),
+    job('US Voice Process', 'Shashi Solution', 'IT Services & Consulting'),
+    job('Site Supervisor', 'Shashi Solution', 'IT Services & Consulting'),
+  ], { now: NOW })
+  assert.equal(r.dropped.staffing, 3, 'all its site posts are dropped as a recruiter')
+  assert.ok(!db.accounts[companyKey('Shashi Solution')])
+
+  // A developer whose posts Naukri tags partly "Real Estate (Co-working)" is neither a recruiter nor dropped.
+  const d = ingestJobs(db, [
+    job('Site Engineer', 'Puranik Builders', 'Real Estate'),
+    job('Billing Engineer', 'Puranik Builders', 'Real Estate (Co-working)'),
+    job('Planning Engineer', 'Puranik Builders', 'Real Estate (Co-working)'),
+  ], { now: NOW })
+  assert.equal(d.kept, 3)
+  assert.equal(d.dropped.staffing + d.dropped.notConstruction, 0)
+})
+
+t('first lines: job-board noise is taken out of the role and the city', () => {
+  const a = { name: 'Papaya Constructions', openRoles: 1 }
+  assert.equal(mergeFields(a, { type: 'hiring', role: '. Site Engineer Pune', location: 'Pune' }).signalLine, 'Saw Papaya Constructions is hiring a site engineer in Pune.')
+  assert.equal(mergeFields(a, { type: 'hiring', role: 'Structural Engineering Professional III', location: 'Mumbai (All Areas), Thane' }).signalLine, 'Saw Papaya Constructions is hiring a structural engineer in Mumbai.')
+  assert.equal(mergeFields(a, { type: 'hiring', role: 'URGENT Hiring - Billing Engineer', location: 'Thane' }).signalLine, 'Saw Papaya Constructions is hiring a billing engineer in Thane.')
+  assert.equal(blockedReason({ name: 'AECOM India Private Limited' }), 'too_large')
+  assert.equal(blockedReason({ name: 'Regis Builders' }), '', 'whole words only')
 })
 
 t('contacts import matches firms by name and domain', () => {

@@ -6,11 +6,19 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 const monthYear = d => (d && /^\d{4}-\d{2}/.test(d) ? `${MONTHS[+d.slice(5, 7) - 1]} ${d.slice(0, 4)}` : '')
 const titleCase = s => String(s || '').toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()).replace(/\b(Ii|Iii|Iv)\b/g, m => m.toUpperCase())
 const aOrAn = w => (/^[aeiou]/i.test(w) ? 'an ' : 'a ') + w
-const cityOf = loc => titleCase(String(loc || '').split(',')[0].trim())
+// "Mumbai (All Areas), Thane" -> "Mumbai"
+const cityOf = loc => titleCase(String(loc || '').split(',')[0].replace(/\(.*?\)/g, '').trim())
 
-// Short role name for a sentence: "Site Engineer - Civil (5-8 yrs)" -> "site engineer"
+// Words job boards add to titles that don't belong in a sentence.
+const PLACES = /\b(mumbai|navi mumbai|thane|pune|pimpri|chinchwad|panvel|kalyan|bhiwandi|vasai|virar|palghar|raigad|andheri|borivali|powai|goregaon|malad|bkc|lower parel|hinjewadi|wakad|kharadi|baner|hadapsar|maharashtra|india)\b/g
+const NOISE = /\b(urgent(ly)?|hiring|opening|required|wanted|vacancy|immediate( joiner)?|walk[- ]?in|level|grade|professional|[ivx]{1,4})\b/g
+
+// Short role name for a sentence: "Site Engineer - Civil (5-8 yrs)" -> "site engineer",
+// ". Site Engineer Pune" -> "site engineer", "Structural Engineering Professional III" -> "structural engineering"
 export function roleShort(t = '') {
-  return String(t).toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').split(/[-|/,]| for | at /)[0].replace(/\bcivil\b/g, '').replace(/\s+/g, ' ').trim()
+  return String(t).toLowerCase().replace(/\(.*?\)|\[.*?\]/g, '').split(/[-|/,:]| for | at | in /)
+    .map(s => s.replace(PLACES, ' ').replace(NOISE, ' ').replace(/\bcivil\b/g, ' ').replace(/[^a-z&\s]/g, ' ').replace(/\s+/g, ' ').trim())
+    .find(Boolean)?.replace(/\bengineering$/, 'engineer') || ''
 }
 
 export function mergeFields(account, sig) {

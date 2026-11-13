@@ -27,6 +27,10 @@ export const config = {
       'vtp', 'kumar properties', 'paranjape', 'gera', 'dosti', 'hubtown', 'indiabulls', 'omkar', 'shriram', 'afcons',
       'nagarjuna', 'ncc', 'capacite', 'b g shirke', 'jmc', 'simplex', 'gammon', 'hcc', 'hindustan construction', 'ahluwalia',
       'pnc infratech', 'dilip buildcon', 'kec', 'j kumar', 'nbcc', 'ircon', 'cidco', 'mhada', 'mmrda',
+      // Global engineering, project-management and property-services firms (they hire site roles on Naukri).
+      'aecom', 'jacobs', 'wsp', 'arcadis', 'mott macdonald', 'atkins', 'ramboll', 'egis', 'systra', 'rites',
+      'bechtel', 'fluor', 'worley', 'technip', 'cbre', 'jll', 'jones lang', 'colliers', 'cushman', 'knight frank',
+      'turner', 'tata consulting engineers', 'sterling and wilson', 'voltas', 'blue star', 'casagrand', 'tuv', 'tecnimont',
     ],
     // Recruiters and staffing firms post jobs for others. A job from them says nothing about them.
     staffing: ['consult', 'placement', 'staffing', 'manpower', 'recruit', 'hr solution', 'hr services', 'talent', 'jobs', 'careers', 'outsourc', 'search partners', 'hiring'],
