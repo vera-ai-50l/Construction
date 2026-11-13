@@ -6,8 +6,10 @@ import { useEffect, useState } from 'react'
 
 const LINKS = [
   { href: '/', label: 'Overview' },
-  { href: '/staffing', label: 'Staffing summary' },
+  { href: '/staffing', label: 'Staffing' },
   { href: '/ask', label: 'Ask HR' },
+  { href: '/recruitment', label: 'Recruitment' },
+  { href: '/reports', label: 'Weekly report' },
 ]
 const EASE = 'ease-[cubic-bezier(0.32,0.72,0,1)]'
 
@@ -23,7 +25,7 @@ export function Nav() {
   }, [open])
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-4 md:pt-6">
+      <header className="pointer-events-none fixed print:hidden inset-x-0 top-0 z-40 flex justify-center px-4 pt-4 md:pt-6">
         <nav className="pointer-events-auto flex w-full max-w-max items-center gap-1 rounded-full bg-card/80 p-1.5 pl-5 shadow-[0_12px_40px_-18px_rgba(16,40,40,0.35)] ring-1 ring-ink/[0.07] backdrop-blur-xl">
           <Link href="/" className="mr-2 flex items-baseline gap-2 text-ink">
             <span className="text-[15px] font-semibold tracking-tight">White Lotus</span>

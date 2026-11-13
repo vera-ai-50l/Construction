@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { AskBoard } from '@/components/AskBoard'
 
-export const metadata: Metadata = { title: 'Ask HR · White Lotus × Vera' }
+export const metadata: Metadata = { title: 'HR assistant · White Lotus' }
 
 const BEFORE = [
   ['PhoneCall', 'A nurse calls or messages HR: “How many PL can I carry forward?”'],
@@ -28,12 +28,12 @@ export default function Page() {
       <main className="px-4 pb-24 pt-32 md:px-8 md:pt-40">
         <div className="mx-auto max-w-[1200px]">
           <Reveal>
-            <Eyebrow>Idea 3 · Employee questions assistant</Eyebrow>
+            <Eyebrow>HR assistant</Eyebrow>
             <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] md:text-6xl">
               Staff ask. It answers from approved policy, <span className="serif font-normal text-teal">or hands to HR.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-2">
-              It searches the approved HR documents, writes a short answer only from what it finds, and shows where each line came from. In the pilot this runs on WhatsApp; here it runs in the browser.
+              It searches the approved HR documents, writes a short answer only from what it finds, and shows where each line came from. In use, staff ask on WhatsApp; here it runs in the browser.
             </p>
           </Reveal>
           <Reveal delay={120} className="mt-12">
@@ -73,7 +73,7 @@ export default function Page() {
             {[
               ['ShieldCheck', 'General policy first', 'No payslips, balances or personal records in the first phase. Questions that need them go to HR, or point to where staff can see their own record.'],
               ['Stethoscope', 'No medical advice', 'It repeats what an approved document says, for example the needle-stick steps, and nothing beyond it.'],
-              ['ListChecks', 'What a pilot needs', 'Your policy documents and FAQ, HR’s review of every answer, and the name of the person who receives hand-overs.'],
+              ['ListChecks', 'What we need from you', 'Your policy documents and FAQ, HR’s review of every answer, and the name of the person who receives hand-overs.'],
             ].map(([ic, t, d], i) => (
               <Reveal key={t} delay={i * 90}>
                 <Bezel className="h-full" inner="h-full p-7">

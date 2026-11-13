@@ -6,7 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { Icon } from '@/components/ui/icons'
 import { StaffingBoard } from '@/components/StaffingBoard'
 
-export const metadata: Metadata = { title: 'Staffing summary · White Lotus × Vera' }
+export const metadata: Metadata = { title: 'Staffing summary · White Lotus' }
 
 const BEFORE = [
   ['7:00', 'Shift starts. Absences reach ward in-charges as calls and WhatsApp messages.'],
@@ -28,7 +28,7 @@ export default function Page() {
       <main className="px-4 pb-24 pt-32 md:px-8 md:pt-40">
         <div className="mx-auto max-w-[1200px]">
           <Reveal>
-            <Eyebrow>Idea 2 · Staff roster and attendance summary</Eyebrow>
+            <Eyebrow>Staffing summary</Eyebrow>
             <h1 className="mt-6 max-w-4xl text-4xl font-semibold leading-[1.04] tracking-[-0.045em] md:text-6xl">
               Which wards are short, <span className="serif font-normal text-teal">in one message at 7:30.</span>
             </h1>
@@ -68,15 +68,15 @@ export default function Page() {
                 </Reveal>
               ))}
             </div>
-            <p className="mt-4 px-1 text-[12px] text-ink-3">Times are illustrative. A pilot on one ward measures them against what the ward manager builds by hand.</p>
+            <p className="mt-4 px-1 text-[12px] text-ink-3">Times are illustrative. We measure them on one ward first, against what the ward manager builds by hand.</p>
           </section>
 
           {/* Safeguards and pilot inputs */}
           <section className="mt-24 grid gap-5 md:grid-cols-3">
             {[
               ['ShieldCheck', 'Reports and flags only', 'It never schedules, assigns or disciplines anyone. The duty manager decides every move.'],
-              ['IdentificationCard', 'Staff IDs, not names', 'IDs can replace names during the pilot. Only the people you name receive the summary.'],
-              ['FileCsv', 'What a pilot needs', 'One week of roster and attendance (spreadsheet, HRMS export or register photos), the minimum-cover rules, and who receives the message.'],
+              ['IdentificationCard', 'Staff IDs, not names', 'IDs can replace names while we start. Only the people you name receive the summary.'],
+              ['FileCsv', 'What we need from you', 'One week of roster and attendance (spreadsheet, HRMS export or register photos), the minimum-cover rules, and who receives the message.'],
             ].map(([ic, t, d], i) => (
               <Reveal key={t} delay={i * 90}>
                 <Bezel className="h-full" inner="h-full p-7">

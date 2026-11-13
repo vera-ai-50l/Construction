@@ -10,25 +10,47 @@ import { chunks } from '@/content/policies'
 const PILOTS = [
   {
     href: '/staffing',
-    tag: 'Idea 2 · Internal',
-    title: 'Staff roster and attendance summary',
+    tag: 'For the duty manager',
+    title: 'Staffing summary',
     line: 'Every morning, one message showing which wards are short-staffed, so gaps are fixed early.',
-    problem: 'When someone is absent or a shift is swapped, the news travels by phone and WhatsApp, and the daily staffing report is built by hand. Gaps are often found late.',
-    does: 'Reads the roster and attendance, applies your minimum-cover rule for each ward and shift, and sends the duty manager a short summary at a time you choose.',
-    prove: 'A 2 to 4 week pilot on one ward, such as the ICU: does the summary match what the ward manager would build by hand, and does it spot gaps earlier?',
+    problem: 'When someone is absent or a shift is swapped, the news travels by phone and WhatsApp, and the staffing sheet is built by hand. Gaps are often found late.',
+    does: 'Reads the roster and attendance, applies your minimum cover for each ward and shift, and sends the duty manager a short summary at a time you choose.',
+    prove: 'Two to four weeks on one ward, such as the ICU, checked against what the ward manager builds by hand.',
     icon: 'UsersThree',
     cta: 'Open the staffing summary',
   },
   {
     href: '/ask',
-    tag: 'Idea 3 · Internal',
-    title: 'Employee questions assistant',
-    line: 'HR stops repeating the same answers, and sees what staff actually ask.',
-    problem: 'HR answers the same questions again and again: leave, policies, shift timings, holidays, how to apply for things.',
-    does: 'Answers from the policy documents HR has approved, shows the source for every answer, and passes anything it is not sure about to a named HR person.',
-    prove: 'A pilot with one department: how many questions are answered without HR, and how quickly.',
+    tag: 'For every staff member',
+    title: 'HR assistant',
+    line: 'Staff get answers in seconds, and HR stops repeating the same ones.',
+    problem: 'HR answers the same questions again and again: leave, shift timings, holidays, pay dates, how to apply for things.',
+    does: 'Answers only from the policy documents HR has approved, shows the source for every answer, and passes anything it is not sure about to a named HR person.',
+    prove: 'One department to start, counting how many questions are answered without HR, and how quickly.',
     icon: 'ChatsCircle',
     cta: 'Ask the HR assistant',
+  },
+  {
+    href: '/recruitment',
+    tag: 'For candidates and HR',
+    title: 'Recruitment assistant',
+    line: 'Every applicant gets a reply in minutes, and HR sees only complete applications.',
+    problem: 'Replies to candidates are slow, the same screening questions are asked on every call, and documents are chased one by one.',
+    does: 'Replies on WhatsApp, asks the screening questions, collects document photos, flags what is missing and books an interview. It never rejects or selects anyone.',
+    prove: 'Thirty days on one department’s hiring: time to first reply, documents complete without chasing, interviews booked.',
+    icon: 'Briefcase',
+    cta: 'Apply as a candidate',
+  },
+  {
+    href: '/reports',
+    tag: 'For leadership',
+    title: 'Weekly report',
+    line: 'One short weekly summary, without anyone building it by hand.',
+    problem: 'Reports are assembled by hand from several spreadsheets, arrive late, and are out of date by the time they are read.',
+    does: 'Pulls staffing gaps, hiring progress and staff questions from the tools in use, and sends the same short report every Monday by email or WhatsApp.',
+    prove: 'Replace one manual report and compare the time taken and the accuracy with today’s method.',
+    icon: 'ChartBar',
+    cta: 'Build the weekly report',
   },
 ]
 
@@ -56,16 +78,16 @@ export default function Home() {
               </Reveal>
               <Reveal delay={80}>
                 <h1 className="mt-7 text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.045em] text-ink sm:text-6xl md:text-[4.6rem]">
-                  Know which wards are short by 7:30. <span className="serif font-normal text-teal">Answer staff questions in seconds.</span>
+                  Less chasing for HR. <span className="serif font-normal text-teal">More time for people.</span>
                 </h1>
               </Reveal>
               <Reveal delay={160}>
                 <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink-2">
-                  Two of the seven ideas from our proposal, built as working demos: the daily staffing summary and the employee questions assistant. Try both. Nothing here touches real hospital data.
+                  Four everyday jobs, working here on sample data: a 7:30 staffing message for the duty manager, an assistant that answers staff questions from approved policy, a recruitment assistant that screens candidates and books interviews, and a weekly report that builds itself.
                 </p>
               </Reveal>
               <Reveal delay={240} className="mt-10 flex flex-wrap gap-3">
-                <Pill href="/staffing">Staffing summary</Pill>
+                <Pill href="#tools">See the four tools</Pill>
                 <Pill href="/ask" variant="light">
                   Ask the HR assistant
                 </Pill>
@@ -73,7 +95,7 @@ export default function Home() {
               <Reveal delay={300}>
                 <p className="mt-8 flex max-w-md items-start gap-2 text-xs leading-relaxed text-ink-3">
                   <Icon name="Info" size={14} className="mt-0.5 shrink-0" />
-                  Sample data. Staff appear as IDs, not names, and the HR policies are sample text until White Lotus shares its approved documents.
+                  Sample data throughout. Staff appear as IDs, candidates and policies are examples, and no hospital system is connected.
                 </p>
               </Reveal>
             </div>
@@ -112,13 +134,13 @@ export default function Home() {
           </div>
         </section>
 
-        {/* The two pilots */}
-        <section className="px-4 py-24 md:px-8 md:py-32">
+        {/* The four tools */}
+        <section id="tools" className="scroll-mt-24 px-4 py-24 md:px-8 md:py-32">
           <div className="mx-auto max-w-[1200px]">
             <Reveal>
-              <Eyebrow>The two demos</Eyebrow>
+              <Eyebrow>Four tools</Eyebrow>
               <h2 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-6xl">
-                Built the way the proposal describes them. <span className="serif font-normal text-teal">Nothing more.</span>
+                Each one works on its own. <span className="serif font-normal text-teal">Start with whichever helps most.</span>
               </h2>
             </Reveal>
             <div className="mt-14 grid gap-5 md:grid-cols-2">
@@ -135,9 +157,9 @@ export default function Home() {
                     <p className="mt-2 text-[15px] text-ink-2">{p.line}</p>
                     <dl className="mt-8 space-y-5 border-t border-ink/[0.06] pt-6 text-[14.5px] leading-relaxed">
                       {[
-                        ['The problem', p.problem],
-                        ['What the demo does', p.does],
-                        ['How a pilot would prove it', p.prove],
+                        ['Today', p.problem],
+                        ['What it does', p.does],
+                        ['How we would start', p.prove],
                       ].map(([k, v]) => (
                         <div key={k} className="grid gap-1 sm:grid-cols-[9.5rem_1fr] sm:gap-4">
                           <dt className="text-[11px] uppercase tracking-[0.16em] text-ink-3 sm:pt-1">{k}</dt>
@@ -146,7 +168,7 @@ export default function Home() {
                       ))}
                     </dl>
                     <div className="mt-auto pt-9">
-                      <Pill href={p.href} variant={i === 0 ? 'dark' : 'teal'}>
+                      <Pill href={p.href} variant={i % 2 === 0 ? 'dark' : 'teal'}>
                         {p.cta}
                       </Pill>
                     </div>
@@ -161,7 +183,7 @@ export default function Home() {
         <section className="bg-night px-4 py-24 text-white md:px-8 md:py-32">
           <div className="mx-auto max-w-[1200px]">
             <Reveal>
-              <Eyebrow dark>How we run a pilot</Eyebrow>
+              <Eyebrow dark>How we work with your team</Eyebrow>
               <h2 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-[-0.04em] md:text-6xl">
                 The tools report. <span className="serif font-normal text-[#7fd1c4]">People decide.</span>
               </h2>
@@ -180,7 +202,7 @@ export default function Home() {
               ))}
             </ul>
             <p className="mt-16 border-t border-white/10 pt-8 text-xs leading-relaxed text-white/40">
-              Vera AI · demo prepared November 2026 for discussion. Sample roster of {sampleWeek().length.toLocaleString('en-IN')} shift records with staff IDs only; {chunks.length} sample HR policy sections. This demo does not promise specific results; time saved would be measured on White Lotus data during a pilot.
+              Prepared by Vera AI for White Lotus International Hospital, November 2026. Everything on these pages is sample data: {sampleWeek().length.toLocaleString('en-IN')} shift records with staff IDs only, {chunks.length} example HR policy sections and example candidates. Time saved is measured on your own data once we start.
             </p>
           </div>
         </section>

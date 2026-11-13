@@ -434,7 +434,7 @@ function Docs({ cited }: { cited: string[] }) {
   }, [cited])
   return (
     <div>
-      <p className="mb-3 text-[12px] leading-relaxed text-ink-3">Sample policy text written for this demo. In a pilot, HR supplies and approves these, and reviews the answers.</p>
+      <p className="mb-3 text-[12px] leading-relaxed text-ink-3">Sample policy text for this demo. In use, HR supplies and approves these documents, and reviews the answers.</p>
       <ul className="space-y-2">
         {policies.map((p) => {
           const isOpen = open === p.id

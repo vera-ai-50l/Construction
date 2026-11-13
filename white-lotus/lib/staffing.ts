@@ -47,7 +47,7 @@ function rng(seed: number) {
   }
 }
 
-// Today's morning, set to the example in the White Lotus proposal (ICU short by one nurse,
+// Today's morning, set to a typical example (ICU short by one nurse,
 // Emergency waiting on one mark), plus a few other everyday cases.
 const TODAY_MORNING: Record<string, { extra?: number; set: [Role, number, Status][] }> = {
   ICU: { set: [['Nurse', 4, 'leave']] },
@@ -119,7 +119,7 @@ export function summarize(entries: Entry[], date: string, shift: Shift, wards: W
 
 const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`
 
-// The message the duty manager receives, in the format agreed in the proposal.
+// The message the duty manager receives.
 export function morningMessage(summaries: WardSummary[], date: string, shift: Shift): string {
   const order = { below: 0, risk: 1, ok: 2, norule: 3, future: 4 }
   const lines = [`Staffing summary - ${shift.toLowerCase()} shift, ${dayLabel(date)}`]
