@@ -272,18 +272,19 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
   if (browser == null) browser = await hasPlaywright()
   const all = []
   let n = 0
-  const read = async url => {
+  // mayBeEmpty: only a district's last page can really be empty (the site's page count is sometimes one too high).
+  // Anywhere else "No Records Found" is MahaRERA misfiring (seen live on the statewide page), so read it again.
+  const read = async (url, { mayBeEmpty = false } = {}) => {
     n++
     let html = await getPage(url, { browser })
     let got = parseSearchPage(html)
-    // "No Records Found" is a finished answer (e.g. an empty last page), not a half-loaded one: don't re-read it.
-    const incomplete = h => { const i = pageInfo(h); return !i.none && (i.total == null || (i.total > 0 && i.pages == null)) }
-    for (let tries = 0; tries < 2 && incomplete(html) && (browser || got.length); tries++) { // half-loaded page: wait and read again
-      await sleep(8000)
+    const incomplete = h => { const i = pageInfo(h); return i.none ? !mayBeEmpty : i.total == null || (i.total > 0 && i.pages == null) }
+    for (let tries = 0; tries < 2 && incomplete(html) && (browser || got.length || pageInfo(html).none); tries++) { // wait and read again
+      await sleep(pageInfo(html).none ? cfg.retryWaitMs ?? 15000 : 8000)
       html = await getPage(url, { browser })
       got = parseSearchPage(html)
     }
-    if (!got.length && !browser && pageInfo(html).total == null && !pageInfo(html).none && await hasPlaywright()) {
+    if (!got.length && !browser && pageInfo(html).total == null && !(mayBeEmpty && pageInfo(html).none) && await hasPlaywright()) {
       log('No results from a plain request; switching to the browser (Playwright).')
       browser = true
       html = await getPage(url, { browser })
@@ -332,7 +333,7 @@ export async function run(db, { pages, browser, files = [], debug = false, now =
       const span = code ? newPages : newPages * Object.keys(cfg.districts).length
       let readCount = 0, lo = Math.max(1, last - span + 1)
       for (let p = last; p >= lo; p--) {
-        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p }))
+        const r = p === 1 ? first : await read(searchUrl({ district: code, page: p }), { mayBeEmpty: p === last })
         // MahaRERA's page count can be one too high (Raigarh, Nov 2026: "542 pages", page 542 empty).
         if (p === last && !r.got.length && r.info.none && p > 1) { lo = Math.max(1, lo - 1); continue }
         readCount++

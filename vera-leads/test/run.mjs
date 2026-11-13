@@ -235,14 +235,17 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
   }
   const due = [P('P51700000401', 'FINAL STRETCH', 'DEADLINE CONSTRUCTIONS', '2026-06-01')]
   const urls = []
-  let dueWorks = true, thanePages = 3
+  let dueWorks = true, thanePages = 3, misfires = 0
   config.maharera.nearlyDoneSearch = true
+  config.maharera.retryWaitMs = 0
   const realFetch = globalThis.fetch
   globalThis.fetch = async u => {
     const q = new URL(u).searchParams, d = q.get('project_district'), pg = +q.get('page') || 1, pct = q.get('project_completion_percentage[75-100]')
     urls.push(String(u))
     let html
-    if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
+    const empty = '<html><body><p>Registered Projects MAHARASHTRA</p><p>Search Record</p><p>No Records Found</p></body></html>'
+    if (d === '0' && misfires > 0) { misfires--; html = empty } // MahaRERA misfiring on a page that has projects
+    else if (d === '0') html = live.page([P('P50500000001', 'FAR AWAY', 'NAGPUR HOMES', '2017-01-01', { district: 'Nagpur' })], { total: 50013, pages: 5002 })
     else if (d === '517' && dueWorks && pct === '75-100') html = live.page(due, { total: 1, pages: 1 })
     else if (d === '517' && thane[pg] === 'empty') html = '<html><body><p>Registered Projects MAHARASHTRA Thane</p><p>Search Record</p><p>No Records Found</p></body></html>'
     else if (d === '517') html = live.page(thane[pg] || [], { total: 4, pages: thanePages, current: pg })
@@ -280,7 +283,9 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     thanePages = 4
     thane[4] = 'empty'
     thane[3].push(P('P51700000304', 'LATE ENTRY', 'SECONDLOOK BUILDERS', '2026-11-25'))
+    misfires = 1 // the statewide check page says "No Records Found" once: read again, don't give up
     const c4 = await runMaharera(db, { browser: false, now: '2026-12-04' })
+    assert.equal(misfires, 0)
     assert.ok(!urls.some(u => /completion_?percentage/i.test(u)), 'no percentage search when it is off')
     assert.ok(urls.some(u => /project_district=517/.test(u) && /page=3\b/.test(u)), 'read the page before the empty last page')
     assert.equal(c4.new, 1)
