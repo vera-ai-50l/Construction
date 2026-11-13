@@ -125,10 +125,30 @@ node test/run.mjs
 
 Offline, on sample pages in `test/fixtures/` (fictional firms): both MahaRERA layouts (cards and table), job filtering, contact matching, scoring, first lines, the export rules.
 
-## Run it on a schedule (optional)
+## Every Monday on n8n, with a Google Sheet
 
-On the n8n VPS, every Monday at 07:00:
+The workflow in `n8n/weekly-sheet.mjs` runs `weekly` on the n8n VPS at 07:00 IST and fills one Google Sheet:
+
+| Tab | What |
+|---|---|
+| `2026-11-16` (new each week) | The Lead Finder to-do list, best firm first, with a Status column for you |
+| `Ready to email` | Verified people exported that week (one row each, with the week) |
+| `Summary` | One row a week: new projects, hiring firms, emails verified, credits left |
+
+n8n runs in Docker without a browser, so it SSHes into the VPS and runs vera-leads there. If the run isn't finished after 75 minutes it checks every 20 minutes, and fails the execution after about 4 hours.
+
+**Deploy once** (from this folder, on a machine that can `ssh` to the VPS):
+
+```bash
+VERA_SSH=user@vps-ip VERA_SHEET_URL='https://docs.google.com/spreadsheets/d/...' node n8n/weekly-sheet.mjs deploy --env --data
+```
+
+This copies the committed code to `/opt/vera/Construction/vera-leads`, installs it and Chromium, runs the tests, copies `.env` and `data/` if the VPS has none, makes an SSH key for n8n on the VPS (it never leaves the server), and imports the workflow switched off. Then in n8n: pick your Google credential in the three Google Sheets nodes, create the tabs `Summary` and `Ready to email` in the sheet, and switch the workflow on. Later deploys: the same command without `--env --data`.
+
+The sheet holds names and emails: keep it shared only with the people who send.
+
+Without n8n, a plain cron line on the VPS does the run (no sheet):
 
 ```
-0 7 * * 1  cd /opt/vera/Construction/vera-leads && . ./.env && node vera-leads.mjs weekly >> data/weekly.log 2>&1
+0 7 * * 1  cd /opt/vera/Construction/vera-leads && node vera-leads.mjs weekly >> data/weekly.log 2>&1
 ```

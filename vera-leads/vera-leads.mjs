@@ -6,6 +6,7 @@ import { config } from './config.mjs'
 import { buildExport, writeExport } from './lib/export.mjs'
 import { enrichWebsites, importContacts, verifyContacts } from './lib/enrich.mjs'
 import { scoreAll } from './lib/score.mjs'
+import { creditBalances, recordWeekly, sheetData } from './lib/sheet.mjs'
 import { addSuppression, openStore, saveStore } from './lib/store.mjs'
 import { daysBetween, parseCSV, pick, prettyCompany } from './lib/util.mjs'
 import * as hiring from './sources/hiring.mjs'
@@ -46,6 +47,11 @@ Vera lead finder (construction, MMR and Pune)
 
   node vera-leads.mjs weekly
       maharera + hiring + enrich + verify + export, in that order. Steps without a key are skipped.
+      Records what each step did in data/last-weekly.json.
+
+  node vera-leads.mjs sheet
+      This week's Google Sheet rows as JSON (for the n8n workflow): the Lead Finder to-do list, people ready
+      to email, and a summary row. "done": false until today's weekly run has finished.
 
   node vera-leads.mjs status
       Counts: firms, signals by type, contacts, verified, exported.
@@ -119,19 +125,31 @@ async function main() {
         break
       }
       case 'weekly': {
-        const step = async (name, fn) => { try { console.log(name + ':', fmt(await fn())) } catch (e) { console.log(`${name}: skipped (${e.message})`) } }
+        // Each step's result is kept for data/last-weekly.json, which `sheet` (and n8n) read.
+        const steps = {}
+        const step = async (name, fn) => {
+          try { const r = await fn(); steps[name.toLowerCase()] = r; console.log(name + ':', fmt(r)) }
+          catch (e) { steps[name.toLowerCase()] = { skipped: e.message }; console.log(`${name}: skipped (${e.message})`) }
+        }
         await step('MahaRERA', () => maharera.run(db, { browser: o.browser ? true : undefined }))
         saveStore(db)
         if (process.env.APIFY_TOKEN) await step('Hiring', () => hiring.run(db, {}))
-        else console.log('Hiring: skipped (APIFY_TOKEN not set)')
+        else { steps.hiring = { skipped: 'APIFY_TOKEN not set' }; console.log('Hiring: skipped (APIFY_TOKEN not set)') }
         saveStore(db)
         const top = () => new Set(scoreAll(db).filter(a => a.score >= config.score.minToExport).map(a => a.key))
         await step('Websites', () => enrichWebsites(db, { keys: new Set([...top()].filter(k => db.accounts[k].top?.type !== 'list')) }))
         if (process.env.MILLIONVERIFIER_KEY) await step('Verify', () => verifyContacts(db, { keys: top() }))
-        else console.log('Verify: skipped (MILLIONVERIFIER_KEY not set); nothing new can be exported until emails are verified')
+        else { steps.verify = { skipped: 'MILLIONVERIFIER_KEY not set' }; console.log('Verify: skipped (MILLIONVERIFIER_KEY not set); nothing new can be exported until emails are verified') }
         const out = buildExport(db)
         const files = writeExport(db, out, { dryRun: !!o['dry-run'] })
         console.log(`Export: ${out.saleshandy.length} with a signal and ${out.list.length} from lists to Saleshandy, ${out.needs.length} firms need a contact. Files in ${files.saleshandy.replace(/saleshandy\.csv$/, '')}`)
+        if (!o['dry-run']) recordWeekly({ steps, export: { saleshandy: out.saleshandy.length, list: out.list.length, needs: out.needs.length, catchAll: out.catchAll.length } })
+        break
+      }
+      case 'sheet': {
+        // JSON on stdout for n8n; everything else goes to stderr.
+        const data = sheetData({ credits: await creditBalances() })
+        process.stdout.write(JSON.stringify(data) + '\n')
         break
       }
       case 'status': {

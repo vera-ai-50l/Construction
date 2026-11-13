@@ -22,6 +22,8 @@ const { scoreAll, blockedReason } = await import('../lib/score.mjs')
 const { mergeFields, roleShort } = await import('../lib/copy.mjs')
 const { openStore, saveStore, addSuppression } = await import('../lib/store.mjs')
 const { companyKey, prettyCompany, parseDate, parseCSV, toCSV } = await import('../lib/util.mjs')
+const sheetMod = await import('../lib/sheet.mjs')
+const { buildWorkflow } = await import('../n8n/weekly-sheet.mjs')
 
 let n = 0, failed = 0
 const t = (name, fn) => { n++; try { fn(); console.log('ok  ', name) } catch (e) { failed++; console.log('FAIL', name, '\n     ', e.message) } }
@@ -346,6 +348,49 @@ await ta('MahaRERA weekly run: newest pages, due-soon search, extensions, baseli
     globalThis.fetch = realFetch
     Object.assign(config.maharera, old)
   }
+})
+
+t('weekly sheet: done only after today\'s run; to-do list, ready people and summary from the export', () => {
+  const { recordWeekly, sheetData } = sheetMod
+  assert.equal(sheetData({ now: '2030-01-07' }).done, false, 'no run recorded yet')
+  const dir = path.join(process.env.VERA_OUT, '2030-01-07')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'needs-contacts.csv'), toCSV([{ Company: 'Raj Constructions', Score: 88, City: 'Thane', 'Signal Line': 'Saw X come up on MahaRERA in Thane.', Project: 'X', 'LinkedIn People': 'https://l', Google: 'https://g' }]))
+  fs.writeFileSync(path.join(dir, 'saleshandy.csv'), toCSV([{ Email: 'a@raj.in', 'First Name': 'Sunil', Company: 'Raj Constructions', 'Signal Line': 'Saw X', Score: 88 }]))
+  recordWeekly({ steps: { maharera: { new: 4 }, hiring: { skipped: 'APIFY_TOKEN not set' } }, export: { catchAll: 0 } }, '2030-01-07')
+  assert.equal(sheetData({ now: '2030-01-08' }).done, false, 'last run was another day')
+  const d = sheetData({ now: '2030-01-07', credits: { millionVerifier: 400 } })
+  assert.equal(d.done, true)
+  assert.equal(d.research[0].Company, 'Raj Constructions')
+  assert.equal(d.research[0].Status, '')
+  assert.equal(d.ready[0].Email, 'a@raj.in')
+  assert.equal(d.summary['New MahaRERA projects'], 4)
+  assert.equal(d.summary['Steps skipped'], 'hiring: APIFY_TOKEN not set')
+  assert.equal(d.summary['MillionVerifier credits left'], 400)
+})
+
+t('n8n workflow: every connection points at a node, and its Code nodes work on real `sheet` output', () => {
+  const wf = buildWorkflow({ sheetUrl: 'https://docs.google.com/spreadsheets/d/x' })
+  const names = new Set(wf.nodes.map(x => x.name))
+  assert.equal(names.size, wf.nodes.length, 'node names are unique')
+  for (const [from, c] of Object.entries(wf.connections)) {
+    assert.ok(names.has(from), from)
+    for (const out of c.main) for (const e of out) assert.ok(names.has(e.node), `${from} -> ${e.node}`)
+  }
+  assert.equal(wf.connections['Wait 20 min'].main[0][0].node, 'Read results', 'unfinished run loops back')
+  assert.ok(wf.nodes.filter(x => x.type === 'n8n-nodes-base.ssh').every(x => x.credentials.sshPrivateKey.id))
+  const node = name => wf.nodes.find(x => x.name === name).parameters.jsCode
+  const run = (name, $input, $runIndex = 0, $ = () => ({ first: () => ({ json: parsed }) })) => new Function('$input', '$runIndex', '$', node(name))($input, $runIndex, $)
+  const stdout = 'some log line\n' + JSON.stringify({ done: true, date: '2030-01-07', summary: { Week: '2030-01-07' }, research: [{ Company: 'A' }, { Company: 'B' }], ready: [] })
+  const parsed = run('Parse', { first: () => ({ json: { stdout } }) })[0].json
+  assert.equal(parsed.done, true)
+  assert.equal(run('To-do rows').length, 2)
+  assert.equal(run('Ready rows').length, 0, 'nothing ready: the append node does not run')
+  assert.equal(run('Summary row')[0].json.Week, '2030-01-07')
+  const notYet = { first: () => ({ json: { stdout: JSON.stringify({ done: false, date: '2030-01-07' }) } }) }
+  assert.equal(run('Parse', notYet, 1)[0].json.done, false)
+  assert.throws(() => run('Parse', notYet, 99), /not finished/)
+  assert.match(node('Settings'), /docs\.google\.com\/spreadsheets\/d\/x/)
 })
 
 console.log(`\n${n - failed}/${n} passed`)
