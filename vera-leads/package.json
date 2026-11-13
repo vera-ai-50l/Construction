@@ -1,0 +1,12 @@
+{
+  "name": "vera-leads",
+  "private": true,
+  "type": "module",
+  "description": "Signal-led lead finder for Vera: construction firms in MMR and Pune",
+  "bin": { "vera-leads": "./vera-leads.mjs" },
+  "scripts": {
+    "test": "node test/run.mjs",
+    "weekly": "node vera-leads.mjs weekly"
+  },
+  "engines": { "node": ">=20" }
+}
