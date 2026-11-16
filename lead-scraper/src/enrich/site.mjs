@@ -48,6 +48,8 @@ const CTA = {
 };
 
 const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply)@/i;
+/** True for shared inboxes (hello@, info@, sales@ ...) rather than a person. */
+export const isRoleMailbox = (email) => GENERIC_MAILBOX.test(email);
 const TITLE_RE = /\b(co-?founder|founder|ceo|chief executive|cto|chief technology|cpo|chief product|vp,? (of )?product|head of (product|design)|design lead|product lead)\b/i;
 const NAME_RE = /^[A-Z][a-zA-Z'’.-]+(?:\s+[A-Z][a-zA-Z'’.-]+){1,3}$/;
 // Capitalised phrases that look like names but are headings.

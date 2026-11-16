@@ -1,6 +1,7 @@
 // Pick who to email and write the teardown email in the positioning brief's voice:
 // direct, plain, specific, no jargon, no emoji, no exclamation marks, no invented results.
 import { SCREEN_NAME, withHook } from './findings.mjs';
+import { isRoleMailbox } from '../enrich/site.mjs';
 
 // Inboxes that should never receive a cold email.
 const DO_NOT_EMAIL = /^(security|legal|privacy|gdpr|dpo|press|media|pr|careers|jobs|apply|cv|resumes?|recruiting|hr|abuse|compliance|billing|finance|accounts|invoices?|noreply|no-reply|donotreply|academic|research|investors?|ir|support|help|helpdesk|feedback|events|community|partners?|partnerships|[a-z]+-ops|cancel|refunds?|unsubscribe)@/i;
@@ -20,7 +21,10 @@ export function chooseRecipient(lead) {
     ...lead.site.people.map((p) => ({ name: p.name, title: p.title })),
     ...(lead.trustmrr?.founders || []).filter((f) => /^[A-Z][a-z]+(\s+[A-Z][\w'’-]+)+$/.test(f.name || '')).map((f) => ({ name: f.name, title: 'Founder' })),
   ];
-  const usable = lead.emails.filter((e) => !DO_NOT_EMAIL.test(e.email) && e.verified !== 'invalid');
+  // Re-check the inbox type with today's rules (leads.json may come from an older run).
+  const usable = lead.emails
+    .filter((e) => !DO_NOT_EMAIL.test(e.email) && e.verified !== 'invalid')
+    .map((e) => ({ ...e, type: isRoleMailbox(e.email) ? 'role' : 'personal' }));
   const personal = usable.filter((e) => e.type === 'personal');
   const roleRank = (e) => {
     const i = ROLE_ORDER.indexOf(e.email.split('@')[0]);
