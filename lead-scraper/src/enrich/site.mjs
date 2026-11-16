@@ -39,7 +39,33 @@ const PAGE_HINTS = {
   careers: /\/(careers|jobs|join-us|work-with-us|hiring)\b/i,
   demo: /\/(demo|tour|product-tour|interactive-demo|self-guided|sandbox|playground)\b/i,
   security: /\/(security|trust)\b/i,
+  legal: /\/(mentions[-_]?legales|legal[-_]?notice|imprint|impressum|aviso[-_]?legal|legal|terms|cgu|cgv|privacy)\b/i,
 };
+// Legal notices name the person behind the site; prefer the notice over terms/privacy.
+const LEGAL_RANK = (u) => (/mentions|notice|imprint|impressum|aviso/i.test(u) ? 0 : /legal/i.test(u) ? 1 : /terms|cgu|cgv/i.test(u) ? 2 : 3);
+const PERSON = "([A-ZÀ-Ý][a-zà-ÿ'’-]+(?:[ -](?:de |van |von |da |le |la )?[A-ZÀ-Ý][a-zà-ÿ'’-]+){1,2})(?![A-Za-zà-ÿ])";
+// Case-insensitive label words, while names keep their capitals.
+const ci = (words) => words.replace(/\p{Ll}/gu, (c) => `[${c.toUpperCase()}${c}]`);
+const LEGAL_PEOPLE = [
+  [new RegExp(`(?:${ci('directeur|directrice|responsable')})\\s+${ci('de')}\\s+(?:${ci('la')}\\s+)?${ci('publication')}\\s*(?:${ci('est')}\\s*)?[:：-]?\\s*(?:M\\.|Mme\\.?|Monsieur|Madame)?\\s*${PERSON}`, 'u'), 'Publisher (legal notice)'],
+  [new RegExp(`(?:${ci('gérant|gérante|président|présidente')})\\s*[:：-]\\s*(?:M\\.|Mme\\.?)?\\s*${PERSON}`, 'u'), 'Director (legal notice)'],
+  [new RegExp(`(?:${ci('geschäftsführer|geschäftsführerin|inhaber|inhaberin|vertreten durch')}|${ci('verantwortlich')}[^:\\n]{0,40})\\s*[:：-]?\\s*(?:Herr|Frau)?\\s*${PERSON}`, 'u'), 'Owner (Impressum)'],
+  [new RegExp(`(?:${ci('owned and operated by|operated by|owned by|sole trader|sole proprietor|data controller is|data controller|director')})[:,]?\\s+${PERSON}`, 'u'), 'Owner (legal page)'],
+];
+// Words that follow "operated by" but are not a person.
+const NOT_PERSON = /\b(Inc|Ltd|LLC|Limited|GmbH|SAS|SARL|SASU|EURL|Corp|Company|Technologies|Labs|Studio|Group|Holdings|Media|Digital|Solutions|Services|Software|Google|Stripe|Vercel|Lovable|Supabase|Netlify|Hostinger|OVH|Amazon|Microsoft|The|This|Our|We|You|Website|Site|Platform|App|Pty|Pte|BV|AB|Oy|SL|SRL|SA|AG|KG|UG|Co|Le|La|Les|Der|Die|Das|Directeur|Directrice|Monsieur|Madame|Président|Société|Agence|Association)\b/;
+const TRAILING_HEADING = /^(Hébergement|Hébergeur|Hosting|Host|Siège|Adresse|Address|Contact|Email|E-mail|Téléphone|Tél|Tel|Phone|Registered|SIRET|SIREN|RCS|Capital|Sitz|Kontakt|Telefon|Handelsregister|Registergericht|Umsatzsteuer|Responsable|Directeur|Éditeur|Editeur|Propriétaire|Conception|Crédits|Credits)$/i;
+export function legalPeople(text) {
+  const out = [];
+  for (const [re, title] of LEGAL_PEOPLE) {
+    const m = text.match(re);
+    if (!m) continue;
+    // Drop a heading word caught after the name ("Jane Doe Hébergement").
+    const name = m[1].trim().split(/\s+/).filter((w, i) => i < 1 || !TRAILING_HEADING.test(w)).join(' ');
+    if (name.includes(' ') && !NOT_PERSON.test(name) && !NOT_A_NAME.test(name)) out.push({ name, title });
+  }
+  return out;
+}
 
 const CTA = {
   book_demo: /\b(book|request|get|schedule)\s+a\s+demo\b|\btalk to (sales|us)\b|\bcontact sales\b/i,
@@ -47,7 +73,7 @@ const CTA = {
   interactive: /\b(take a (product )?tour|product tour|interactive demo|explore the (product|demo)|self-guided|live demo|try the demo|see it in action)\b/i,
 };
 
-const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply)@/i;
+const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply|grow|growth|business|biz|bonjour|hola|ciao|kontakt|contacto|contato|service|services|orders?|shop|store|bookings?|reservations?|newsletter|news|dev|developers?|tech|webmaster|it|studio|social|content|partner|affiliates?|ads|growth-team|accounting|payments?|invoices?|bonjour|salut)@/i;
 /** True for shared inboxes (hello@, info@, sales@ ...) rather than a person. */
 export const isRoleMailbox = (email) => GENERIC_MAILBOX.test(email);
 const TITLE_RE = /\b(co-?founder|founder|ceo|chief executive|cto|chief technology|cpo|chief product|vp,? (of )?product|head of (product|design)|design lead|product lead)\b/i;
@@ -67,8 +93,21 @@ function absolute(href, base) {
 
 function visibleText($) {
   $('script,style,noscript,svg,template').remove();
+  // Keep block boundaries as spaces, so "<p>Jane Doe</p><h2>Hosting</h2>" stays two phrases.
+  $('br').replaceWith(' ');
+  $('p,div,li,h1,h2,h3,h4,h5,h6,td,th,section,article,header,footer,span,a,strong,b').each((_, el) => {
+    $(el).append(' ');
+  });
   return $('body').text().replace(/\s+/g, ' ').trim();
 }
+
+// Form placeholders and sample data in vibe-coded apps ("you@company.com").
+const PLACEHOLDER_LOCAL = /^(you|your|yourname|your\.name|name|firstname|first\.last|john|jane|john\.doe|jane\.doe|johndoe|janedoe|user|username|test|sample|demo|agent|me|someone|email|mail)$/;
+const PLACEHOLDER_DOMAIN = /^(company|business|insurance|acme|mycompany|yourdomain|yoursite|website|test|sample|demo|placeholder|mail|e-?mail|agency|startup|brand|store|shop)\.[a-z.]{2,6}$/;
+export const isPlaceholderEmail = (e) => {
+  const [local, dom = ''] = e.toLowerCase().split('@');
+  return PLACEHOLDER_LOCAL.test(local) || PLACEHOLDER_DOMAIN.test(dom);
+};
 
 function findEmails(rawHtml, domain) {
   // Undo JSON/HTML escaping so "\u003ehello@x.com" or "hello@x.com\" read cleanly.
@@ -80,6 +119,7 @@ function findEmails(rawHtml, domain) {
     .map((e) => e.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '').replace(/^\d+-(?=[a-z])/i, ''))
     .filter((e) => !/\.(png|jpe?g|gif|webp|svg|css|js)$/i.test(e))
     .filter((e) => !/(sentry|wixpress|example\.com|domain\.com|email\.com|yourcompany|godaddy)/i.test(e))
+    .filter((e) => !isPlaceholderEmail(e))
     // Only addresses on the company's own domain, except on shared app hosts
     // (x.lovable.app), where the founder's published address is all there is.
     .filter((e) => registrableDomain(e.split('@')[1]) === domain || isSharedHost(domain))
@@ -142,7 +182,7 @@ function atsFrom(urls) {
  * @param opts  { maxPages, get }  `get` defaults to plain HTTP; pass a browser-backed
  *              getter (same return shape) to read client-rendered sites.
  */
-export async function enrichSite(site, { maxPages = 6, get = getText, company = '' } = {}) {
+export async function enrichSite(site, { maxPages = 7, get = getText, company = '' } = {}) {
   const getText_ = get;
   const domain = registrableDomain(site);
   const home = await getText_(site);
@@ -189,7 +229,9 @@ export async function enrichSite(site, { maxPages = 6, get = getText, company = 
   const internal = homeLinks.filter((u) => registrableDomain(u) === domain);
   const picked = [];
   for (const [kind, re] of Object.entries(PAGE_HINTS)) {
-    const hit = internal.find((u) => re.test(new URL(u).pathname));
+    const hits = internal.filter((u) => re.test(new URL(u).pathname));
+    if (kind === 'legal') hits.sort((a, b) => LEGAL_RANK(a) - LEGAL_RANK(b));
+    const hit = hits[0];
     if (hit && !picked.some((p) => p.url === hit)) picked.push({ kind, url: hit });
   }
   for (const p of picked.slice(0, maxPages)) {
@@ -217,6 +259,7 @@ export async function enrichSite(site, { maxPages = 6, get = getText, company = 
     for (const [tool, re] of BUILT_WITH) if (re.test(p.html)) out.built_with.push(tool);
 
     if (p.kind === 'about' || p.kind === 'home') out.people.push(...findPeople(cheerio.load(p.html), company || domain.split('.')[0], p.kind === 'about'));
+    if (p.kind === 'legal' || p.kind === 'home') out.people.push(...legalPeople(visibleText(cheerio.load(p.html))));
     out.emails.push(...findEmails(p.html, domain));
 
     const text = visibleText($);

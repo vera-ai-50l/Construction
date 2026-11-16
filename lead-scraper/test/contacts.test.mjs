@@ -62,3 +62,18 @@ test('a finder email is checked as given, before patterns', async () => {
   assert.equal(c[0].email, 'ceo@acme.io');
   assert.equal(c[0].origin, 'finder:pipelinelabs');
 });
+
+test('legal notices name the owner; companies and hosts are not people', async () => {
+  const { legalPeople, isRoleMailbox } = await import('../src/enrich/site.mjs');
+  assert.equal(legalPeople('Directeur de la publication : M. Marc Pfeiler. Hébergeur : OVH')[0].name, 'Marc Pfeiler');
+  assert.equal(legalPeople('Geschäftsführer: Anna Müller')[0].name, 'Anna Müller');
+  assert.equal(legalPeople('This site is operated by Jane Smith, a sole trader')[0].name, 'Jane Smith');
+  assert.deepEqual(legalPeople('operated by Acme Labs Inc'), []);
+  assert.ok(isRoleMailbox('grow@x.io') && !isRoleMailbox('jake@x.io'));
+});
+
+test('builder-hosted apps use the company domain their pages publish', () => {
+  const lead = { domain: 'loadit.lovable.app', site: { emails: [{ email: 'support@optimizeit.ai' }, { email: 'legal@optimizeit.ai' }, { email: 'me@gmail.com' }], people: [{ name: 'Lucas Cannon', title: 'Founder & CEO' }] } };
+  assert.deepEqual(candidatesFor(lead, knownPeople(lead), 2).map((c) => c.email), ['lucas@optimizeit.ai', 'lucas.cannon@optimizeit.ai']);
+  assert.deepEqual(candidatesFor({ domain: 'x.lovable.app', site: { emails: [] } }, knownPeople({ site: { people: [{ name: 'Jo Doe', title: 'CEO' }] } })), []);
+});

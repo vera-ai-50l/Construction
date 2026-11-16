@@ -49,7 +49,12 @@ export async function runActor(actor, input, { maxWaitSecs = 900, memoryMbytes, 
   }
   if (status !== 'SUCCEEDED') throw new Error(`Apify run ${run.id} ended ${status}`);
   const items = await call('GET', `/datasets/${run.defaultDatasetId}/items?clean=true&format=json`);
-  const final = (await call('GET', `/actor-runs/${run.id}`)).data;
+  let final = (await call('GET', `/actor-runs/${run.id}`)).data;
+  // Pay-per-event charges reach the run record a few seconds after it ends.
+  for (let i = 0; i < 4 && !final.usageTotalUsd && items.length; i++) {
+    await sleep(3000);
+    final = (await call('GET', `/actor-runs/${run.id}`)).data;
+  }
   log(`apify: ${actor} returned ${items.length} items (usage $${(final.usageTotalUsd ?? 0).toFixed(3)})`);
   // Actual billed usage for the run, as Apify reports it.
   addCost(`apify:${actor}`, { units: items.length, usd: final.usageTotalUsd ?? 0, unit: 'item' });

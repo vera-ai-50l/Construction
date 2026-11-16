@@ -17,10 +17,11 @@ export const PROFILES = {
       'TrustMRR startups with verified revenue (and, with --serp, Google results for builder footprints), kept only when the site is not professionally designed.',
     discover: async ({ limit, offset, minRevenue = 500, serp = false, log }) => {
       // Revenue yield on TrustMRR is low (a few % clear $1K/month), so read widely.
-      const rows = await trustmrrStartups({ limit: limit * 8, offset, minRevenue30d: minRevenue, b2bOnly: false });
+      // --limit applies per source, so each source gets a fair sample in the funnel.
+      const rows = (await trustmrrStartups({ limit: limit * 8, offset, minRevenue30d: minRevenue, b2bOnly: false })).slice(0, limit);
       if (serp) {
         try {
-          rows.push(...(await serpFootprints({ log })));
+          rows.push(...(await serpFootprints({ log })).slice(offset, offset + limit));
         } catch (e) {
           log?.(`vibe: Google footprint search skipped: ${e.message}`);
         }

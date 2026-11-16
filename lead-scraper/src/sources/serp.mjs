@@ -2,6 +2,7 @@
 // Search scraper. Finds apps that kept a builder badge or host and mention pricing.
 import { count } from '../ledger.mjs';
 import { runActor } from '../apify.mjs';
+import { cacheGet, cachePut } from '../http.mjs';
 import { registrableDomain } from '../domain.mjs';
 
 // Apps still on a builder's host, with signs of a paid, signed-in product. Queries
@@ -18,11 +19,14 @@ export const DEFAULT_FOOTPRINTS = [
 const BUILDER_HOST = /(^|\.)(lovable\.app|base44\.app|bolt\.host|replit\.app)$/;
 
 export async function serpFootprints({ queries = DEFAULT_FOOTPRINTS, pagesPerQuery = 2, log } = {}) {
-  const items = await runActor(
-    'apify/google-search-scraper',
-    { queries: queries.join('\n'), maxPagesPerQuery: pagesPerQuery, countryCode: 'us', mobileResults: false },
-    { log },
-  );
+  const input = { queries: queries.join('\n'), maxPagesPerQuery: pagesPerQuery, countryCode: 'us', mobileResults: false };
+  const cacheKey = 'serp:' + JSON.stringify(input);
+  let items = await cacheGet(cacheKey);
+  if (items) log?.('google footprints: cached results reused (no charge)');
+  else {
+    items = await runActor('apify/google-search-scraper', input, { log });
+    await cachePut(cacheKey, items);
+  }
   const seen = new Map();
   for (const page of items) {
     for (const r of page.organicResults || []) {
@@ -51,5 +55,6 @@ export async function serpFootprints({ queries = DEFAULT_FOOTPRINTS, pagesPerQue
       });
     }
   }
+  count('serp_kept', seen.size);
   return [...seen.values()];
 }

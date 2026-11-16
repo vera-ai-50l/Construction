@@ -11,7 +11,7 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     trustmrr: getCount('trustmrr_pages_read'),
     'google-footprint': getCount('serp_results'),
   };
-  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter') };
+  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept') };
 
   const rows = [];
   for (const src of sources) {
@@ -28,6 +28,7 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
       not_polished: K.filter((l) => l.site?.reachable).length,
       vibe_coded: K.filter(VIBE).length,
       sent_to_contact_finding: Q.length,
+      mail_domain_known: Q.filter((l) => l.mail_domain).length,
       finder_found_people: Q.filter((l) => l.finder_people > 0).length,
       named_person: Q.filter((l) => l.contact_people > 0).length,
       email_candidate: Q.filter((l) => (l.contact_trail || []).length > 0).length,
@@ -43,12 +44,13 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
   const STEPS = [
     ['sampled', 'Sampled from source', 'TrustMRR pages read / Google results (Apify google-search-scraper)'],
     ['passed_source_filter', 'Passed source filter', `TrustMRR revenue >= $${args['min-revenue']}/30d; Google: builder-hosted product pages`],
-    ['taken_into_run', 'Taken into this run', `--limit ${args.limit}`],
+    ['taken_into_run', 'Taken into this run', `--limit ${args.limit} per source`],
     ['unique_companies', 'Unique companies', 'dedupe by domain'],
     ['site_reachable', 'Website reachable', 'HTTP + headless browser'],
     ['not_polished', 'Not professionally designed', 'vibe check (fingerprints, design patterns, design spend)'],
     ['vibe_coded', 'Vibe-coded or likely', 'vibe check'],
     ['sent_to_contact_finding', 'Sent to contact finding', `top ${args['max-contacts']} by score`],
+    ['mail_domain_known', 'Company mail domain known', 'own domain, or the domain a builder-hosted app publishes'],
     ['finder_found_people', 'Finder returned people', `finder: ${args.finder}`],
     ['named_person', 'Named decision-maker known', 'finder + TrustMRR founder + people on site'],
     ['email_candidate', 'Email candidate checked', `up to ${args['max-candidates']} per lead`],

@@ -121,9 +121,16 @@ in batches so each paid tool runs once per round, not once per lead:
    | `code_crafter` | code_crafter/leads-finder | $0.002 / lead + $0.02 / run | full (approve in Apify first) |
    | `none` | — | free | known names only |
 
-   Plus names we already have: TrustMRR founders, people named on the company's pages,
-   personal mailboxes the company published. Apps on a shared host (x.lovable.app) are
-   skipped by finders and get no pattern guesses: they have no company mailbox.
+   `--finder auto` (the default) uses no paid finder for the vibe profile: in testing,
+   pipelinelabs and microworlds knew 0 and 1 of 9 small TrustMRR apps even with every
+   filter removed. Their databases cover funded companies (Type B), not one-person apps.
+
+   Free names: TrustMRR founders; people on the company's about/team pages; the person a
+   legal notice must name (French *directeur de la publication*, German *Impressum*
+   Geschäftsführer/Inhaber, "operated by ..." on terms pages); personal mailboxes the
+   company published (`jane.doe@` reads as Jane Doe). Apps on a builder host
+   (x.lovable.app) use the company domain their pages publish (support@acme.io → acme.io),
+   and that company's own site is read too. Form placeholders (you@company.com) are ignored.
 2. **Candidates** — the finder's own email first, then `first@`, `first.last@`,
    `firstlast@`, `flast@` for the best-ranked person, at most `--max-candidates` per lead.
 3. **Verification in rounds** (`--verifier`): round 1 checks every lead's first candidate

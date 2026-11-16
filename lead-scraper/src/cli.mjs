@@ -35,7 +35,7 @@ const { values: args } = parseArgs({
     concurrency: { type: 'string', default: '4' },
     'find-contacts': { type: 'boolean', default: false },
     'max-contacts': { type: 'string', default: '100' },
-    finder: { type: 'string', default: 'pipelinelabs' },
+    finder: { type: 'string', default: 'auto' },
     verifier: { type: 'string', default: 'bounceverify' },
     'max-candidates': { type: 'string', default: '3' },
     'min-revenue': { type: 'string', default: '500' },
@@ -62,8 +62,9 @@ Options:
   --serp                 vibe profile: also search Google for builder footprints via Apify (needs APIFY_TOKEN)
   --keep-polished        keep leads whose site looks professionally designed (dropped by default for vibe)
   --find-contacts        find a named decision-maker with a verified email (needs APIFY_TOKEN)
-  --finder <name>        who finds people: pipelinelabs ($0.001/lead, default), microworlds,
-                         code_crafter (needs full Apify access approved), none (known names only)
+  --finder <name>        who finds people: auto (default: none for the vibe profile, whose apps
+                         are not in finder databases; pipelinelabs otherwise), pipelinelabs
+                         ($0.001/lead), microworlds, code_crafter (needs full Apify access), none
   --verifier <name>      who verifies: bounceverify (Apify, ~$0.0009/email, default) or
                          mv (MillionVerifier; needs MILLIONVERIFIER_API_KEY, set MV_PRICE_USD)
   --max-candidates <n>   email guesses checked per lead, in rounds (default 3)
@@ -88,7 +89,7 @@ for (const name of wanted) {
     log(`${name}: ${rows.length} discovered`);
     // type_a pages through its source itself; the others are sliced here.
     const page = name === 'type_a' || name === 'vibe' ? rows : rows.slice(offset);
-    candidates.push(...page.slice(0, limit).map((r) => ({ ...r, profile: name })));
+    candidates.push(...(name === 'vibe' ? page : page.slice(0, limit)).map((r) => ({ ...r, profile: name })));
   } catch (e) {
     log(`${name}: discovery failed: ${e.message}`);
   }
@@ -163,6 +164,7 @@ if (!args['keep-polished']) {
 
 // 3c. Named, verified decision-makers (batched to keep paid calls down).
 let queue = [];
+if (args.finder === 'auto') args.finder = wanted.length === 1 && wanted[0] === 'vibe' ? 'none' : 'pipelinelabs';
 if (args['find-contacts']) {
   queue = kept
     .filter((l) => l.site?.reachable && l.vibe?.verdict !== 'polished')

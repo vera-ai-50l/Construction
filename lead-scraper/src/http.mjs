@@ -30,7 +30,7 @@ async function spaceOut(host) {
 const cacheFile = (key) =>
   path.join(CACHE_DIR, createHash('sha1').update(key).digest('hex') + '.json');
 
-async function cacheGet(key) {
+export async function cacheGet(key) {
   try {
     const f = cacheFile(key);
     const s = await stat(f);
@@ -41,7 +41,7 @@ async function cacheGet(key) {
   }
 }
 
-async function cachePut(key, value) {
+export async function cachePut(key, value) {
   await mkdir(CACHE_DIR, { recursive: true });
   await writeFile(cacheFile(key), JSON.stringify(value));
 }
