@@ -43,7 +43,17 @@ for (const d of dirs) {
 const rank = (l) => (l.contact.verification === 'ok' ? 0 : 2) + (/vibe/.test(l.vibe?.verdict || '') ? 0 : 1);
 // Builder-hosted apps carry project slugs as names ("ai agents for ngos beta"): use the
 // name the company presents (page author, site title, or its mail domain).
+const looksLikeBrand = (n, l) => n && n.length <= 30 && n.split(/\s+/).length <= 4 && !/^(show hn|my |i |we )/i.test(n) && n.toLowerCase() !== String(l.contact?.first_name || '').toLowerCase();
 for (const l of seen.values()) {
+  // Show HN post titles and person names are not brand names: use the site's own.
+  if (!isSharedHost(l.domain) && (l.sources[0] === 'showhn' || !looksLikeBrand(l.name, l))) {
+    const title = String(l.site?.title || '').replace(/[®™©]/g, '').split(/\s+[|–—-]\s+|:\s/)[0].trim();
+    const author = String(l.site?.meta_author || '').replace(/[®™©]/g, '').trim();
+    const stem = l.domain.split('.')[0];
+    const pick = [author, title].find((n) => looksLikeBrand(n, l) && !/^(home|welcome|lovable)$/i.test(n)) || stem;
+    l.name = pick.charAt(0).toUpperCase() + pick.slice(1);
+    continue;
+  }
   if (!isSharedHost(l.domain)) continue;
   const title = String(l.site?.title || '').replace(/[®™©]/g, '').split(/\s+[|–—-]\s+|:\s/)[0].trim();
   const pretty = (s) => s.charAt(0).toUpperCase() + s.slice(1);
