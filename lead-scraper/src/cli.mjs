@@ -40,6 +40,7 @@ const { values: args } = parseArgs({
     'max-candidates': { type: 'string', default: '3' },
     'min-revenue': { type: 'string', default: '500' },
     serp: { type: 'boolean', default: false },
+    sources: { type: 'string', default: 'trustmrr' },
     'keep-polished': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
   },
@@ -59,7 +60,8 @@ Options:
   --verify-emails        check published emails with MillionVerifier (needs MILLIONVERIFIER_API_KEY)
   --skip-jobs            do not query job boards
   --min-revenue <usd>    vibe profile: minimum TrustMRR revenue in the last 30 days (default 500)
-  --serp                 vibe profile: also search Google for builder footprints via Apify (needs APIFY_TOKEN)
+  --sources <list>       vibe profile sources: trustmrr, google, commoncrawl, showhn (default trustmrr)
+  --serp                 same as adding google to --sources (Apify, needs APIFY_TOKEN)
   --keep-polished        keep leads whose site looks professionally designed (dropped by default for vibe)
   --find-contacts        find a named decision-maker with a verified email (needs APIFY_TOKEN)
   --finder <name>        who finds people: auto (default: none for the vibe profile, whose apps
@@ -85,7 +87,7 @@ const log = (...m) => console.error(`[${new Date().toISOString().slice(11, 19)}]
 const candidates = [];
 for (const name of wanted) {
   try {
-    const rows = await PROFILES[name].discover({ limit, offset, minRevenue: Number(args['min-revenue']), serp: args.serp, log });
+    const rows = await PROFILES[name].discover({ limit, offset, minRevenue: Number(args['min-revenue']), serp: args.serp, sources: args.sources, log });
     log(`${name}: ${rows.length} discovered`);
     // type_a pages through its source itself; the others are sliced here.
     const page = name === 'type_a' || name === 'vibe' ? rows : rows.slice(offset);
@@ -109,7 +111,7 @@ for (const c of candidates) {
   const prev = byDomain.get(domain);
   if (prev) {
     prev.sources = [...new Set([...prev.sources, c.source])];
-    for (const k of ['yc', 'github', 'trustmrr']) if (c[k] && !prev[k]) prev[k] = c[k];
+    for (const k of ['yc', 'github', 'trustmrr', 'hn', 'cc']) if (c[k] && !prev[k]) prev[k] = c[k];
   } else byDomain.set(domain, { ...c, domain, sources: [c.source] });
 }
 const leads = [...byDomain.values()];
@@ -157,9 +159,15 @@ if (browserMod) await browserMod.closeBrowser();
 
 // 3b. For the vibe profile, professionally designed products are not our buyers.
 let kept = leads;
+// Sources without verified revenue must at least look like a paid product.
+const UNPROVEN = new Set(['google-footprint', 'commoncrawl', 'showhn']);
+const looksPaid = (l) => !UNPROVEN.has(l.sources[0]) || l.site?.paid_signal || l.cc?.pricing_path;
+for (const l of leads) l.paid_product = !!(l.site?.reachable && looksPaid(l));
+kept = kept.filter((l) => l.profile !== 'vibe' || l.paid_product);
 if (!args['keep-polished']) {
-  kept = leads.filter((l) => !(l.profile === 'vibe' && l.vibe?.verdict === 'polished'));
-  if (kept.length < leads.length) log(`dropped ${leads.length - kept.length} polished sites (use --keep-polished to keep them)`);
+  const before = kept.length;
+  kept = kept.filter((l) => !(l.profile === 'vibe' && l.vibe?.verdict === 'polished'));
+  if (kept.length < before) log(`dropped ${before - kept.length} polished sites (use --keep-polished to keep them)`);
 }
 
 // 3c. Named, verified decision-makers (batched to keep paid calls down).

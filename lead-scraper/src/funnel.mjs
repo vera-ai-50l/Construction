@@ -10,8 +10,10 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
   const rawBySource = {
     trustmrr: getCount('trustmrr_pages_read'),
     'google-footprint': getCount('serp_results'),
+    commoncrawl: getCount('commoncrawl_hosts'),
+    showhn: getCount('showhn_posts'),
   };
-  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept') };
+  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept'), commoncrawl: getCount('commoncrawl_kept'), showhn: getCount('showhn_kept') };
 
   const rows = [];
   for (const src of sources) {
@@ -25,6 +27,7 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
       taken_into_run: candidates.filter((c) => c.source === src).length,
       unique_companies: L.length,
       site_reachable: L.filter((l) => l.site?.reachable).length,
+      paid_product: L.filter((l) => l.paid_product).length,
       not_polished: K.filter((l) => l.site?.reachable).length,
       vibe_coded: K.filter(VIBE).length,
       sent_to_contact_finding: Q.length,
@@ -42,11 +45,12 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
   const usable = verified + (total.catch_all || 0);
 
   const STEPS = [
-    ['sampled', 'Sampled from source', 'TrustMRR pages read / Google results (Apify google-search-scraper)'],
-    ['passed_source_filter', 'Passed source filter', `TrustMRR revenue >= $${args['min-revenue']}/30d; Google: builder-hosted product pages`],
+    ['sampled', 'Sampled from source', 'TrustMRR pages / Google results (Apify) / Common Crawl apps / Show HN posts'],
+    ['passed_source_filter', 'Passed source filter', `TrustMRR revenue >= $${args['min-revenue']}/30d; Google/Common Crawl: builder-hosted, not throwaway; HN: a product, not a dev tool`],
     ['taken_into_run', 'Taken into this run', `--limit ${args.limit} per source`],
     ['unique_companies', 'Unique companies', 'dedupe by domain'],
     ['site_reachable', 'Website reachable', 'HTTP + headless browser'],
+    ['paid_product', 'Paid product', 'TrustMRR revenue, or prices/pricing found on the site'],
     ['not_polished', 'Not professionally designed', 'vibe check (fingerprints, design patterns, design spend)'],
     ['vibe_coded', 'Vibe-coded or likely', 'vibe check'],
     ['sent_to_contact_finding', 'Sent to contact finding', `top ${args['max-contacts']} by score`],

@@ -1,6 +1,8 @@
 // ICP profiles: where to find each customer type and what qualifies it.
 // type_a / type_b follow the positioning brief; the other three are the ICPs the
 // research report ranked, kept so the lead pools can be compared.
+import { commonCrawlApps } from './sources/commoncrawl.mjs';
+import { showHnApps } from './sources/showhn.mjs';
 import { ycCompanies } from './sources/yc.mjs';
 import { storylaneShowcase } from './sources/storylane.mjs';
 import { githubProducts } from './sources/github.mjs';
@@ -15,17 +17,27 @@ export const PROFILES = {
     offer: 'AI App Glow-Up',
     describe:
       'TrustMRR startups with verified revenue (and, with --serp, Google results for builder footprints), kept only when the site is not professionally designed.',
-    discover: async ({ limit, offset, minRevenue = 500, serp = false, log }) => {
-      // Revenue yield on TrustMRR is low (a few % clear $1K/month), so read widely.
-      // --limit applies per source, so each source gets a fair sample in the funnel.
-      const rows = (await trustmrrStartups({ limit: limit * 8, offset, minRevenue30d: minRevenue, b2bOnly: false })).slice(0, limit);
-      if (serp) {
+    // Sources: trustmrr (default), google (Apify search), commoncrawl (free index),
+    // showhn (free HN API). --limit applies per source.
+    discover: async ({ limit, offset, minRevenue = 500, serp = false, sources = '', log }) => {
+      const want = new Set((sources || 'trustmrr').split(',').map((x) => x.trim()));
+      if (serp) want.add('google');
+      const rows = [];
+      const run = async (name, fn, { pagesItself = false } = {}) => {
+        if (!want.has(name)) return;
         try {
-          rows.push(...(await serpFootprints({ log })).slice(offset, offset + limit));
+          const got = await fn();
+          log?.(`vibe: ${name}: ${got.length} candidates`);
+          rows.push(...(pagesItself ? got.slice(0, limit) : got.slice(offset, offset + limit)));
         } catch (e) {
-          log?.(`vibe: Google footprint search skipped: ${e.message}`);
+          log?.(`vibe: ${name} skipped: ${e.message}`);
         }
-      }
+      };
+      // TrustMRR reads limit*8 pages and applies the offset itself.
+      await run('trustmrr', () => trustmrrStartups({ limit: limit * 8, offset, minRevenue30d: minRevenue, b2bOnly: false }), { pagesItself: true });
+      await run('google', () => serpFootprints({ log }));
+      await run('commoncrawl', () => commonCrawlApps({ log }));
+      await run('showhn', () => showHnApps());
       return rows;
     },
   },

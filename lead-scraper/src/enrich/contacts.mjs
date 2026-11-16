@@ -35,7 +35,7 @@ import { findPeople, VERIFIERS } from '../providers.mjs';
 import { count } from '../ledger.mjs';
 
 const ascii = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
-const TITLE_RANK = (t = '') => (/ceo|chief executive|founder|owner|legal notice|impressum/i.test(t) ? 0 : /cpo|product|design/i.test(t) ? 1 : /cto|coo|chief/i.test(t) ? 2 : 3);
+const TITLE_RANK = (t = '') => (/ceo|chief executive|founder|owner|maker|legal notice|impressum/i.test(t) ? 0 : /cpo|product|design/i.test(t) ? 1 : /cto|coo|chief/i.test(t) ? 2 : 3);
 
 /** Common startup patterns for a person at a domain, most likely first. */
 export function emailPatterns(firstName, lastName, domain) {
@@ -56,6 +56,13 @@ export function knownPeople(lead, finderPeople = []) {
       .map((f) => ({ first_name: f.name.split(/\s+/)[0], last_name: f.name.split(/\s+/).slice(1).join(' '), title: 'Founder', email: '', source: 'trustmrr' })),
     ...[...(lead.site?.people || []), ...(lead.company_site?.people || [])].map((p) => ({ first_name: p.name.split(/\s+/)[0], last_name: p.name.split(/\s+/).slice(1).join(' '), title: p.title, email: '', source: 'company site' })),
   ];
+  // The maker's own public HN profile address (they published it themselves).
+  for (const email of lead.hn?.emails || []) {
+    if (isRoleMailbox(email)) continue;
+    const parts = email.split('@')[0].split(/[._-]/);
+    const ok = parts.length <= 2 && parts.every((w) => /^[a-z]{2,15}$/.test(w));
+    people.unshift({ first_name: ok ? parts[0][0].toUpperCase() + parts[0].slice(1) : lead.hn.author, last_name: ok && parts[1] ? parts[1][0].toUpperCase() + parts[1].slice(1) : '', title: 'Maker (Show HN poster)', email, source: 'hn profile' });
+  }
   // A personal mailbox the company published, matched to a known person when possible.
   const cap = (w) => w[0].toUpperCase() + w.slice(1);
   for (const e of [...(lead.site?.emails || []), ...(lead.company_site?.emails || [])]) {

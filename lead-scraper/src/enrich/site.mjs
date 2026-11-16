@@ -73,7 +73,7 @@ const CTA = {
   interactive: /\b(take a (product )?tour|product tour|interactive demo|explore the (product|demo)|self-guided|live demo|try the demo|see it in action)\b/i,
 };
 
-const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply|grow|growth|business|biz|bonjour|hola|ciao|kontakt|contacto|contato|service|services|orders?|shop|store|bookings?|reservations?|newsletter|news|dev|developers?|tech|webmaster|it|studio|social|content|partner|affiliates?|ads|growth-team|accounting|payments?|invoices?|bonjour|salut)@/i;
+const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply|grow|growth|owner|business|biz|bonjour|hola|ciao|kontakt|contacto|contato|service|services|orders?|shop|store|bookings?|reservations?|newsletter|news|dev|developers?|tech|webmaster|it|studio|social|content|partner|affiliates?|ads|growth-team|accounting|payments?|invoices?|bonjour|salut)@/i;
 /** True for shared inboxes (hello@, info@, sales@ ...) rather than a person. */
 export const isRoleMailbox = (email) => GENERIC_MAILBOX.test(email);
 const TITLE_RE = /\b(co-?founder|founder|ceo|chief executive|cto|chief technology|cpo|chief product|vp,? (of )?product|head of (product|design)|design lead|product lead)\b/i;
@@ -210,6 +210,7 @@ export async function enrichSite(site, { maxPages = 7, get = getText, company = 
     shopify_app_listing: null,
     open_source_repo: null,
     pricing_url: null,
+    paid_signal: false,
     emails: [],
     people: [],
     linkedin_company: null,
@@ -240,6 +241,7 @@ export async function enrichSite(site, { maxPages = 7, get = getText, company = 
   }
   out.pages_read = pages.map((p) => `${p.kind}:${p.url}`);
   out.pricing_url = pages.find((p) => p.kind === 'pricing')?.url || null;
+  if (out.pricing_url) out.paid_signal = true;
 
   const allLinks = [];
   let homeText = '';
@@ -265,6 +267,8 @@ export async function enrichSite(site, { maxPages = 7, get = getText, company = 
     const text = visibleText($);
     if (p.kind === 'home') homeText = text;
     for (const [k, re] of Object.entries(CTA)) if (re.test(text)) out.ctas[k] = true;
+    // Prices, plans or a paid sign-up anywhere we read: a product people pay for.
+    if (/[$€£]\s?\d+(\.\d\d)?\s*(\/|per\s)\s*(mo|month|year|yr|user|seat)|\b(pricing|upgrade to pro|free trial|start (your )?trial|subscribe|monthly plan|annual plan)\b/i.test(text)) out.paid_signal = true;
     if (/demo (account|credentials|login)|username\s*:\s*\S+\s+password\s*:/i.test(text)) out.demo_credentials_hint = true;
     if (/investor relations|\b(NYSE|NASDAQ|LSE)\s*:\s*[A-Z]{1,5}\b|fortune 500 company|publicly traded/i.test(text)) out.large_company_hint = true;
   }

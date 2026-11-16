@@ -38,7 +38,7 @@ export function homepage(input) {
 }
 
 // Hosts that are platforms, not company websites.
-const PLATFORM = /(^|\.)(github\.com|github\.io|linkedin\.com|twitter\.com|x\.com|medium\.com|notion\.site|substack\.com|youtube\.com|google\.com|apple\.com|ycombinator\.com|producthunt\.com|storylane\.io|navattic\.com|arcade\.software|lemonsqueezy\.com|gumroad\.com|stripe\.com|whop\.com|chromewebstore\.google\.com|chrome\.google\.com|apps\.apple\.com|play\.google\.com|reddit\.com|facebook\.com|instagram\.com|tiktok\.com|linktr\.ee|carrd\.co|beacons\.ai)$/i;
+const PLATFORM = /(^|\.)(github\.com|github\.io|linkedin\.com|twitter\.com|x\.com|medium\.com|notion\.site|substack\.com|youtube\.com|google\.com|apple\.com|ycombinator\.com|producthunt\.com|storylane\.io|navattic\.com|arcade\.software|lemonsqueezy\.com|gumroad\.com|stripe\.com|whop\.com|chromewebstore\.google\.com|chrome\.google\.com|apps\.apple\.com|play\.google\.com|reddit\.com|facebook\.com|instagram\.com|tiktok\.com|linktr\.ee|carrd\.co|beacons\.ai|shopify\.com|amazon\.[a-z.]+|etsy\.com|microsoft\.com|ebay\.com)$/i;
 
 export function isCompanySite(input) {
   const u = toUrl(input);
