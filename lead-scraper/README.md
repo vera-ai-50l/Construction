@@ -15,6 +15,8 @@ npm install
 npm run leads -- --profile type_a,type_b --limit 25 --screenshots
 ```
 
+This is step 1 (finding leads). Step 2 (teardowns and emails) is below.
+
 Output goes to `out/<date>/`: `leads.csv` (open in Sheets), `leads.json` (everything), and
 `shots/<domain>/home.png | pricing.png | signup.png | demo.png` when `--screenshots` is on.
 
@@ -76,6 +78,71 @@ So for Type A a teardown of three of the five "screens that matter" (landing, si
 pricing) can be written from public screenshots. Onboarding and the dashboard need a
 person to sign up with a company email, which the `signup_url` and `work_email_to_sign_up`
 columns tell you how to do. Do not use fake identities or other people's details.
+
+## Step 2: teardowns and the email sheet
+
+```bash
+npm run teardown -- --leads out/<run>/leads.json
+```
+
+For every lead this opens the public screens (homepage on desktop and phone, pricing,
+sign-up, any public demo), screenshots them into `out/<run>/teardowns/<domain>/`, measures
+them, and writes the email. Output in `out/<run>/`:
+
+| File | What it is |
+| --- | --- |
+| `teardowns.xlsx` | Sheets: **Ready to send**, **Needs manual login**, **Needs an email**, **Review (thin teardown)**, **All findings** |
+| `saleshandy.csv` | Ready-to-send prospects only: `Email, First Name, Last Name, Company, Website, subject, email_body, followup_body, finding_1..3` |
+| `teardowns.json` | Everything, including every measurement |
+
+**Measured checks** (each finding quotes its number): largest-content load time (Google's
+4 s "poor" line), page weight, sideways scrolling on a 390 px phone, touch targets under
+24 px (WCAG 2.2), text under 12 px, no sign-up/demo button in the first screen, competing
+calls to action, WCAG 2 AA errors (axe-core), typeface count, broken images, JavaScript
+errors, missing meta description, sign-up form length, work-email-only sign-up, no
+self-serve access, hidden pricing, and on dashboards: very wide tables, empty cells, tiny
+text, crowded navigation.
+
+**Reviewed findings** (what a person notices: vague headline, no product shown, overlapping
+elements, placeholder text, generic AI look) come from a review file per lead at
+`out/<run>/reviews/<domain>.json`, written either:
+
+- by hand (or by Claude in a session, as for the first batch), or
+- automatically with `--ai-review` (Claude Opus 5.5 looks at the screenshots; needs
+  `ANTHROPIC_API_KEY`; roughly $0.05 per lead; server-side refusal fallback is on).
+
+A file that exists is never overwritten. The email leads with up to two reviewed findings,
+backs them with measured ones, opens with one genuine strength, and offers a free
+before/after with no call. Use `--reuse` to rebuild emails from saved screenshots after
+adding reviews.
+
+The emails describe what was observed and its likely effect. They do not claim to know a
+company's churn or bounce rate: nobody can measure that from outside.
+
+### Dashboards behind a login
+
+Leads whose dashboard is not public are listed on **Needs manual login** with the sign-up
+URL, whether a work email is required, and a command to run **on your own computer**:
+
+```bash
+npm run login -- https://app.example.com example.com
+```
+
+A browser opens; sign up or log in yourself, open the main dashboard, press Enter. Your
+session is saved to `auth/<domain>.json` (git-ignored; it holds your cookies, keep it
+private). The next `npm run teardown` screenshots and audits that dashboard with your
+session and adds dashboard findings. Use only accounts you created yourself, with your
+real details, and respect each product's terms.
+
+### Sending with SalesHandy
+
+1. Import `saleshandy.csv` as prospects; map `Email`, `First Name`, `Last Name`, `Company`,
+   `Website`, and create custom fields for `subject`, `email_body` and `followup_body`.
+2. In the sequence, step 1 subject = the `subject` merge tag, body = the `email_body` merge
+   tag; step 2 (3 days later) body = `followup_body`. Check SalesHandy's exact merge-tag
+   syntax when you map the fields.
+3. Read every email before it goes out, use a separate sending domain with warmed inboxes,
+   add your signature and an opt-out line.
 
 ## Being a good citizen
 
