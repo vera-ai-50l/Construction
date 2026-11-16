@@ -4,6 +4,7 @@
 // ("AI-built apps with paying users"): revenue is verified, the stack often listed.
 import * as cheerio from 'cheerio';
 import { getText, pool } from '../http.mjs';
+import { count } from '../ledger.mjs';
 
 const SITEMAP = 'https://trustmrr.com/startup-sitemap.xml';
 
@@ -58,10 +59,13 @@ export async function trustmrrStartups({ limit = 300, offset = 0, minRevenue30d 
   const urls = Array.from({ length: Math.min(limit, all.length) }, (_, i) => all[(i * step + offset) % all.length]);
   const rows = await pool(urls, 2, async (u) => {
     const r = await getText(u);
+    if (r.ok) count('trustmrr_pages_read');
     return r.ok ? parseTrustmrrPage(r.text, u) : null;
   });
-  return rows
+  const passed = rows
     .filter(Boolean)
     .filter((r) => (r.trustmrr.revenue_30d_usd || 0) >= minRevenue30d)
     .filter((r) => !b2bOnly || !r.trustmrr.keywords.some((k) => /^B2C$/i.test(k)));
+  count('trustmrr_passed_filter', passed.length);
+  return passed;
 }

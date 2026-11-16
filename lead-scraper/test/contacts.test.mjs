@@ -22,37 +22,43 @@ after(() => {
   rmSync(cache, { recursive: true, force: true });
 });
 
-const { emailPatterns, findContact } = await import('../src/enrich/contacts.mjs');
+const { emailPatterns, findContacts, candidatesFor, knownPeople } = await import('../src/enrich/contacts.mjs');
+const { snapshot } = await import('../src/ledger.mjs');
+const opts = { finder: 'none', verifier: 'mv', maxCandidates: 3 };
 
 test('patterns: first@ first, accents stripped', () => {
   assert.deepEqual(emailPatterns('Jösé', 'De la Cruz', 'x.io').slice(0, 2), ['jose@x.io', 'jose.delacruz@x.io']);
   assert.deepEqual(emailPatterns('', 'Doe', 'x.io'), []);
 });
 
-test('verified pattern wins; shared inboxes never become the contact', async () => {
-  const lead = {
-    domain: 'acme.io',
-    site: { people: [{ name: 'Jo Doe', title: 'Founder & CEO' }], emails: [{ email: 'hello@acme.io', type: 'role' }] },
-  };
-  const { contact, tried } = await findContact(lead, []);
-  assert.equal(contact.email, 'jo.doe@acme.io');
-  assert.equal(contact.verification, 'ok');
-  assert.equal(contact.first_name, 'Jo');
-  assert.ok(tried.includes('jo@acme.io:invalid'));
-  assert.ok(!tried.some((t) => t.startsWith('hello@')));
+test('candidates: capped, no shared inboxes, no patterns on shared app hosts', () => {
+  const people = [{ first_name: 'Jo', last_name: 'Doe', title: 'CEO', email: '', source: 'trustmrr' }];
+  assert.deepEqual(candidatesFor({ domain: 'acme.io' }, people, 2).map((c) => c.email), ['jo@acme.io', 'jo.doe@acme.io']);
+  assert.deepEqual(candidatesFor({ domain: 'thing.lovable.app' }, people, 3), []);
+  const lead = { domain: 'acme.io', site: { people: [], emails: [{ email: 'hello@acme.io' }] } };
+  assert.equal(knownPeople(lead).length, 0);
 });
 
-test('catch-all domains keep one flagged guess', async () => {
-  const lead = { domain: 'catchy.io', site: { people: [], emails: [] }, trustmrr: { founders: [{ name: 'Sam Lee' }] } };
-  const { contact } = await findContact(lead, []);
-  assert.equal(contact.email, 'sam@catchy.io');
-  assert.equal(contact.verification, 'catch_all');
+test('batch: verified pattern wins, catch-all stops and is flagged, rounds only retry unresolved', async () => {
+  const acme = { domain: 'acme.io', site: { people: [{ name: 'Jo Doe', title: 'Founder & CEO' }], emails: [{ email: 'hello@acme.io', type: 'role' }] } };
+  const catchy = { domain: 'catchy.io', site: { people: [], emails: [] }, trustmrr: { founders: [{ name: 'Sam Lee' }] } };
+  const nobody = { domain: 'nobody.io', site: { people: [], emails: [] } };
+  await findContacts([acme, catchy, nobody], opts);
+  assert.equal(acme.contact.email, 'jo.doe@acme.io');
+  assert.equal(acme.contact.verification, 'ok');
+  assert.deepEqual(acme.contact_trail, ['jo@acme.io:invalid', 'jo.doe@acme.io:ok']);
+  assert.equal(catchy.contact.email, 'sam@catchy.io');
+  assert.equal(catchy.contact.verification, 'catch_all');
+  assert.equal(catchy.contact_trail.length, 1);
+  assert.equal(nobody.contact, null);
+  assert.equal(snapshot().counts.emails_verified, 3);
 });
 
-test('apify people come first and their email is checked as given', async () => {
+test('a finder email is checked as given, before patterns', async () => {
   RESULTS['ceo@acme.io'] = 'ok';
   const lead = { domain: 'acme.io', site: { people: [], emails: [] } };
-  const { contact } = await findContact(lead, [{ first_name: 'Ana', last_name: 'Ray', title: 'CEO', email: 'ceo@acme.io', source: 'apify-leads-finder' }]);
-  assert.equal(contact.email, 'ceo@acme.io');
-  assert.equal(contact.email_source, 'apify-leads-finder');
+  const people = knownPeople(lead, [{ first_name: 'Ana', last_name: 'Ray', title: 'CEO', email: 'ceo@acme.io', source: 'finder:pipelinelabs' }]);
+  const c = candidatesFor(lead, people);
+  assert.equal(c[0].email, 'ceo@acme.io');
+  assert.equal(c[0].origin, 'finder:pipelinelabs');
 });

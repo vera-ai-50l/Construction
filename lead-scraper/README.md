@@ -82,7 +82,7 @@ columns tell you how to do. Do not use fake identities or other people's details
 ## Vibe-coded leads with named, verified emails
 
 ```bash
-APIFY_TOKEN=... MILLIONVERIFIER_API_KEY=... npm run leads -- --profile vibe --limit 50 --serp --find-contacts
+APIFY_TOKEN=... npm run leads -- --profile vibe --limit 50 --serp --find-contacts
 ```
 
 **Which sites qualify.** Each site gets a vibe check, recorded in `vibe_verdict`,
@@ -109,15 +109,44 @@ $500 in 30 days; only a few percent of listings clear $1K, so the profile reads 
 and, with `--serp`, Google results for builder footprints (`"Edit with Lovable" pricing`,
 `site:lovable.app pricing`...) through Apify's Google Search scraper.
 
-**Named emails (`--find-contacts`).** For the best `--max-contacts` leads (default 100):
+**Named emails (`--find-contacts`).** For the best `--max-contacts` leads (default 100),
+in batches so each paid tool runs once per round, not once per lead:
 
-1. Apify's Leads Finder (`code_crafter/leads-finder`, about $1.50 per 1,000 leads)
-   returns founders, owners and C-level people at each domain with name, title,
-   LinkedIn and email.
-2. Known names (TrustMRR founders, people on the site) get the usual patterns tried:
-   `first@`, `first.last@`, `firstlast@`, `flast@`.
-3. Every address is checked with MillionVerifier: `ok` is accepted, `catch_all` is kept
-   and flagged, everything else is dropped. Shared inboxes are never returned.
+1. **People** — one finder run for all domains (`--finder`):
+
+   | Finder | Apify Actor | Price | Account access |
+   | --- | --- | --- | --- |
+   | `pipelinelabs` (default) | pipelinelabs/lead-scraper-apollo-zoominfo-lusha-ppe | $0.001 / lead | limited |
+   | `microworlds` | microworlds/leads-finder | $0.003 / lead (free plan), $0.0017 paid | limited |
+   | `code_crafter` | code_crafter/leads-finder | $0.002 / lead + $0.02 / run | full (approve in Apify first) |
+   | `none` | — | free | known names only |
+
+   Plus names we already have: TrustMRR founders, people named on the company's pages,
+   personal mailboxes the company published. Apps on a shared host (x.lovable.app) are
+   skipped by finders and get no pattern guesses: they have no company mailbox.
+2. **Candidates** — the finder's own email first, then `first@`, `first.last@`,
+   `firstlast@`, `flast@` for the best-ranked person, at most `--max-candidates` per lead.
+3. **Verification in rounds** (`--verifier`): round 1 checks every lead's first candidate
+   in one batch, round 2 only the leads still unresolved. A lead stops at `ok`; a
+   `catch_all` stops it too (more checks would only spend credits) and is flagged.
+
+   | Verifier | How | Price |
+   | --- | --- | --- |
+   | `bounceverify` (default) | Apify Actor bounceverify/bounceverify-email-verifier | $0.00089 / email |
+   | `mv` | MillionVerifier API, needs `MILLIONVERIFIER_API_KEY` | your credit pack; set `MV_PRICE_USD` (e.g. 0.0004) so the funnel counts it |
+
+   MillionVerifier's key travels in the URL, so it can only be used where you can set the
+   environment variable yourself (your own computer), not through a cloud proxy.
+
+Shared inboxes (hello@, info@, support@...) are never candidates.
+
+**Funnel report.** Every run writes `funnel.md` and `funnel.json` next to the leads: for
+each source, how many companies survived each step (sampled → passed filter → unique →
+reachable → not polished → vibe-coded → sent to contact finding → finder found people →
+named person → email checked → verified / catch-all), which tool did each step, what each
+paid tool cost (Apify's reported usage per run) and the cost per verified named email.
+Use it to compare tools on the same sample: rerun with `--finder microworlds` or
+`--verifier mv` and compare the two funnels.
 
 The result fills `contact_name`, `contact_title`, `contact_email`, `email_verification`,
 `email_source`; the teardown step then writes to that person ("Hi Jose") automatically.

@@ -1,31 +1,22 @@
-// Find a named decision-maker and a verified email for each lead.
+// Find a named decision-maker and a verified email for a batch of leads, cheaply.
 //
-// Order of attempts (stops at the first verified address):
-//   1. Apify "Leads Finder" (code_crafter/leads-finder): founders / owners / C-level
-//      at the company's domain, with name, title, LinkedIn and email.
-//   2. Names we already have (TrustMRR founders, people on the company's own pages):
-//      try first@, first.last@, firstlast@, flast@ at the domain.
-// Every address is checked with MillionVerifier (MILLIONVERIFIER_API_KEY) before it is
-// accepted. "ok" is accepted; "catch_all" is kept but flagged (the server accepts any
-// address, so it cannot be confirmed); everything else is dropped. Shared inboxes
-// (hello@, info@, support@...) are never returned as a contact.
-import { runActor } from '../apify.mjs';
-import { getJson } from '../http.mjs';
+// 1. People: one finder run for all domains (see providers.mjs), plus names we already
+//    have (TrustMRR founders, people named on the company's own pages, a personal
+//    mailbox published on the site).
+// 2. Candidates per lead, best first: the finder's own email, then first@, first.last@,
+//    firstlast@, flast@ for the best-ranked person. At most --max-candidates per lead.
+// 3. Verification in rounds: round 1 checks every lead's first candidate in one batch,
+//    round 2 only the leads still unresolved, and so on. A lead stops at its first "ok".
+//    A "catch_all" stops it too (that server accepts any address, so more checks would
+//    only spend credits): the best candidate is kept and flagged.
+// Shared inboxes (hello@, info@, support@...) are never candidates.
 import { isRoleMailbox } from './site.mjs';
 import { isSharedHost } from '../domain.mjs';
+import { findPeople, VERIFIERS } from '../providers.mjs';
+import { count } from '../ledger.mjs';
 
-const LEADS_FINDER = 'code_crafter/leads-finder';
 const ascii = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
-const RANK = { founder: 0, owner: 1, c_suite: 2 };
-const TITLE_RANK = (t = '') => (/ceo|chief executive|founder/i.test(t) ? 0 : /cpo|product|design/i.test(t) ? 1 : /cto|coo|chief/i.test(t) ? 2 : 3);
-
-/** MillionVerifier single check. Returns 'ok' | 'catch_all' | 'unknown' | 'invalid' | 'disposable' | 'error' | 'no_key'. */
-export async function verifyEmail(email) {
-  const key = process.env.MILLIONVERIFIER_API_KEY;
-  if (!key) return 'no_key';
-  const r = await getJson(`https://api.millionverifier.com/api/v3/?api=${encodeURIComponent(key)}&email=${encodeURIComponent(email)}&timeout=20`);
-  return r?.result || 'error';
-}
+const TITLE_RANK = (t = '') => (/ceo|chief executive|founder|owner/i.test(t) ? 0 : /cpo|product|design/i.test(t) ? 1 : /cto|coo|chief/i.test(t) ? 2 : 3);
 
 /** Common startup patterns for a person at a domain, most likely first. */
 export function emailPatterns(firstName, lastName, domain) {
@@ -37,80 +28,94 @@ export function emailPatterns(firstName, lastName, domain) {
   return [...new Set(out)];
 }
 
-/** Batch: ask Apify's Leads Finder for decision-makers at many domains at once. */
-export async function apifyDecisionMakers(domains, { perDomain = 3, log } = {}) {
-  if (!domains.length) return new Map();
-  const items = await runActor(
-    LEADS_FINDER,
-    {
-      company_domain: domains,
-      seniority_level: ['founder', 'owner', 'c_suite'],
-      fetch_count: Math.min(5000, domains.length * perDomain),
-    },
-    { log },
-  );
-  const byDomain = new Map();
-  for (const it of items) {
-    const d = String(it.company_domain || it.company_website || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
-    if (!d) continue;
-    const list = byDomain.get(d) || [];
-    list.push({
-      first_name: it.first_name || '',
-      last_name: it.last_name || '',
-      title: it.job_title || it.headline || '',
-      email: (it.email || '').toLowerCase(),
-      linkedin: it.linkedin || it.linkedin_url || '',
-      seniority: it.seniority_level || '',
-      source: 'apify-leads-finder',
-    });
-    byDomain.set(d, list);
-  }
-  for (const list of byDomain.values()) list.sort((a, b) => (RANK[a.seniority] ?? 9) - (RANK[b.seniority] ?? 9) || TITLE_RANK(a.title) - TITLE_RANK(b.title));
-  return byDomain;
-}
-
-/**
- * Pick and verify one contact for a lead.
- * @param lead       scrape lead (site.people, trustmrr.founders, domain)
- * @param apifyList  people Apify returned for this domain (may be empty)
- * @returns contact or null, plus a trail of what was tried
- */
-export async function findContact(lead, apifyList = []) {
-  const domain = lead.domain;
-  const tried = [];
+/** Everyone we know at a lead, best decision-maker first. */
+export function knownPeople(lead, finderPeople = []) {
   const people = [
-    ...apifyList,
+    ...finderPeople,
     ...(lead.trustmrr?.founders || [])
       .filter((f) => /^[A-Z][\p{L}'’-]+(\s+[\p{L}'’-]+)+$/u.test(f.name || ''))
       .map((f) => ({ first_name: f.name.split(/\s+/)[0], last_name: f.name.split(/\s+/).slice(1).join(' '), title: 'Founder', email: '', source: 'trustmrr' })),
     ...(lead.site?.people || []).map((p) => ({ first_name: p.name.split(/\s+/)[0], last_name: p.name.split(/\s+/).slice(1).join(' '), title: p.title, email: '', source: 'company site' })),
   ];
-  // A personal mailbox published on the site, matched to a person when possible.
+  // A personal mailbox the company published, matched to a known person when possible.
   for (const e of lead.site?.emails || []) {
     if (isRoleMailbox(e.email)) continue;
     const local = e.email.split('@')[0];
     const who = people.find((p) => ascii(p.first_name) && local.startsWith(ascii(p.first_name)));
     people.unshift({ ...(who || { first_name: /^[a-z]{3,12}$/.test(local) ? local[0].toUpperCase() + local.slice(1) : '', last_name: '', title: '' }), email: e.email, source: 'company site' });
   }
+  return people.filter((p) => p.first_name).sort((a, b) => TITLE_RANK(a.title) - TITLE_RANK(b.title));
+}
 
-  let catchAll = null;
-  for (const p of people) {
-    if (!p.first_name) continue;
-    // No company mailboxes exist on a shared app host (x.lovable.app), so no patterns there.
-    const patterns = isSharedHost(domain) ? [] : emailPatterns(p.first_name, p.last_name, domain);
-    const candidates = p.email && !isRoleMailbox(p.email) ? [p.email, ...patterns] : patterns;
-    for (const email of [...new Set(candidates)].slice(0, 5)) {
-      const result = await verifyEmail(email);
-      tried.push(`${email}:${result}`);
-      if (result === 'no_key') return { contact: null, tried, error: 'MILLIONVERIFIER_API_KEY not set' };
-      const contact = { ...p, email, verification: result, email_source: email === p.email ? p.source : `pattern (${p.source} name)` };
-      if (result === 'ok') return { contact, tried };
-      // On a catch-all domain every pattern "passes"; keep the first, from the best source.
-      if (result === 'catch_all') {
-        catchAll ||= contact;
-        break;
-      }
+/** Ordered email candidates for a lead: {email, person, origin}. */
+export function candidatesFor(lead, people, max = 3) {
+  const out = [];
+  const add = (email, person, origin) => {
+    if (email && !isRoleMailbox(email) && !out.some((c) => c.email === email)) out.push({ email, person, origin });
+  };
+  for (const p of people) if (p.email) add(p.email, p, p.source);
+  // No company mailboxes exist on a shared app host (x.lovable.app), so no patterns there.
+  if (!isSharedHost(lead.domain) && people[0]) {
+    for (const e of emailPatterns(people[0].first_name, people[0].last_name, lead.domain)) add(e, people[0], `pattern (${people[0].source} name)`);
+  }
+  return out.slice(0, max);
+}
+
+/**
+ * Contacts for many leads.
+ * @param leads  leads to process (each gets .contact and .contact_trail)
+ * @param opts   { finder: 'pipelinelabs'|'microworlds'|'code_crafter'|'none', verifier: 'bounceverify'|'mv', perDomain, maxCandidates, log }
+ */
+export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 'bounceverify', perDomain = 3, maxCandidates = 3, log = () => {} } = {}) {
+  // 1. People
+  let found = new Map();
+  if (finder !== 'none') {
+    const domains = leads.map((l) => l.domain).filter((d) => !isSharedHost(d));
+    try {
+      found = await findPeople(finder, domains, { perDomain, log });
+    } catch (e) {
+      log(`finder ${finder} failed: ${e.message.slice(0, 160)}`);
     }
   }
-  return { contact: catchAll, tried };
+  const state = leads.map((lead) => {
+    const fromFinder = found.get(lead.domain) || [];
+    const people = knownPeople(lead, fromFinder);
+    lead.contact_people = people.length;
+    lead.finder_people = fromFinder.length;
+    if (fromFinder.length) count('leads_with_finder_people');
+    if (people.length) count('leads_with_named_person');
+    const cands = candidatesFor(lead, people, maxCandidates);
+    if (cands.length) count('leads_with_email_candidate');
+    lead.contact = null;
+    lead.contact_trail = [];
+    return { lead, cands, next: 0, done: !cands.length };
+  });
+
+  // 2. Verification rounds
+  const v = VERIFIERS[verifier];
+  if (!v) throw new Error(`Unknown verifier "${verifier}" (use ${Object.keys(VERIFIERS).join(', ')})`);
+  for (let round = 0; round < maxCandidates; round++) {
+    const batch = state.filter((s) => !s.done && s.next < s.cands.length);
+    if (!batch.length) break;
+    const emails = [...new Set(batch.map((s) => s.cands[s.next].email))];
+    let results;
+    try {
+      results = await v.verify(emails, { log });
+    } catch (e) {
+      log(`verifier ${verifier} failed: ${e.message.slice(0, 160)}`);
+      break;
+    }
+    count('emails_verified', emails.length);
+    for (const s of batch) {
+      const c = s.cands[s.next++];
+      const r = results.get(c.email) || 'error';
+      s.lead.contact_trail.push(`${c.email}:${r}`);
+      if (r === 'ok' || r === 'catch_all') {
+        s.lead.contact = { ...c.person, email: c.email, verification: r, email_source: c.origin };
+        s.done = true;
+        count(r === 'ok' ? 'contacts_verified_ok' : 'contacts_catch_all');
+      } else if (s.next >= s.cands.length) s.done = true;
+    }
+  }
+  return leads;
 }

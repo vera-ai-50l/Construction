@@ -15,9 +15,10 @@ import { homepage, registrableDomain, isCompanySite } from './domain.mjs';
 import { accessLevel, aiBuilt, score, flags } from './score.mjs';
 import { writeOutputs } from './export.mjs';
 import { buildFingerprints, vibeVerdict } from './enrich/vibe.mjs';
-import { apifyDecisionMakers, findContact } from './enrich/contacts.mjs';
+import { findContacts } from './enrich/contacts.mjs';
 import { getText } from './http.mjs';
-import { isSharedHost } from './domain.mjs';
+import { funnelReport } from './funnel.mjs';
+import { writeFile } from 'node:fs/promises';
 
 const { values: args } = parseArgs({
   options: {
@@ -34,6 +35,9 @@ const { values: args } = parseArgs({
     concurrency: { type: 'string', default: '4' },
     'find-contacts': { type: 'boolean', default: false },
     'max-contacts': { type: 'string', default: '100' },
+    finder: { type: 'string', default: 'pipelinelabs' },
+    verifier: { type: 'string', default: 'bounceverify' },
+    'max-candidates': { type: 'string', default: '3' },
     'min-revenue': { type: 'string', default: '500' },
     serp: { type: 'boolean', default: false },
     'keep-polished': { type: 'boolean', default: false },
@@ -57,9 +61,14 @@ Options:
   --min-revenue <usd>    vibe profile: minimum TrustMRR revenue in the last 30 days (default 500)
   --serp                 vibe profile: also search Google for builder footprints via Apify (needs APIFY_TOKEN)
   --keep-polished        keep leads whose site looks professionally designed (dropped by default for vibe)
-  --find-contacts        find a named decision-maker and verified email (Apify Leads Finder + MillionVerifier;
-                         needs APIFY_TOKEN and MILLIONVERIFIER_API_KEY)
-  --max-contacts <n>     at most this many leads go through contact finding (default 100)`);
+  --find-contacts        find a named decision-maker with a verified email (needs APIFY_TOKEN)
+  --finder <name>        who finds people: pipelinelabs ($0.001/lead, default), microworlds,
+                         code_crafter (needs full Apify access approved), none (known names only)
+  --verifier <name>      who verifies: bounceverify (Apify, ~$0.0009/email, default) or
+                         mv (MillionVerifier; needs MILLIONVERIFIER_API_KEY, set MV_PRICE_USD)
+  --max-candidates <n>   email guesses checked per lead, in rounds (default 3)
+  --max-contacts <n>     at most this many leads go through contact finding (default 100)
+A funnel report (funnel.md / funnel.json) with counts and costs is written every run.`);
   process.exit(0);
 }
 
@@ -152,32 +161,21 @@ if (!args['keep-polished']) {
   if (kept.length < leads.length) log(`dropped ${leads.length - kept.length} polished sites (use --keep-polished to keep them)`);
 }
 
-// 3c. Named, verified decision-makers.
+// 3c. Named, verified decision-makers (batched to keep paid calls down).
+let queue = [];
 if (args['find-contacts']) {
-  const queue = kept
+  queue = kept
     .filter((l) => l.site?.reachable && l.vibe?.verdict !== 'polished')
     .sort((a, b) => b.score.total - a.score.total)
     .slice(0, Number(args['max-contacts']));
-  let apify = new Map();
-  const apifyDomains = queue.map((l) => l.domain).filter((d) => !isSharedHost(d));
-  try {
-    apify = await apifyDecisionMakers(apifyDomains, { log });
-  } catch (e) {
-    log(`apify leads finder skipped: ${e.message}`);
-  }
-  let found = 0;
-  for (const lead of queue) {
-    const { contact, tried, error } = await findContact(lead, apify.get(lead.domain) || []);
-    if (error) {
-      log(`contact finding stopped: ${error}`);
-      break;
-    }
-    lead.contact = contact;
-    lead.contact_trail = tried;
-    if (contact) found++;
-    lead.score = score(lead);
-  }
-  log(`verified contacts: ${found}/${queue.length}`);
+  await findContacts(queue, {
+    finder: args.finder,
+    verifier: args.verifier,
+    maxCandidates: Number(args['max-candidates']),
+    log,
+  });
+  for (const lead of queue) lead.score = score(lead);
+  log(`verified contacts: ${queue.filter((l) => l.contact).length}/${queue.length}`);
 }
 
 // 4. Write
@@ -185,3 +183,9 @@ const files = await writeOutputs(kept, outDir);
 const byPriority = kept.reduce((m, l) => ((m[l.score.priority] = (m[l.score.priority] || 0) + 1), m), {});
 log(`wrote ${files.csv}`);
 log(`priority counts: ${JSON.stringify(byPriority)}`);
+
+// 5. Funnel: how many survived each step, with which tool, at what cost.
+const funnel = funnelReport({ candidates, leads, kept, queue, args });
+await writeFile(path.join(outDir, 'funnel.md'), funnel.markdown);
+await writeFile(path.join(outDir, 'funnel.json'), JSON.stringify(funnel.data, null, 2));
+console.error('\n' + funnel.markdown);

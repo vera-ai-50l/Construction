@@ -1,16 +1,17 @@
 // Source: Google results for vibe-coding footprints, through Apify's official Google
 // Search scraper. Finds apps that kept a builder badge or host and mention pricing.
+import { count } from '../ledger.mjs';
 import { runActor } from '../apify.mjs';
-import { isCompanySite, registrableDomain } from '../domain.mjs';
+import { registrableDomain } from '../domain.mjs';
 
+// Apps still on a builder's host, with signs of a paid, signed-in product. Queries
+// about a builder's badge mostly return articles about the builder, so they are not used.
 export const DEFAULT_FOOTPRINTS = [
-  '"Edit with Lovable" pricing',
-  '"Edit with Lovable" "sign up"',
-  'site:lovable.app pricing "per month"',
-  'site:base44.app pricing',
-  'site:bolt.host pricing',
-  'site:replit.app pricing "per month"',
-  '"Made with Bolt" pricing',
+  'site:lovable.app "sign in" "pricing"',
+  'site:lovable.app "free trial" "per month"',
+  'site:base44.app "sign in" "pricing"',
+  'site:bolt.host "sign in" "pricing"',
+  'site:replit.app "sign in" "pricing"',
 ];
 
 // Builder hosts are allowed here (they are the point), unlike other sources.
@@ -25,14 +26,18 @@ export async function serpFootprints({ queries = DEFAULT_FOOTPRINTS, pagesPerQue
   const seen = new Map();
   for (const page of items) {
     for (const r of page.organicResults || []) {
+      count('serp_results');
       let host;
       try {
         host = new URL(r.url).hostname.toLowerCase();
       } catch {
         continue;
       }
+      // Only apps on a builder's own host: other results are articles about the builders.
       const builderHosted = BUILDER_HOST.test(host);
-      if (!builderHosted && !isCompanySite(r.url)) continue;
+      if (!builderHosted) continue;
+      // Content pages ("... pricing guide 2026") are not products.
+      if (/\b(guide|cost of|costs|how much|vs\.?|comparison|calculator|blog)\b/i.test(r.title || '')) continue;
       // A builder-hosted app is its own site; anything else is keyed by company domain.
       const key = builderHosted ? host : registrableDomain(r.url);
       if (seen.has(key)) continue;

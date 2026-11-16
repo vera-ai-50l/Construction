@@ -1,6 +1,8 @@
 // Minimal Apify client: start an actor run, wait for it, read its dataset.
 // Token: APIFY_TOKEN. (In a cloud session with a saved network secret for
 // api.apify.com, the proxy adds the real token and this placeholder is replaced.)
+import { addCost } from './ledger.mjs';
+
 const BASE = 'https://api.apify.com/v2';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -49,5 +51,7 @@ export async function runActor(actor, input, { maxWaitSecs = 900, memoryMbytes, 
   const items = await call('GET', `/datasets/${run.defaultDatasetId}/items?clean=true&format=json`);
   const final = (await call('GET', `/actor-runs/${run.id}`)).data;
   log(`apify: ${actor} returned ${items.length} items (usage $${(final.usageTotalUsd ?? 0).toFixed(3)})`);
+  // Actual billed usage for the run, as Apify reports it.
+  addCost(`apify:${actor}`, { units: items.length, usd: final.usageTotalUsd ?? 0, unit: 'item' });
   return items;
 }
