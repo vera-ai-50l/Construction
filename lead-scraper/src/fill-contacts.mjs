@@ -27,7 +27,8 @@ for (const d of dirs) {
     const hasPerson = l.contact?.email && !isRoleMailbox(l.contact.email) && ['ok', 'catch_all'].includes(l.contact.verification);
     if (hasPerson || !l.site?.reachable) continue;
     if (args['vibe-only'] && !/vibe/.test(l.vibe?.verdict || '')) continue;
-    if (!byDomain.has(l.domain)) byDomain.set(l.domain, { ...l, filled_from: path.basename(d) });
+    // Names found by an earlier search are looked up again with today's rules.
+    if (!byDomain.has(l.domain)) byDomain.set(l.domain, { ...l, search_people: undefined, filled_from: l.filled_from || path.basename(d) });
   }
 }
 const gap = [...byDomain.values()];

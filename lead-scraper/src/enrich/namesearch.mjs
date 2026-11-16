@@ -10,12 +10,20 @@ const BUILDER_NAME = /^(lovable|gpt engineer|bolt|base44|replit|v0|vite|react ap
 const DECIDER = /\b(founder|co-?founder|ceo|chief executive|owner|managing director|director|president|cto)\b/i;
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** The company's name as it presents itself (not the builder's default). */
+// Page words that are not a company name (titles like "Pricing | ...").
+const GENERIC = /^(pricing|contact|contact us|home|homepage|sign in|log ?in|sign up|welcome|dashboard|about|about us|plans|features|app|landing|index|untitled)$/i;
+
+/** The company's name as it presents itself (not the builder's default or a page word). */
 export function companyName(lead) {
-  const candidates = [lead.site?.meta_author, lead.trustmrr?.name, lead.name, (lead.mail_domain || lead.domain || '').split('.')[0]];
+  const stem = (lead.mail_domain || lead.domain || '').split('.')[0];
+  // Builder-hosted apps: the company domain they publish names the company best.
+  const offHost = lead.mail_domain && lead.mail_domain !== lead.domain;
+  const candidates = offHost
+    ? [lead.site?.meta_author, stem]
+    : [lead.trustmrr?.name, lead.site?.meta_author, lead.name, stem];
   for (const c of candidates) {
     const n = String(c || '').replace(/[®™©]/g, '').replace(/\s+(LLC|Ltd|Inc|GmbH|SAS|Pty)\.?$/i, '').trim();
-    if (n && n.length >= 3 && !BUILDER_NAME.test(n)) return n;
+    if (n && n.length >= 3 && !BUILDER_NAME.test(n) && !GENERIC.test(n)) return n;
   }
   return '';
 }
@@ -42,14 +50,21 @@ export async function searchFounderNames(leads, { log } = {}) {
   const todo = leads.map((l) => ({ lead: l, company: companyName(l) })).filter((t) => t.company);
   if (!todo.length) return;
   const queryFor = (t) => `site:linkedin.com/in "${t.company}" (founder OR co-founder OR CEO OR owner)`;
-  const input = { queries: todo.map(queryFor).join('\n'), maxPagesPerQuery: 1, resultsPerPage: 10, countryCode: 'us', mobileResults: false };
-  const key = 'namesearch:' + JSON.stringify(input);
-  let pages = await cacheGet(key);
-  if (!pages) {
-    pages = await runActor('apify/google-search-scraper', input, { log });
-    await cachePut(key, pages);
+  // Cached per query, so a rerun only pays for searches it has not made before.
+  const byQuery = new Map();
+  for (const t of todo) {
+    const hit = await cacheGet('namesearch:q:' + queryFor(t));
+    if (hit) byQuery.set(queryFor(t), hit);
   }
-  const byQuery = new Map(pages.map((p) => [p.searchQuery?.term, p]));
+  const fresh = [...new Set(todo.map(queryFor).filter((q) => !byQuery.has(q)))];
+  if (fresh.length) {
+    const pages = await runActor('apify/google-search-scraper', { queries: fresh.join('\n'), maxPagesPerQuery: 1, resultsPerPage: 10, countryCode: 'us', mobileResults: false }, { log });
+    for (const p of pages) {
+      byQuery.set(p.searchQuery?.term, p);
+      await cachePut('namesearch:q:' + p.searchQuery?.term, p);
+    }
+  }
+  log?.(`founder name search: ${fresh.length} new searches, ${todo.length - fresh.length} cached`);
   for (const t of todo) {
     count('namesearch_queries');
     const page = byQuery.get(queryFor(t));
