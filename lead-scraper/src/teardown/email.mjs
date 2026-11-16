@@ -31,7 +31,9 @@ export function chooseRecipient(lead) {
   // Small companies: address the founder by name even on a shared inbox.
   const founder = people.find((p) => /founder|ceo/i.test(p.title));
   const small = lead.trustmrr || (lead.yc?.team_size != null && lead.yc.team_size <= 20);
-  const person = match || (small && founder) || null;
+  let person = match || (small && founder) || null;
+  // A personal mailbox that is just a first name ("manu@") tells us who reads it.
+  if (!person && pick.type === 'personal' && /^[a-z]{3,12}$/.test(local)) person = { name: cap(local), title: '' };
   const [first, ...rest] = person ? person.name.split(/\s+/) : [];
   return {
     email: pick.email,
