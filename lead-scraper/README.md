@@ -79,6 +79,49 @@ pricing) can be written from public screenshots. Onboarding and the dashboard ne
 person to sign up with a company email, which the `signup_url` and `work_email_to_sign_up`
 columns tell you how to do. Do not use fake identities or other people's details.
 
+## Vibe-coded leads with named, verified emails
+
+```bash
+APIFY_TOKEN=... MILLIONVERIFIER_API_KEY=... npm run leads -- --profile vibe --limit 50 --serp --find-contacts
+```
+
+**Which sites qualify.** Each site gets a vibe check, recorded in `vibe_verdict`,
+`vibe_score`, `vibe_reasons` and `polish_signals`:
+
+1. **Builder fingerprints** (strong): a lovable.app / base44.app / bolt.host / replit.app
+   address, or builder artifacts in the HTML and JS bundles ("lovable-uploads",
+   `data-lovable`, gpt-engineer tags, `@base44/sdk`, "Bolt.new"), untouched Vite template
+   titles, default shadcn theme values, a Supabase backend. In testing it caught 4 of 4
+   known Lovable sites, including custom domains, with no false positives on 5 funded
+   YC sites.
+2. **Default-design patterns** (measured in a browser, after Adrian Krebs's Show HN
+   study): Inter/Geist everywhere, gradient headline text, purple-indigo accents, a pill
+   badge over the hero, colored card borders, emoji headings, identical icon cards.
+   Patterns polished sites also use (blurred headers, glows, all-caps labels) count little.
+3. **Design spend** (counts against a lead): licensed typefaces (GT, ABC, SF Pro, Söhne...),
+   a Framer or Webflow marketing site, design job openings, a funded team of 15+.
+
+Verdicts: `vibe-coded`, `likely vibe-coded`, `unclear` (hand-built, no proof either way),
+`polished` (dropped from the vibe profile unless `--keep-polished`).
+
+**Where leads come from.** TrustMRR (Stripe-verified revenue, `--min-revenue`, default
+$500 in 30 days; only a few percent of listings clear $1K, so the profile reads widely)
+and, with `--serp`, Google results for builder footprints (`"Edit with Lovable" pricing`,
+`site:lovable.app pricing`...) through Apify's Google Search scraper.
+
+**Named emails (`--find-contacts`).** For the best `--max-contacts` leads (default 100):
+
+1. Apify's Leads Finder (`code_crafter/leads-finder`, about $1.50 per 1,000 leads)
+   returns founders, owners and C-level people at each domain with name, title,
+   LinkedIn and email.
+2. Known names (TrustMRR founders, people on the site) get the usual patterns tried:
+   `first@`, `first.last@`, `firstlast@`, `flast@`.
+3. Every address is checked with MillionVerifier: `ok` is accepted, `catch_all` is kept
+   and flagged, everything else is dropped. Shared inboxes are never returned.
+
+The result fills `contact_name`, `contact_title`, `contact_email`, `email_verification`,
+`email_source`; the teardown step then writes to that person ("Hi Jose") automatically.
+
 ## Step 2: teardowns and the email sheet
 
 ```bash
