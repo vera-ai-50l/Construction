@@ -197,6 +197,7 @@ export async function enrichSite(site, { maxPages = 7, get = getText, company = 
     error: home.error || null,
     title: '',
     meta_description: '',
+    meta_author: '',
     pages_read: [],
     demo_embeds: [],
     public_demo_urls: [],
@@ -226,6 +227,7 @@ export async function enrichSite(site, { maxPages = 7, get = getText, company = 
   const $home = cheerio.load(home.text);
   out.title = $home('title').first().text().trim().slice(0, 140);
   out.meta_description = ($home('meta[name="description"]').attr('content') || '').trim().slice(0, 240);
+  out.meta_author = ($home('meta[name="author"]').attr('content') || $home('meta[property="og:site_name"]').attr('content') || '').trim().slice(0, 80);
 
   // Pick the internal pages worth reading.
   const homeLinks = uniq($home('a[href]').map((_, a) => absolute($home(a).attr('href'), home.url)).get());

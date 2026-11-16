@@ -38,6 +38,7 @@ const { values: args } = parseArgs({
     finder: { type: 'string', default: 'auto' },
     verifier: { type: 'string', default: 'bounceverify' },
     'max-candidates': { type: 'string', default: '3' },
+    'name-search': { type: 'boolean', default: false },
     'min-revenue': { type: 'string', default: '500' },
     serp: { type: 'boolean', default: false },
     sources: { type: 'string', default: 'trustmrr' },
@@ -70,6 +71,8 @@ Options:
   --verifier <name>      who verifies: bounceverify (Apify, ~$0.0009/email, default) or
                          mv (MillionVerifier; needs MILLIONVERIFIER_API_KEY, set MV_PRICE_USD)
   --max-candidates <n>   email guesses checked per lead, in rounds (default 3)
+  --name-search          leads with a mail domain but no name: one Google search each for a
+                         founder's LinkedIn result title (Apify, ~$0.0045 per company)
   --max-contacts <n>     at most this many leads go through contact finding (default 100)
 A funnel report (funnel.md / funnel.json) with counts and costs is written every run.`);
   process.exit(0);
@@ -182,6 +185,7 @@ if (args['find-contacts']) {
     finder: args.finder,
     verifier: args.verifier,
     maxCandidates: Number(args['max-candidates']),
+    nameSearch: args['name-search'],
     log,
   });
   for (const lead of queue) lead.score = score(lead);

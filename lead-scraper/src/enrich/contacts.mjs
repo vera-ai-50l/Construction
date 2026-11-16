@@ -32,6 +32,7 @@ export function mailDomain(lead) {
   return ranked.length && (ranked.length === 1 || ranked[0][1] > ranked[1][1]) ? ranked[0][0] : null;
 }
 import { findPeople, VERIFIERS } from '../providers.mjs';
+import { searchFounderNames } from './namesearch.mjs';
 import { count } from '../ledger.mjs';
 
 const ascii = (s) => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
@@ -54,6 +55,7 @@ export function knownPeople(lead, finderPeople = []) {
     ...(lead.trustmrr?.founders || [])
       .filter((f) => /^[A-Z][\p{L}'’-]+(\s+[\p{L}'’-]+)+$/u.test(f.name || ''))
       .map((f) => ({ first_name: f.name.split(/\s+/)[0], last_name: f.name.split(/\s+/).slice(1).join(' '), title: 'Founder', email: '', source: 'trustmrr' })),
+    ...(lead.search_people || []).map((p) => ({ first_name: p.name.split(/\s+/)[0], last_name: p.name.split(/\s+/).slice(1).join(' '), title: p.title, linkedin: p.linkedin, email: '', source: 'google (LinkedIn title)' })),
     ...[...(lead.site?.people || []), ...(lead.company_site?.people || [])].map((p) => ({ first_name: p.name.split(/\s+/)[0], last_name: p.name.split(/\s+/).slice(1).join(' '), title: p.title, email: '', source: 'company site' })),
   ];
   // The maker's own public HN profile address (they published it themselves).
@@ -98,7 +100,7 @@ export function candidatesFor(lead, people, max = 3) {
  * @param leads  leads to process (each gets .contact and .contact_trail)
  * @param opts   { finder: 'pipelinelabs'|'microworlds'|'code_crafter'|'none', verifier: 'bounceverify'|'mv', perDomain, maxCandidates, log }
  */
-export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 'bounceverify', perDomain = 3, maxCandidates = 3, log = () => {} } = {}) {
+export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 'bounceverify', perDomain = 3, maxCandidates = 3, nameSearch = false, log = () => {} } = {}) {
   // 0. Apps on a builder host: read the company site their pages point to (free), for
   //    the founder's name and published addresses.
   const offHost = leads.filter((l) => isSharedHost(l.domain) && mailDomain(l) && !l.company_site);
@@ -111,6 +113,20 @@ export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 
     }
   });
   if (offHost.length) log(`company sites read for builder-hosted apps: ${offHost.length}`);
+
+  // 0b. Still nobody named, but a company mail domain: one Google search per company
+  //     for a founder's LinkedIn result title (paid, about $0.0045 per company).
+  if (nameSearch) {
+    const anonymous = leads.filter((l) => mailDomain(l) && !knownPeople(l).length);
+    if (anonymous.length) {
+      try {
+        await searchFounderNames(anonymous.map((l) => Object.assign(l, { mail_domain: mailDomain(l) })), { log });
+        log(`founder name search: ${anonymous.filter((l) => l.search_people?.length).length}/${anonymous.length} named`);
+      } catch (e) {
+        log(`founder name search failed: ${e.message.slice(0, 160)}`);
+      }
+    }
+  }
 
   // 1. People
   let found = new Map();

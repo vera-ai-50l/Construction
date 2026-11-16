@@ -64,6 +64,7 @@ export function chooseRecipient(lead) {
 
 const OFFER = {
   type_a: 'I can send a free before/after mock of your {screen}, no call needed.',
+  vibe: 'I can send a free before/after mock of your {screen}, no call needed.',
   default: 'I can send a free before/after of your {screen}, no call needed.',
 };
 

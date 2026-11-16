@@ -77,3 +77,13 @@ test('builder-hosted apps use the company domain their pages publish', () => {
   assert.deepEqual(candidatesFor(lead, knownPeople(lead), 2).map((c) => c.email), ['lucas@optimizeit.ai', 'lucas.cannon@optimizeit.ai']);
   assert.deepEqual(candidatesFor({ domain: 'x.lovable.app', site: { emails: [] } }, knownPeople({ site: { people: [{ name: 'Jo Doe', title: 'CEO' }] } })), []);
 });
+
+test('founder name from a LinkedIn result title, only for this company', async () => {
+  const { personFromResult, companyName } = await import('../src/enrich/namesearch.mjs');
+  const r = { url: 'https://www.linkedin.com/in/andrew-k-123', title: 'Andrew Kim - Founder & CEO - Homestream | LinkedIn', description: 'Founder at Homestream.' };
+  assert.deepEqual(personFromResult(r, 'Homestream').name, 'Andrew Kim');
+  assert.equal(personFromResult({ ...r, title: 'Andrew Kim - Founder - Other Co | LinkedIn', description: '' }, 'Homestream'), null);
+  assert.equal(personFromResult({ ...r, url: 'https://homestream.io' }, 'Homestream'), null);
+  assert.equal(companyName({ site: { meta_author: 'Lovable' }, name: 'happycamper', domain: 'happycamper.lovable.app' }), 'happycamper');
+  assert.equal(companyName({ site: { meta_author: 'Toothapps®' } }), 'Toothapps');
+});
