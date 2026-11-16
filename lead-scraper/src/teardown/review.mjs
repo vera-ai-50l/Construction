@@ -24,6 +24,18 @@ export const Review = z.object({
   strength: z.string().describe('One genuine, specific thing the product does well, as a clause that can follow "First, what works: "'),
   looks_ai_generated: z.boolean(),
   ai_look_evidence: z.string().describe('If looks_ai_generated, what gives it away; otherwise empty'),
+  subject: z.string().optional(),
+  hook: z.string().optional(),
+});
+
+// What Claude must return: the review plus a subject line and an opening hook.
+const ReviewOut = Review.extend({
+  subject: z.string().describe(
+    "Email subject, 3 to 7 words, lowercase except names and quoted on-page text, about the single most specific thing you saw (e.g. \"the 'asdasd' error in middleware's hero\"). Must only make sense for this company. No clickbait, no 'quick question', no 'free', no emoji, no exclamation marks.",
+  ),
+  hook: z.string().describe(
+    'The opening sentence of the email (it shows as the inbox preview): the most specific observation, under 25 words, addressed to them ("Your ..."). Same thing as the subject.',
+  ),
 });
 
 const SYSTEM = `You are a senior product designer reviewing a software company's public screens to write a short teardown that will be emailed to its founder.
@@ -34,7 +46,8 @@ Rules:
 - Do not invent metrics, conversion rates or analytics. Do not claim to know their churn or bounce rate; describe the likely effect on a visitor instead.
 - Do not repeat the measured findings you are given; add what only a person looking at the page would notice: unclear headline or value proposition, weak hierarchy, competing focal points, generic template or AI-generated look, inconsistent components, confusing next step, trust gaps, cramped or empty layouts, mobile layout problems.
 - Plain, direct sentences an engineer would respect. No design jargon, no flattery, no exclamation marks.
-- If the screens are genuinely well designed, return fewer findings and say so through the severities (1 = polish).`;
+- If the screens are genuinely well designed, return fewer findings and say so through the severities (1 = polish).
+- The subject and hook must be about your most specific finding: something a founder would recognise instantly on their own page.`;
 
 const IMAGE_ORDER = ['home', 'home-mobile', 'pricing', 'signup', 'demo', 'dashboard'];
 
@@ -78,7 +91,7 @@ export async function aiReview({ lead, shots, measured, outDir, log = console.er
       // Server-side fallback: if the request is declined, the API retries it on a fallback model.
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      output_config: { effort: 'medium', format: betaZodOutputFormat(Review) },
+      output_config: { effort: 'medium', format: betaZodOutputFormat(ReviewOut) },
       system: SYSTEM,
       messages: [{ role: 'user', content: [...images, { type: 'text', text: `${context}\n\nReview these screens.` }] }],
     });
@@ -103,6 +116,8 @@ export async function aiReview({ lead, shots, measured, outDir, log = console.er
 export function reviewFindings(review) {
   if (!review) return [];
   return review.visual_findings.map((f, i) => ({
+    // The review's subject and hook belong to its first (most important) finding.
+    ...(i === 0 && review.subject ? { subject: review.subject, hook: review.hook || '' } : {}),
     key: `visual_${i + 1}`,
     screen: f.screen,
     severity: Math.max(1, Math.min(3, f.severity)),

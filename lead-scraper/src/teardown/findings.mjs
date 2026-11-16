@@ -246,3 +246,39 @@ export function strengths(screens, lead) {
 }
 
 export { SCREEN_NAME };
+
+// Subject line + opening sentence for each measured finding. Subjects are short,
+// lowercase, and only make sense for this company (its name plus a number we measured).
+const HOOKS = {
+  slow_lcp: (n, c) => [`${c} took ${n}s to load`, `Your homepage's main content took ${n}s to appear in my test, on a fast connection.`],
+  heavy_page: (n, c) => [`${c}'s ${n} mb homepage`, `Your homepage downloads ${n} MB before it settles.`],
+  mobile_overflow: (n, c) => [`${c} scrolls sideways on phones`, 'On a phone, your homepage scrolls sideways.'],
+  small_targets: (n, c) => [`${n} tiny tap targets on ${c}`, `On a phone, ${n} buttons and links on your homepage are too small to tap reliably.`],
+  no_cta_fold: (n, c) => [`no signup button on ${c}'s first screen`, 'On a laptop, your homepage shows no sign-up or demo button until you scroll.'],
+  competing_ctas: (n, c) => [`${n} buttons competing on ${c}'s homepage`, `The first screen of your homepage asks visitors to do ${n} different things.`],
+  a11y: (n, c) => [`${n} accessibility errors on ${c}`, `An accessibility check flagged ${n} serious issues on your homepage.`],
+  tiny_text: (n, c) => [`${n} bits of tiny text on ${c}`, `On a phone, ${n} pieces of text on your homepage are under 12px.`],
+  many_fonts: (n, c) => [`${n} typefaces on ${c}'s homepage`, `Your homepage mixes ${n} different typefaces.`],
+  broken_images: (n, c) => [`a broken image on ${c}'s homepage`, 'An image on your homepage failed to load when I visited.'],
+  console_errors: (n, c) => [`${n} javascript errors on ${c}`, `Your homepage throws ${n} JavaScript errors while loading.`],
+  no_meta: (n, c) => [`${c} has no google description`, 'Your homepage has no meta description, so Google writes its own.'],
+  long_signup: (n, c) => [`the ${n}-field signup at ${c}`, `Your sign-up form asks for ${n} fields before anyone sees the product.`],
+  work_email: (n, c) => [`${c} turns away gmail signups`, 'Your sign-up rejects personal email addresses.'],
+  no_oauth: (n, c) => [`no google signup on ${c}`, 'Your sign-up has no "Continue with Google" option.'],
+  no_self_serve: (n, c) => [`no way to try ${c} without a call`, 'The only way to see your product is to book a call.'],
+  no_pricing: (n, c) => [`where is ${c}'s pricing?`, 'I could not find a price anywhere on your site.'],
+  wide_tables: (n, c) => [`the ${n}-column table in ${c}`, `The main table in your dashboard shows ${n} columns at once.`],
+  empty_cells: (n, c) => [`${n}% empty cells in ${c}'s dashboard`, `${n}% of the table cells in your dashboard are empty.`],
+  dash_tiny_text: (n, c) => [`tiny text in ${c}'s dashboard`, `${n} pieces of text in your dashboard are under 12px.`],
+  dash_nav: (n, c) => [`${n} menu links in ${c}`, `Your dashboard navigation shows ${n} links at once.`],
+};
+
+/** Add `subject` and `hook` to a measured finding (reviewed findings bring their own). */
+export function withHook(f, companyName) {
+  if (f.subject) return f;
+  const make = HOOKS[f.key];
+  if (!make) return f;
+  const n = parseFloat(String(f.metric).replace(/,/g, '')) || '';
+  const [subject, hook] = make(n, companyName.toLowerCase());
+  return { ...f, subject, hook };
+}

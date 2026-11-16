@@ -51,8 +51,8 @@ export async function writeWorkbook(teardowns, outDir) {
   await writeFile(
     csv,
     toCsvRows(
-      ['Email', 'First Name', 'Last Name', 'Company', 'Website', 'subject', 'email_body', 'followup_body', 'finding_1', 'finding_2', 'finding_3'],
-      ready.map((r) => [r.email, r.first_name, r.last_name, r.company, r.website, r.subject, r.email_body, r.followup_body, r.finding_1, r.finding_2, r.finding_3]),
+      ['Email', 'First Name', 'Last Name', 'Company', 'Website', 'subject', 'subject_alt', 'email_body', 'followup_body', 'finding_1', 'finding_2', 'finding_3'],
+      ready.map((r) => [r.email, r.first_name, r.last_name, r.company, r.website, r.subject, r.subject_alt, r.email_body, r.followup_body, r.finding_1, r.finding_2, r.finding_3]),
     ),
   );
   return { xlsx, csv, counts: { ready: ready.length, needs_login: loginRows.length, needs_email: sendRows.filter((r) => r.status === 'needs_email').length, thin: sendRows.filter((r) => r.status === 'thin').length } };

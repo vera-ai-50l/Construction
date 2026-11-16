@@ -111,6 +111,15 @@ elements, placeholder text, generic AI look) come from a review file per lead at
 - automatically with `--ai-review` (Claude Opus 5.5 looks at the screenshots; needs
   `ANTHROPIC_API_KEY`; roughly $0.05 per lead; server-side refusal fallback is on).
 
+**Subject lines and the first sentence** are written from the single most specific finding,
+because that is what decides the open: a few lowercase words that only make sense for that
+company ("the 'asdasd' error in middleware's hero", "metropolix took 8.4s to load"), and the
+same observation as the email's first sentence, which inboxes show as the preview.
+`subject_alt` uses a buying signal when there is one ("while pointone hires a brand
+designer") or the strongest measured number, so you can A/B test the two in SalesHandy.
+Reviews carry their own `subject` and `hook`; measured findings have templates in
+`src/teardown/findings.mjs`.
+
 A file that exists is never overwritten. The email leads with up to two reviewed findings,
 backs them with measured ones, opens with one genuine strength, and offers a free
 before/after with no call. Use `--reuse` to rebuild emails from saved screenshots after
@@ -138,7 +147,8 @@ real details, and respect each product's terms.
 
 1. Import `saleshandy.csv` as prospects; map `Email`, `First Name`, `Last Name`, `Company`,
    `Website`, and create custom fields for `subject`, `email_body` and `followup_body`.
-2. In the sequence, step 1 subject = the `subject` merge tag, body = the `email_body` merge
+2. In the sequence, step 1 subject = the `subject` merge tag (add a variant with `subject_alt`
+   to A/B test), body = the `email_body` merge
    tag; step 2 (3 days later) body = `followup_body`. Check SalesHandy's exact merge-tag
    syntax when you map the fields.
 3. Read every email before it goes out, use a separate sending domain with warmed inboxes,

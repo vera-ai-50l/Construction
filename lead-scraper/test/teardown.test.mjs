@@ -34,6 +34,7 @@ test('email: reviewed findings first, three at most, no exclamation marks', () =
   const review = Review.parse({
     visual_findings: [{ screen: 'home', severity: 3, issue: 'The headline is vague.', impact: 'People leave.', fix: 'Say what it does.' }],
     strength: 'the demo is public', looks_ai_generated: false, ai_look_evidence: '',
+    subject: "acme's vague headline", hook: 'The headline is vague.',
   });
   const measured = [
     { key: 'a', screen: 'home', severity: 2, issue: 'Measured A.', impact: 'x.', fix: 'Fix a.' },
@@ -42,7 +43,22 @@ test('email: reviewed findings first, three at most, no exclamation marks', () =
   ];
   const mail = writeEmail(lead(), { greeting: 'Hi Jo' }, [...reviewFindings(review), ...measured], [review.strength], ['homepage']);
   assert.equal(mail.findings_used.length, 3);
-  assert.match(mail.body, /^Hi Jo,/);
-  assert.match(mail.body, /1\. The headline is vague\./);
+  // The reviewed finding opens the email (it is the inbox preview); the rest are listed.
+  assert.match(mail.body, /^Hi Jo,\n\nThe headline is vague\. People leave\./);
+  assert.match(mail.body, /1\. Measured A\./);
   assert.doesNotMatch(mail.body, /!/);
+  assert.equal(mail.subject, "acme's vague headline");
+  assert.ok(mail.subject.length <= 60);
+});
+
+test('subjects from measured findings name the company and the number', () => {
+  const mail = writeEmail(
+    lead({ hiring: { design_roles: [{ title: 'Senior Product Designer' }] } }),
+    null,
+    [{ key: 'slow_lcp', screen: 'home', severity: 3, metric: '8.4s', issue: 'Slow.', impact: 'Bad.', fix: 'Faster.' }],
+    [],
+  );
+  assert.equal(mail.subject, 'acme took 8.4s to load');
+  assert.equal(mail.subject_alt, 'while acme hires a product designer');
+  assert.match(mail.body, /^Hi Acme team,\n\nYour homepage's main content took 8\.4s/);
 });

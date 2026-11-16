@@ -1,6 +1,6 @@
 // Pick who to email and write the teardown email in the positioning brief's voice:
 // direct, plain, specific, no jargon, no emoji, no exclamation marks, no invented results.
-import { SCREEN_NAME } from './findings.mjs';
+import { SCREEN_NAME, withHook } from './findings.mjs';
 
 // Inboxes that should never receive a cold email.
 const DO_NOT_EMAIL = /^(security|legal|privacy|gdpr|dpo|press|media|pr|careers|jobs|apply|cv|resumes?|recruiting|hr|abuse|compliance|billing|finance|accounts|invoices?|noreply|no-reply|donotreply|academic|research|investors?|ir|support|help|helpdesk|feedback|events|community|partners?|partnerships|[a-z]+-ops|cancel|refunds?|unsubscribe)@/i;
@@ -8,6 +8,11 @@ const ROLE_ORDER = ['founders', 'founder', 'ceo', 'hello', 'hi', 'hey', 'contact
 
 const firstWord = (s) => String(s || '').trim().split(/\s+/)[0];
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Inbox clients cut subjects around 50-60 characters; keep the specific part.
+const trimSubject = (t) => {
+  const s = t.replace(/[!]+/g, '').replace(/\s+/g, ' ').trim();
+  return s.length <= 60 ? s : s.slice(0, 57).replace(/\s+\S*$/, '') + '...';
+};
 const listJoin = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a.at(-1)}`);
 
 export function chooseRecipient(lead) {
@@ -52,36 +57,48 @@ const OFFER = {
 
 /** Build the first email and a follow-up from the top findings. */
 export function writeEmail(lead, recipient, found, strengthsList, screensAudited = []) {
+  // screensAudited: plain names of the screens we opened, e.g. ['homepage', 'pricing page']
   const top = [];
   for (const f of found) {
     if (top.length === 3) break;
-    if (!top.some((t) => t.key === f.key)) top.push(f);
+    if (!top.some((t) => t.key === f.key)) top.push(withHook(f, lead.name));
   }
   const mainScreen = SCREEN_NAME[top[0]?.screen] || 'homepage';
-  const screensSeen = screensAudited;
-  const n = top.length;
-  const subject = top.some((f) => f.key === 'mobile_overflow')
-    ? `${lead.name} on a phone`
-    : `${lead.name}: ${n} fix${n > 1 ? 'es' : ''} for your ${mainScreen}`;
-  const subjectAlt = `Quick teardown of ${lead.name}`;
+  const lead0 = top[0];
 
+  // Subject: the most specific thing we found, in their words. Alternate: a buying
+  // signal (an open design role) or the second finding, for an A/B test.
+  const subject = trimSubject(lead0?.subject || `${lead.name.toLowerCase()}'s ${mainScreen}`);
+  const role = lead.hiring?.design_roles?.[0]?.title;
+  const subjectAlt = trimSubject(
+    role
+      ? `while ${lead.name.toLowerCase()} hires a ${role.toLowerCase().replace(/^(senior|staff|lead|founding|sr\.?)\s+/, '')}`
+      : found.map((f) => withHook(f, lead.name)).find((f) => f.subject && f.key !== lead0?.key)?.subject ||
+          `first look at ${lead.name.toLowerCase()}`,
+  );
+
+  const greeting = `${recipient?.greeting || `Hi ${lead.name} team`},`;
+  // The first sentence is the inbox preview, so it carries the hook, not a pleasantry.
+  const opener = `${lead0?.hook || lead0?.issue || ''} ${lead0?.impact || ''}`.trim();
+  const rest = top.slice(1);
   const strength = strengthsList[0];
   const lines = [
-    `${recipient?.greeting || `Hi ${lead.name} team`},`,
+    greeting,
     '',
-    `I went through ${lead.name} the way a new visitor would, on a laptop and on a phone${screensSeen.length ? `: ${listJoin(screensSeen)}` : ''}.` +
-      (strength ? ` First, what works: ${strength}.` : ''),
+    opener,
     '',
-    n > 1 ? `${cap(['', 'one thing', 'two things', 'three things'][n])} I would fix first:` : 'One thing I would fix first:',
-    '',
-    ...top.map((f, i) => `${i + 1}. ${f.issue} ${f.impact}`),
+    `I went through ${lead.name} as a new visitor, on a laptop and on a phone${screensAudited.length ? ` (${listJoin(screensAudited)})` : ''}.` +
+      (strength ? ` What works: ${strength}.` : ''),
+    ...(rest.length
+      ? ['', rest.length > 1 ? 'Two more things I would fix:' : 'One more thing I would fix:', '', ...rest.map((f, i) => `${i + 1}. ${f.issue} ${f.impact}`)]
+      : []),
     '',
     (OFFER[lead.profile] || OFFER.default).replace('{screen}', mainScreen) + ' Want me to send it?',
   ];
   const followup = [
-    `${recipient?.greeting || `Hi ${lead.name} team`},`,
+    greeting,
     '',
-    `Following up on my notes about ${lead.name}. The quickest win is the first one: ${top[0] ? top[0].fix.charAt(0).toLowerCase() + top[0].fix.slice(1) : 'tightening the first screen'}`,
+    `Following up on ${lead.name}. The quickest win: ${lead0 ? lead0.fix.charAt(0).toLowerCase() + lead0.fix.slice(1) : 'tightening the first screen'}`,
     '',
     `Happy to send the before/after of your ${mainScreen} if you reply "yes".`,
   ];
@@ -90,7 +107,7 @@ export function writeEmail(lead, recipient, found, strengthsList, screensAudited
     subject_alt: subjectAlt,
     body: lines.join('\n'),
     followup: followup.join('\n'),
-    first_line: lines[2],
+    first_line: opener,
     findings_used: top,
   };
 }
