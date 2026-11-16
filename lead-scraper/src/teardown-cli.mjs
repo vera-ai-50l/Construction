@@ -13,6 +13,7 @@ import { chooseRecipient, writeEmail } from './teardown/email.mjs';
 import { writeWorkbook } from './teardown/workbook.mjs';
 import { loadReview, aiReview, reviewFindings } from './teardown/review.mjs';
 import { pool } from './http.mjs';
+import { parseCsv } from './sources/seed.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -24,6 +25,7 @@ const { values: args } = parseArgs({
     concurrency: { type: 'string', default: '2' },
     'ai-review': { type: 'boolean', default: false },
     reuse: { type: 'boolean', default: false },
+    contacts: { type: 'string' },
     help: { type: 'boolean', default: false },
   },
 });
@@ -34,6 +36,8 @@ if (args.help || !args.leads) {
   --only <domains>    comma list of domains to (re)do
   --min-score <n>     skip leads below this scrape score
   --concurrency <n>   leads audited in parallel (default 2)
+  --contacts <csv>    verified decision-maker emails (domain,email,first_name,last_name,title);
+                      they replace the scraped inbox and the greeting
   --reuse             reuse screenshots and measurements from the last run (only re-write emails)
   --ai-review         have Claude review the screenshots (needs ANTHROPIC_API_KEY; ~$0.05 per lead)
                       A review file in <out>/reviews/<domain>.json is used instead when present.`);
@@ -55,6 +59,15 @@ log(`${leads.length} leads to tear down`);
 const previous = new Map();
 if (args.reuse && existsSync(path.join(outDir, 'teardowns.json'))) {
   for (const t of JSON.parse(readFileSync(path.join(outDir, 'teardowns.json'), 'utf8'))) previous.set(t.domain, t.screens);
+}
+
+// --contacts: verified people beat scraped shared inboxes.
+const contacts = new Map();
+if (args.contacts) {
+  for (const r of parseCsv(readFileSync(args.contacts, 'utf8'))) {
+    if (r.domain && /@/.test(r.email || '')) contacts.set(r.domain.trim().toLowerCase(), r);
+  }
+  log(`${contacts.size} verified contacts loaded`);
 }
 
 const teardowns = [];
@@ -95,12 +108,22 @@ await pool(leads, Number(args.concurrency), async (lead) => {
   // Lead with what a person noticed (up to two), then back it with measured numbers.
   const found = [...visual.slice(0, 2), ...measured, ...visual.slice(2)];
   const good = [...(review?.strength ? [review.strength.replace(/\.$/, '')] : []), ...strengths(screens, lead)];
-  const recipient = chooseRecipient(lead);
+  const c = contacts.get(lead.domain);
+  const recipient = c
+    ? { email: c.email.trim(), email_type: 'personal', first_name: c.first_name || '', last_name: c.last_name || '', title: c.title || '', greeting: c.first_name ? `Hi ${c.first_name}` : `Hi ${lead.name} team`, source: 'contacts' }
+    : chooseRecipient(lead);
   const audited = [...new Set(screens.filter((s) => !s.error && !s.blocked && s.kind !== 'dashboard').map((s) => SCREEN_NAME[s.kind]))];
   const mail = writeEmail(lead, recipient, found, good, audited);
   const shots = shotsByKey;
   const signup = screens.find((s) => s.kind === 'signup' && !s.error);
-  const status = !recipient ? 'needs_email' : mail.findings_used.length < 2 ? 'thin' : 'ready';
+  // Only a named person counts as ready: shared inboxes (hello@, info@) rarely reach the buyer.
+  const status = !recipient
+    ? 'needs_email'
+    : mail.findings_used.length < 2
+      ? 'thin'
+      : recipient.email_type === 'personal' || recipient.source === 'contacts'
+        ? 'ready'
+        : 'shared_inbox';
 
   teardowns.push({
     company: lead.name,
@@ -119,6 +142,7 @@ await pool(leads, Number(args.concurrency), async (lead) => {
       company: lead.name,
       website: lead.site.fetched_url,
       email: recipient?.email || '',
+      email_source: recipient?.source === 'contacts' ? 'verified contact' : recipient ? `scraped ${recipient.email_type} inbox` : '',
       first_name: recipient?.first_name || '',
       last_name: recipient?.last_name || '',
       subject: mail.subject,

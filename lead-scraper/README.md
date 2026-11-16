@@ -128,6 +128,28 @@ adding reviews.
 The emails describe what was observed and its likely effect. They do not claim to know a
 company's churn or bounce rate: nobody can measure that from outside.
 
+### Getting the founder's email (do this before sending)
+
+Shared inboxes (hello@, info@, team@) rarely reach the person who buys, so only rows
+addressed to a named person count as **ready**; the rest land on **Shared inbox only
+(find founder)**. To fix them:
+
+1. Name the decision-maker: the YC company page ("Active Founders"), the TrustMRR founder,
+   the company's About page, or LinkedIn (company > People > "founder"). Under ~50 staff
+   pick the CEO; above that, the head of product or design.
+2. Find the address with one finder tool (Hunter, Apollo, Snov, Prospeo, or SalesHandy's
+   own lead finder if your plan has it), or try the usual startup patterns: `first@`,
+   `first.last@`, `flast@`.
+3. Verify every address (MillionVerifier, NeverBounce, ZeroBounce or SalesHandy's
+   verifier). Send to `valid` only; `catch-all` only when a finder also returned it;
+   never to `invalid` or `unknown`. Bounces above ~2% hurt every later email.
+4. Put the verified ones in a CSV (`domain,email,first_name,last_name,title`) and rebuild:
+   `npm run teardown -- --leads out/<run>/leads.json --reuse --contacts contacts.csv`.
+   The email, the greeting and the SalesHandy file update together.
+5. Check the law where the company is: US (CAN-SPAM) needs a real sender and an opt-out;
+   EU B2B email relies on legitimate interest (relevant offer, clear opt-out); Germany
+   generally needs prior consent even for B2B, so reach German companies on LinkedIn.
+
 ### Dashboards behind a login
 
 Leads whose dashboard is not public are listed on **Needs manual login** with the sign-up

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { toCsvRows } from './csv.mjs';
 
 const SEND_COLS = [
-  ['status', 14], ['priority', 8], ['score', 7], ['company', 22], ['website', 28], ['email', 30], ['first_name', 12], ['last_name', 14],
+  ['status', 14], ['priority', 8], ['score', 7], ['company', 22], ['website', 28], ['email', 30], ['email_source', 18], ['first_name', 12], ['last_name', 14],
   ['subject', 34], ['subject_alt', 30], ['email_body', 80], ['followup_body', 60], ['finding_1', 50], ['finding_2', 50], ['finding_3', 50],
   ['strength', 40], ['review', 9], ['looks_ai_generated', 30], ['dashboard_visible', 18], ['needs_manual_login', 10], ['login_url', 34], ['profile', 10], ['offer', 16], ['screenshots', 50],
 ];
@@ -38,6 +38,7 @@ export async function writeWorkbook(teardowns, outDir) {
   wb.created = new Date();
   sheet(wb, 'Ready to send', SEND_COLS, sendRows.filter((r) => r.status === 'ready'));
   sheet(wb, 'Needs manual login', LOGIN_COLS, loginRows);
+  sheet(wb, 'Shared inbox only (find founder)', SEND_COLS, sendRows.filter((r) => r.status === 'shared_inbox'));
   sheet(wb, 'Needs an email', SEND_COLS, sendRows.filter((r) => r.status === 'needs_email'));
   sheet(wb, 'Review (thin teardown)', SEND_COLS, sendRows.filter((r) => r.status === 'thin'));
   sheet(wb, 'All findings', FINDING_COLS, findingRows);
@@ -55,5 +56,5 @@ export async function writeWorkbook(teardowns, outDir) {
       ready.map((r) => [r.email, r.first_name, r.last_name, r.company, r.website, r.subject, r.subject_alt, r.email_body, r.followup_body, r.finding_1, r.finding_2, r.finding_3]),
     ),
   );
-  return { xlsx, csv, counts: { ready: ready.length, needs_login: loginRows.length, needs_email: sendRows.filter((r) => r.status === 'needs_email').length, thin: sendRows.filter((r) => r.status === 'thin').length } };
+  return { xlsx, csv, counts: { ready: ready.length, needs_login: loginRows.length, shared_inbox: sendRows.filter((r) => r.status === 'shared_inbox').length, needs_email: sendRows.filter((r) => r.status === 'needs_email').length, thin: sendRows.filter((r) => r.status === 'thin').length } };
 }
