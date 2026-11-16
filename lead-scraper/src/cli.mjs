@@ -14,6 +14,10 @@ import { pool } from './http.mjs';
 import { homepage, registrableDomain, isCompanySite } from './domain.mjs';
 import { accessLevel, aiBuilt, score, flags } from './score.mjs';
 import { writeOutputs } from './export.mjs';
+import { buildFingerprints, vibeVerdict } from './enrich/vibe.mjs';
+import { apifyDecisionMakers, findContact } from './enrich/contacts.mjs';
+import { getText } from './http.mjs';
+import { isSharedHost } from './domain.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -28,6 +32,11 @@ const { values: args } = parseArgs({
     'verify-emails': { type: 'boolean', default: false },
     'skip-jobs': { type: 'boolean', default: false },
     concurrency: { type: 'string', default: '4' },
+    'find-contacts': { type: 'boolean', default: false },
+    'max-contacts': { type: 'string', default: '100' },
+    'min-revenue': { type: 'string', default: '500' },
+    serp: { type: 'boolean', default: false },
+    'keep-polished': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
   },
 });
@@ -44,7 +53,13 @@ Options:
   --no-browser           never start the headless browser (client-rendered sites stay unread)
   --screenshots          screenshot home/pricing/signup/demo for teardowns (implies browser)
   --verify-emails        check published emails with MillionVerifier (needs MILLIONVERIFIER_API_KEY)
-  --skip-jobs            do not query job boards`);
+  --skip-jobs            do not query job boards
+  --min-revenue <usd>    vibe profile: minimum TrustMRR revenue in the last 30 days (default 500)
+  --serp                 vibe profile: also search Google for builder footprints via Apify (needs APIFY_TOKEN)
+  --keep-polished        keep leads whose site looks professionally designed (dropped by default for vibe)
+  --find-contacts        find a named decision-maker and verified email (Apify Leads Finder + MillionVerifier;
+                         needs APIFY_TOKEN and MILLIONVERIFIER_API_KEY)
+  --max-contacts <n>     at most this many leads go through contact finding (default 100)`);
   process.exit(0);
 }
 
@@ -60,10 +75,10 @@ const log = (...m) => console.error(`[${new Date().toISOString().slice(11, 19)}]
 const candidates = [];
 for (const name of wanted) {
   try {
-    const rows = await PROFILES[name].discover({ limit, offset });
+    const rows = await PROFILES[name].discover({ limit, offset, minRevenue: Number(args['min-revenue']), serp: args.serp, log });
     log(`${name}: ${rows.length} discovered`);
     // type_a pages through its source itself; the others are sliced here.
-    const page = name === 'type_a' ? rows : rows.slice(offset);
+    const page = name === 'type_a' || name === 'vibe' ? rows : rows.slice(offset);
     candidates.push(...page.slice(0, limit).map((r) => ({ ...r, profile: name })));
   } catch (e) {
     log(`${name}: discovery failed: ${e.message}`);
@@ -112,6 +127,13 @@ await pool(leads, Number(args.concurrency), async (lead) => {
     : await hiringSignals(lead.site.ats_boards, lead.site.ats_boards.length ? [] : [...new Set([stem, ...nameSlugs])]);
   lead.emails = args['verify-emails'] ? await verifyEmails(lead.site.emails) : lead.site.emails;
   if (args.screenshots && !args['no-browser'] && lead.site.reachable) lead.render = await (await browserApi()).captureLead(lead, outDir);
+  // Vibe-coded or professionally designed? Fingerprints always; design patterns in a browser.
+  if (lead.site.reachable) {
+    const home = await getText(homepage(lead.website));
+    const fp = await buildFingerprints(lead.site.fetched_url || site, home.text || '');
+    const slop = args['no-browser'] ? null : await (await browserApi()).slopScan(lead.site.fetched_url || site);
+    lead.vibe = { ...vibeVerdict(fp, slop, lead), fingerprints: fp };
+  }
   lead.access = accessLevel(lead.site, lead.render);
   lead.ai_built = aiBuilt(lead.site, lead);
   lead.offer = PROFILES[lead.profile].offer;
@@ -123,8 +145,43 @@ await pool(leads, Number(args.concurrency), async (lead) => {
 });
 if (browserMod) await browserMod.closeBrowser();
 
+// 3b. For the vibe profile, professionally designed products are not our buyers.
+let kept = leads;
+if (!args['keep-polished']) {
+  kept = leads.filter((l) => !(l.profile === 'vibe' && l.vibe?.verdict === 'polished'));
+  if (kept.length < leads.length) log(`dropped ${leads.length - kept.length} polished sites (use --keep-polished to keep them)`);
+}
+
+// 3c. Named, verified decision-makers.
+if (args['find-contacts']) {
+  const queue = kept
+    .filter((l) => l.site?.reachable && l.vibe?.verdict !== 'polished')
+    .sort((a, b) => b.score.total - a.score.total)
+    .slice(0, Number(args['max-contacts']));
+  let apify = new Map();
+  const apifyDomains = queue.map((l) => l.domain).filter((d) => !isSharedHost(d));
+  try {
+    apify = await apifyDecisionMakers(apifyDomains, { log });
+  } catch (e) {
+    log(`apify leads finder skipped: ${e.message}`);
+  }
+  let found = 0;
+  for (const lead of queue) {
+    const { contact, tried, error } = await findContact(lead, apify.get(lead.domain) || []);
+    if (error) {
+      log(`contact finding stopped: ${error}`);
+      break;
+    }
+    lead.contact = contact;
+    lead.contact_trail = tried;
+    if (contact) found++;
+    lead.score = score(lead);
+  }
+  log(`verified contacts: ${found}/${queue.length}`);
+}
+
 // 4. Write
-const files = await writeOutputs(leads, outDir);
-const byPriority = leads.reduce((m, l) => ((m[l.score.priority] = (m[l.score.priority] || 0) + 1), m), {});
+const files = await writeOutputs(kept, outDir);
+const byPriority = kept.reduce((m, l) => ((m[l.score.priority] = (m[l.score.priority] || 0) + 1), m), {});
 log(`wrote ${files.csv}`);
 log(`priority counts: ${JSON.stringify(byPriority)}`);

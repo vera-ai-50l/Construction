@@ -17,6 +17,14 @@ const trimSubject = (t) => {
 const listJoin = (a) => (a.length <= 1 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a.at(-1)}`);
 
 export function chooseRecipient(lead) {
+  // A named decision-maker found and verified in the scrape (--find-contacts) wins.
+  if (lead.contact?.email) {
+    const c = lead.contact;
+    return {
+      email: c.email, email_type: 'personal', first_name: c.first_name || '', last_name: c.last_name || '', title: c.title || '',
+      greeting: c.first_name ? `Hi ${c.first_name}` : `Hi ${lead.name} team`, source: 'contacts', verification: c.verification,
+    };
+  }
   const people = [
     ...lead.site.people.map((p) => ({ name: p.name, title: p.title })),
     ...(lead.trustmrr?.founders || []).filter((f) => /^[A-Z][a-z]+(\s+[A-Z][\w'’-]+)+$/.test(f.name || '')).map((f) => ({ name: f.name, title: 'Founder' })),

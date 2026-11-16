@@ -3,7 +3,7 @@
 // built, published contact details, people named on the site, and job boards.
 import * as cheerio from 'cheerio';
 import { getText } from '../http.mjs';
-import { registrableDomain } from '../domain.mjs';
+import { registrableDomain, isSharedHost } from '../domain.mjs';
 
 // Interactive-demo vendors. A hit means real product screens are public (Level B).
 const DEMO_VENDORS = [
@@ -80,8 +80,9 @@ function findEmails(rawHtml, domain) {
     .map((e) => e.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '').replace(/^\d+-(?=[a-z])/i, ''))
     .filter((e) => !/\.(png|jpe?g|gif|webp|svg|css|js)$/i.test(e))
     .filter((e) => !/(sentry|wixpress|example\.com|domain\.com|email\.com|yourcompany|godaddy)/i.test(e))
-    // Only addresses on the company's own domain: those are the ones it chose to publish.
-    .filter((e) => registrableDomain(e.split('@')[1]) === domain)
+    // Only addresses on the company's own domain, except on shared app hosts
+    // (x.lovable.app), where the founder's published address is all there is.
+    .filter((e) => registrableDomain(e.split('@')[1]) === domain || isSharedHost(domain))
     .map((e) => ({ email: e, type: GENERIC_MAILBOX.test(e) ? 'role' : 'personal' }));
 }
 

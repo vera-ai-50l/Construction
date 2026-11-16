@@ -5,10 +5,29 @@ import { ycCompanies } from './sources/yc.mjs';
 import { storylaneShowcase } from './sources/storylane.mjs';
 import { githubProducts } from './sources/github.mjs';
 import { trustmrrStartups } from './sources/trustmrr.mjs';
+import { serpFootprints } from './sources/serp.mjs';
 
 const AI = /\b(ai|a\.i\.|llms?|genai|generative ai|agents?|agentic|machine learning|copilot)\b/i;
 
 export const PROFILES = {
+  vibe: {
+    label: 'Vibe-coded products with paying users',
+    offer: 'AI App Glow-Up',
+    describe:
+      'TrustMRR startups with verified revenue (and, with --serp, Google results for builder footprints), kept only when the site is not professionally designed.',
+    discover: async ({ limit, offset, minRevenue = 500, serp = false, log }) => {
+      // Revenue yield on TrustMRR is low (a few % clear $1K/month), so read widely.
+      const rows = await trustmrrStartups({ limit: limit * 8, offset, minRevenue30d: minRevenue, b2bOnly: false });
+      if (serp) {
+        try {
+          rows.push(...(await serpFootprints({ log })));
+        } catch (e) {
+          log?.(`vibe: Google footprint search skipped: ${e.message}`);
+        }
+      }
+      return rows;
+    },
+  },
   type_a: {
     label: 'A: AI-built app with paying users',
     offer: 'AI App Glow-Up',

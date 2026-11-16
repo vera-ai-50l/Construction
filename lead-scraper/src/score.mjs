@@ -35,7 +35,10 @@ export function score(lead) {
 
   // Redesign: placeholder until inspected; the brief's thesis (AI-built apps look
   // generic) earns a small, labelled bump.
-  const redesign = lead.ai_built.value === 'yes' ? 15 : 12;
+  // The vibe check (build fingerprints + default-design patterns) is the best
+  // outside evidence of redesign room; still a placeholder until someone looks.
+  const v = lead.vibe?.verdict;
+  const redesign = v === 'vibe-coded' ? 18 : v === 'likely vibe-coded' ? 15 : v === 'polished' ? 5 : lead.ai_built.value === 'yes' ? 15 : 12;
 
   let commercial = 6;
   const rev = lead.trustmrr?.revenue_30d_usd;
@@ -49,6 +52,8 @@ export function score(lead) {
   if (s.large_company_hint) commercial -= 6; // can pay, but rarely buys from a small studio
 
   let reach = 0;
+  if (lead.contact?.verification === 'ok') reach += 8;
+  else if (lead.contact) reach += 5;
   const named = s.people.length || lead.trustmrr?.founders?.length;
   if (named) reach += 6;
   if (lead.emails.some((e) => e.type === 'personal')) reach += 4;
@@ -66,7 +71,7 @@ export function score(lead) {
   const ycYear = Number(String(lead.yc?.batch || '').match(/\d{4}/)?.[0] || 0);
   if ((founded && Date.now() - founded < 548 * 864e5) || ycYear >= new Date().getFullYear() - 1) timing += 1;
 
-  const fit = lead.profile === 'type_a' && lead.ai_built.value === 'unknown' ? 3 : 5;
+  const fit = (lead.profile === 'type_a' || lead.profile === 'vibe') && lead.ai_built.value === 'unknown' && !/vibe/.test(v || '') ? 3 : 5;
 
   const parts = {
     access,

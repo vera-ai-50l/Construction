@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { USER_AGENT, robotsAllowsUrl } from '../http.mjs';
+import { slopChecks } from './vibe.mjs';
 
 const require = createRequire(import.meta.url);
 let browserPromise = null;
@@ -110,4 +111,17 @@ export async function captureLead(lead, outDir) {
     }
   }
   return result;
+}
+
+/** Run the default-design checks (vibe.mjs slopChecks) on a rendered page. */
+export async function slopScan(url) {
+  if (!(await robotsAllowsUrl(url))) return null;
+  try {
+    return await withPage(async (page) => {
+      await open(page, url);
+      return page.evaluate(slopChecks);
+    });
+  } catch {
+    return null;
+  }
 }
