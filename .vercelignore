@@ -4,3 +4,4 @@
 # Workflow sources and build output are not part of the website.
 /n8n
 /infra
+/lead-scraper

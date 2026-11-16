@@ -1,0 +1,13 @@
+{
+  "name": "lead-scraper",
+  "private": true,
+  "type": "module",
+  "description": "Finds and enriches redesign leads for the ICPs in the ICP research report.",
+  "scripts": {
+    "leads": "NODE_USE_ENV_PROXY=1 node --no-warnings src/cli.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "cheerio": "1.2.0"
+  }
+}
