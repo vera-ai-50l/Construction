@@ -47,7 +47,7 @@ export async function latestCrawl(log) {
  * pages were crawled, then the rest.
  * @param opts { hosts, crawl, log }
  */
-export async function commonCrawlApps({ hosts = BUILDER_HOSTS, crawl, log } = {}) {
+export async function commonCrawlApps({ hosts = (process.env.CC_HOSTS || BUILDER_HOSTS.join(',')).split(','), crawl, log } = {}) {
   crawl ||= await latestCrawl(log);
   if (!crawl) throw new Error('Common Crawl index unavailable');
   const apps = new Map(); // hostname -> {paths}
