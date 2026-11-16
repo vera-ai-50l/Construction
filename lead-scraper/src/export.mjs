@@ -30,7 +30,12 @@ const COLUMNS = [
   ['open_jobs', (l) => l.hiring.open_jobs ?? ''],
   ['design_roles_open', (l) => l.hiring.design_roles.map((j) => `${j.title} (${j.days_open ?? '?'}d)`).join('; ')],
   ['design_role_urls', (l) => l.hiring.design_roles.map((j) => j.url).join(' ')],
-  ['people', (l) => [...l.site.people.map((p) => `${p.name} (${p.title})`), ...(l.trustmrr?.founders || []).map((f) => `${f.name} (founder, TrustMRR)`)].join('; ')],
+  ['people', (l) => {
+    const site = l.site.people.map((p) => `${p.name} (${p.title})`);
+    const named = new Set(l.site.people.map((p) => p.name.toLowerCase()));
+    const tm = (l.trustmrr?.founders || []).filter((f) => !named.has(String(f.name).toLowerCase())).map((f) => `${f.name} (founder, TrustMRR)`);
+    return [...site, ...tm].join('; ');
+  }],
   ['emails', (l) => l.emails.map((e) => e.email + (e.verified ? `[${e.verified}]` : '')).join(' ')],
   ['email_types', (l) => l.emails.map((e) => e.type).join(' ')],
   ['linkedin_company', (l) => l.site.linkedin_company || ''],

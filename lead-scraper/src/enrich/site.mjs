@@ -50,6 +50,8 @@ const CTA = {
 const GENERIC_MAILBOX = /^(info|hello|hi|contact|sales|support|help|team|admin|press|media|careers|jobs|hr|privacy|legal|security|billing|partners?|marketing|office|enquiries|inquiries|founders?|noreply|no-reply)@/i;
 const TITLE_RE = /\b(co-?founder|founder|ceo|chief executive|cto|chief technology|cpo|chief product|vp,? (of )?product|head of (product|design)|design lead|product lead)\b/i;
 const NAME_RE = /^[A-Z][a-zA-Z'’.-]+(?:\s+[A-Z][a-zA-Z'’.-]+){1,3}$/;
+// Capitalised phrases that look like names but are headings.
+const NOT_A_NAME = /\b(founders?|team|area|our|meet|about|leadership|company|careers|contact|story|mission|board|advisors?|investors?|the)\b/i;
 
 const uniq = (a) => [...new Set(a.filter(Boolean))];
 
@@ -73,7 +75,7 @@ function findEmails(rawHtml, domain) {
   for (const m of html.matchAll(/mailto:([^"'?\s>]+)/gi)) found.add(decodeURIComponent(m[1]).toLowerCase());
   for (const m of html.matchAll(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi)) found.add(m[0].toLowerCase());
   return [...found]
-    .map((e) => e.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, ''))
+    .map((e) => e.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, '').replace(/^\d+-(?=[a-z])/i, ''))
     .filter((e) => !/\.(png|jpe?g|gif|webp|svg|css|js)$/i.test(e))
     .filter((e) => !/(sentry|wixpress|example\.com|domain\.com|email\.com|yourcompany|godaddy)/i.test(e))
     // Only addresses on the company's own domain: those are the ones it chose to publish.
@@ -112,7 +114,10 @@ function findPeople($, company, onAboutPage) {
     if (near && ownCompany(lines[i])) people.push({ name: near, title: lines[i].slice(0, 60) });
   }
   const seen = new Set();
-  return people.filter((p) => !seen.has(p.name) && seen.add(p.name)).slice(0, 8);
+  return people
+    .filter((p) => !NOT_A_NAME.test(p.name) && p.name.length <= 40)
+    .filter((p) => !seen.has(p.name) && seen.add(p.name))
+    .slice(0, 8);
 }
 
 function atsFrom(urls) {

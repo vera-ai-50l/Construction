@@ -28,6 +28,8 @@ export async function ycCompanies(q) {
     .filter((c) => !q.b2bOnly || /B2B|Industrials|Healthcare|Fintech/i.test(c.industry || ''))
     .filter((c) => q.include.test(text(c)))
     .filter((c) => !q.exclude || !q.exclude.test(text(c)))
+    // Hiring companies first, then bigger teams: more budget and more product surface.
+    .sort((a, b) => Number(!!b.isHiring) - Number(!!a.isHiring) || (b.team_size || 0) - (a.team_size || 0))
     .map((c) => ({
       name: c.name,
       website: c.website,
