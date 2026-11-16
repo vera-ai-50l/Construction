@@ -157,6 +157,11 @@ await pool(leads, Number(args.concurrency), async (lead) => {
 });
 await closeBrowser();
 
+// --only redoes some leads: keep every other lead from the last run in the outputs.
+const lastFile = path.join(outDir, 'teardowns.json');
+if (only && existsSync(lastFile)) {
+  for (const t of JSON.parse(readFileSync(lastFile, 'utf8'))) if (!only.has(t.domain)) teardowns.push(t);
+}
 teardowns.sort((a, b) => b.send_row.score - a.send_row.score);
 await writeFile(path.join(outDir, 'teardowns.json'), JSON.stringify(teardowns, null, 2));
 const res = await writeWorkbook(teardowns, outDir);
