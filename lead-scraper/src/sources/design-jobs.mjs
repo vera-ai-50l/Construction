@@ -112,10 +112,15 @@ export async function classifyCompany(row) {
   if (!r.ok) return { icp: null, why: `site ${r.blocked || r.status || 'unreachable'}` };
   const html = r.text;
   if (/cdn\.shopify\.com|Shopify\.shop\s*=/.test(html)) return { icp: 'C', why: 'Shopify store' };
+  // The AI builders themselves are not apps built with them.
+  if (/^(lovable|bolt|boltnew|stackblitz|replit|v0|vercel|base44|wix|bubble|webflow|framer)\./.test(registrableDomain(row.website) || '')) return { icp: null, why: 'an AI builder / site builder itself' };
   if (BUILDER_MARK.test(html)) return { icp: 'A', why: `AI-builder fingerprint (${html.match(BUILDER_MARK)[0]})` };
   const $ = cheerio.load(html);
-  const text = `${$('title').text()} ${$('meta[name="description"]').attr('content') || ''} ${$('h1,h2').slice(0, 6).text()} ${row.description || ''}`;
-  const app = /\b(log ?in|sign ?in|sign ?up|get started|start (for )?free|book a demo|request a demo|pricing)\b/i.test($('a, button').text());
+  $('script,style,noscript,svg').remove();
+  const body = $('body').text().replace(/\s+/g, ' ').slice(0, 2500);
+  const text = `${$('title').text()} ${$('meta[name="description"]').attr('content') || ''} ${$('h1,h2,h3').slice(0, 8).text()} ${body} ${row.description || ''}`;
+  const links = $('a, button').map((_, e) => $(e).text().trim()).get().join(' | ');
+  const app = /\b(log ?in|sign ?in|sign ?up|get started|start (for )?free|book a demo|request a demo|get a demo|pricing|try (it )?free)\b/i.test(links);
   const { isSaas } = await import('./saas.mjs');
   if (isSaas(text) && app) return { icp: 'B', why: 'B2B software with sign-in / pricing' };
   return { icp: null, why: 'not a store, AI-built app or SaaS' };
