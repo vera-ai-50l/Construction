@@ -6,7 +6,7 @@ import path from 'node:path';
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { isRoleMailbox } from './enrich/site.mjs';
-import { isSharedHost } from './domain.mjs';
+import { brandName } from './brand.mjs';
 
 const { values: args, positionals: dirs } = parseArgs({
   allowPositionals: true,
@@ -41,27 +41,8 @@ for (const d of dirs) {
   }
 }
 const rank = (l) => (l.contact.verification === 'ok' ? 0 : 2) + (/vibe/.test(l.vibe?.verdict || '') ? 0 : 1);
-// Builder-hosted apps carry project slugs as names ("ai agents for ngos beta"): use the
-// name the company presents (page author, site title, or its mail domain).
-const looksLikeBrand = (n, l) => n && n.length <= 30 && n.split(/\s+/).length <= 4 && !/^(show hn|my |i |we )/i.test(n) && n.toLowerCase() !== String(l.contact?.first_name || '').toLowerCase();
-for (const l of seen.values()) {
-  // Show HN post titles and person names are not brand names: use the site's own.
-  if (!isSharedHost(l.domain) && (l.sources[0] === 'showhn' || !looksLikeBrand(l.name, l))) {
-    const title = String(l.site?.title || '').replace(/[®™©]/g, '').split(/\s+[|–—-]\s+|:\s/)[0].trim();
-    const author = String(l.site?.meta_author || '').replace(/[®™©]/g, '').trim();
-    const stem = l.domain.split('.')[0];
-    const pick = [author, title].find((n) => looksLikeBrand(n, l) && !/^(home|welcome|lovable)$/i.test(n)) || stem;
-    l.name = pick.charAt(0).toUpperCase() + pick.slice(1);
-    continue;
-  }
-  if (!isSharedHost(l.domain)) continue;
-  const title = String(l.site?.title || '').replace(/[®™©]/g, '').split(/\s+[|–—-]\s+|:\s/)[0].trim();
-  const pretty = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const author = String(l.site?.meta_author || '').replace(/[®™©]/g, '').trim();
-  const usable = (x) => x && x.length >= 3 && x.length <= 30 && !/^(lovable|base44|bolt|replit|pricing|home|welcome|sign in|login)$/i.test(x) && !/\.(lovable|base44|replit|bolt)\b/.test(x);
-  const stem = l.mail_domain && l.mail_domain !== l.domain ? pretty(l.mail_domain.split('.')[0]) : '';
-  l.name = [author, title, stem].find(usable) || l.name;
-}
+// Sheet and email names: what the company calls itself (src/brand.mjs).
+for (const l of seen.values()) l.name = brandName(l);
 // A first name that is really a handle ("Vdanielbit") gets no name in the greeting.
 for (const l of seen.values()) if (/@gmail\.com$/.test(l.contact.email) && !l.contact.last_name && /bit|\d/.test(l.contact.first_name)) l.contact = { ...l.contact, first_name: '' };
 const picked = [...seen.values()].sort((a, b) => rank(a) - rank(b)).slice(0, Number(args.max));

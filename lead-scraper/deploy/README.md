@@ -43,7 +43,12 @@ are never delivered again, and the next run starts further into each source
 4. In the imported workflow:
    - Create a **Header Auth** credential called "Leads API": name `Authorization`, value `Bearer <LEADS_API_TOKEN>`; pick it in *Start run*, *Check run* and *Get scored leads*.
    - In **Google Sheet**, connect your Google account and paste the sheet URL. Make a tab named `Type A leads`.
-5. Click **Run now** once (takes 20-40 minutes), check the sheet, then **Activate**. It runs Mondays 07:17 IST.
+5. Carry over which companies were already delivered (so they never come back), from the
+   machine that ran the earlier batches:
+   ```bash
+   docker cp lead-scraper/out/state leads:/app/out/
+   ```
+6. Click **Run now** once (takes 20-40 minutes), check the sheet, then **Activate**. It runs Mondays 07:17 IST.
 
 The API is only on the Docker network (not published to the internet) and also checks the token.
 

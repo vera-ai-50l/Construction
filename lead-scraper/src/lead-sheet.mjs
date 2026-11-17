@@ -10,6 +10,7 @@ import { toCsvRows } from './teardown/csv.mjs';
 import { emailConfidence } from './confidence.mjs';
 import { remarks } from './remarks.mjs';
 import { isRoleMailbox } from './enrich/site.mjs';
+import { brandName } from './brand.mjs';
 
 const { values: args, positionals } = parseArgs({ allowPositionals: true, options: { title: { type: 'string' }, top: { type: 'string' }, exclude: { type: 'string' } } });
 const dir = path.resolve(positionals[0] || 'out');
@@ -59,7 +60,7 @@ const rows = leads.map((l, i) => {
     priority: l.score.priority,
     fit_score: l.score.total,
     fit_band: fitBand(l.score.total),
-    company: l.name,
+    company: brandName(l),
     domain: l.domain,
     website: l.site.fetched_url || l.website,
     type: { vibe: 'A', type_a: 'A', type_b: 'B', type_c: 'C' }[l.profile] || l.profile,
