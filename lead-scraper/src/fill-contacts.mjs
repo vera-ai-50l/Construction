@@ -14,8 +14,11 @@ const { values: args, positionals: dirs } = parseArgs({
   options: {
     out: { type: 'string' },
     'vibe-only': { type: 'boolean', default: true },
+    all: { type: 'boolean', default: false },
     verifier: { type: 'string', default: 'bounceverify' },
     'max-candidates': { type: 'string', default: '2' },
+    'in-place': { type: 'boolean', default: false },
+    finder: { type: 'string', default: 'none' },
   },
 });
 const log = (...m) => console.error(`[${new Date().toISOString().slice(11, 19)}]`, ...m);
@@ -26,14 +29,14 @@ for (const d of dirs) {
   for (const l of JSON.parse(readFileSync(f, 'utf8'))) {
     const hasPerson = l.contact?.email && !isRoleMailbox(l.contact.email) && ['ok', 'catch_all'].includes(l.contact.verification);
     if (hasPerson || !l.site?.reachable) continue;
-    if (args['vibe-only'] && !/vibe/.test(l.vibe?.verdict || '')) continue;
+    if (args['vibe-only'] && !args.all && !/vibe/.test(l.vibe?.verdict || '')) continue;
     // Names found by an earlier search are looked up again with today's rules.
     if (!byDomain.has(l.domain)) byDomain.set(l.domain, { ...l, search_people: undefined, filled_from: l.filled_from || path.basename(d) });
   }
 }
 const gap = [...byDomain.values()];
 log(`${gap.length} vibe-coded leads without a named contact`);
-await findContacts(gap, { finder: 'none', verifier: args.verifier, maxCandidates: Number(args['max-candidates']), nameSearch: true, log });
+await findContacts(gap, { finder: args.finder, verifier: args.verifier, maxCandidates: Number(args['max-candidates']), nameSearch: true, log });
 
 const stat = (f) => gap.filter(f).length;
 const rows = [
@@ -56,4 +59,12 @@ const md = [
 mkdirSync(args.out, { recursive: true });
 writeFileSync(path.join(args.out, 'leads.json'), JSON.stringify(gap, null, 2));
 writeFileSync(path.join(args.out, 'funnel.md'), md);
+// --in-place: put the new contacts back into the source run (one folder).
+if (args['in-place'] && dirs.length === 1) {
+  const f = path.join(dirs[0], 'leads.json');
+  const byD = new Map(gap.map((l) => [l.domain, l]));
+  const merged = JSON.parse(readFileSync(f, 'utf8')).map((l) => byD.get(l.domain) || l);
+  writeFileSync(f, JSON.stringify(merged, null, 2));
+  log(`updated ${f}`);
+}
 console.error('\n' + md);

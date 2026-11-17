@@ -34,6 +34,26 @@ Output goes to `out/<date>/`: `leads.csv` (open in Sheets), `leads.json` (everyt
 Set `GITHUB_TOKEN` to raise GitHub search limits for `open_source_demo`. Pages are cached
 in `out/cache` for 7 days, so re-runs are fast and polite.
 
+## Weekly pipeline (n8n or cron)
+
+`npm run pipeline -- --preset type_a|type_b|type_c` runs one ICP end to end, up to
+scoring (no teardowns): sources, site checks, login check, named contacts, verification,
+fit score, email confidence and remarks, into `out/runs/<id>/leads-scored.xlsx`. It never
+delivers a company twice. `npm run serve` wraps it in a small HTTP API that the n8n
+workflows in `deploy/n8n/` call every week and copy into a Google Sheet. Setup:
+[`deploy/README.md`](deploy/README.md).
+
+- **Type A** (AI-built apps): TrustMRR + Show HN + Common Crawl; free names, Google name search, 5 email patterns.
+- **Type B** (funded AI SaaS with dashboards): newest YC B2B AI batches; login check (public demo,
+  self-serve, work email, waitlist, sales-gated); finder database, then Google name search.
+- **Type C** (US/EU Shopify brands, accessibility + conversion): Shopify stores from Common Crawl
+  (Google fallback); theme (default vs custom), accessibility overlay widget, missing alt text,
+  paid apps (size proxy), catalogue activity; scored on its own scale.
+
+Remarks tell the next step what it needs: "Login required: free sign-up, work email only",
+"Teardown: a person signs up and saves the session", "Email: catch-all server",
+"Compliance: German company, LinkedIn only", "Signal: accessibility overlay installed".
+
 ## Profiles
 
 | Profile | Customer type | Where companies come from |

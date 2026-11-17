@@ -26,15 +26,29 @@ const HOW = (src = '') =>
   : /company site/.test(src) ? 'Published on the company website'
   : src;
 const band = (s) => (s >= 80 ? 'High' : s >= 55 ? 'Medium' : 'Low');
-const fitBand = (s) => (s >= 70 ? 'High' : s >= 55 ? 'Medium' : 'Low');
+// Fit band is relative to this list (ICPs score on different scales): top quarter High,
+// middle half Medium, bottom quarter Low.
+let fitBand = (s) => (s >= 70 ? 'High' : s >= 55 ? 'Medium' : 'Low');
 
 const personal = (l) => l.contact?.email && !isRoleMailbox(l.contact.email) && ['ok', 'catch_all'].includes(l.contact.verification);
 // Companies delivered in earlier runs are left out (pipeline state).
 const seen = new Set(args.exclude && existsSync(args.exclude) ? JSON.parse(readFileSync(args.exclude, 'utf8')) : []);
 let leads = all.filter((l) => l.site?.reachable && !seen.has(l.domain));
 leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.total - a.score.total);
-if (args.top) leads = leads.slice(0, Number(args.top));
+// --top N: verified mailboxes first, then catch-alls, then leads without a named email
+// (each by fit score); the sheet itself is sorted by fit score.
+if (args.top) {
+  const tier = (l) => (personal(l) ? (l.contact.verification === 'ok' ? 0 : 1) : 2);
+  leads = [...leads].sort((a, b) => tier(a) - tier(b) || b.score.total - a.score.total).slice(0, Number(args.top));
+  leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.total - a.score.total);
+}
 
+{
+  const sorted = leads.map((l) => l.score.total).sort((a, b) => b - a);
+  const hi = sorted[Math.max(0, Math.ceil(sorted.length * 0.25) - 1)] ?? 0;
+  const lo = sorted[Math.max(0, Math.ceil(sorted.length * 0.75) - 1)] ?? 0;
+  fitBand = (s) => (s >= hi ? 'High' : s >= lo ? 'Medium' : 'Low');
+}
 const rows = leads.map((l, i) => {
   const c = personal(l) ? l.contact : null;
   const ec = c ? emailConfidence(l) : null;
@@ -144,7 +158,7 @@ const notes = wb.addWorksheet('How to read');
 notes.columns = [{ header: 'How to read this workbook', key: 'a', width: 130 }];
 header(notes);
 for (const line of [
-  'fit score (0-100): access to the product, room for redesign, ability to pay, reachability, timing and ICP fit. Green 70+, amber 55-69, red under 55. Priority 1 = best.',
+  'fit score (0-100): access to the product, room for redesign, ability to pay, reachability, timing and ICP fit. Colours rank leads within this list: green = top quarter, amber = middle half, red = bottom quarter. score parts shows where the points came from.',
   'login required: green = no (public demo or sandbox), amber = yes (self-serve sign-up, work email, waitlist or sales-gated: see product access), grey = could not tell.',
   'email confidence (0-100): 85 for a verified mailbox, 55 for a catch-all server; +10 if they published it, +5 if the name is from their own listing, -10 if the name came from Google search (check LinkedIn), -15 if the address is on another domain.',
   'remarks: what the next step needs to know (login wall, how to do the teardown, contact caveats, compliance, buying signals).',

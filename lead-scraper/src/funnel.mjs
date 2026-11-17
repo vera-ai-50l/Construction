@@ -4,6 +4,15 @@ import { snapshot, getCount } from './ledger.mjs';
 
 const VIBE = (l) => /vibe/.test(l.vibe?.verdict || '');
 
+const SOURCE_NOTES = {
+  trustmrr: ['TrustMRR pages read', 'revenue >= --min-revenue in 30 days'],
+  'google-footprint': ['Google results (Apify)', 'builder-hosted product pages'],
+  commoncrawl: ['Common Crawl builder-hosted apps', 'not a throwaway project'],
+  showhn: ['Show HN posts', 'a product, not a dev tool'],
+  yc: ['YC companies in the dataset', 'active, B2B, AI + dashboards/analytics/evals/agents, batch in the last 2 years, team 2-40'],
+  shopify: ['Shopify stores read (Common Crawl / Google)', 'own domain, open (no password page), 5+ products'],
+};
+
 export function funnelReport({ candidates, leads, kept, queue, args }) {
   const sources = [...new Set(leads.map((l) => l.sources[0]))];
   const by = (list, src) => list.filter((l) => l.sources[0] === src);
@@ -53,8 +62,8 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
   const usable = verified + (total.catch_all || 0);
 
   const STEPS = [
-    ['sampled', 'Sampled from source', 'TrustMRR pages / Google results (Apify) / Common Crawl apps / Show HN posts'],
-    ['passed_source_filter', 'Passed source filter', `TrustMRR revenue >= $${args['min-revenue']}/30d; Google/Common Crawl: builder-hosted, not throwaway; HN: a product, not a dev tool`],
+    ['sampled', 'Sampled from source', sources.map((x) => SOURCE_NOTES[x]?.[0] || x).join(' / ')],
+    ['passed_source_filter', 'Passed source filter', sources.map((x) => SOURCE_NOTES[x]?.[1] || x).join('; ')],
     ['taken_into_run', 'Taken into this run', `--limit ${args.limit} per source`],
     ['unique_companies', 'Unique companies', 'dedupe by domain'],
     ['site_reachable', 'Website reachable', 'HTTP + headless browser'],
@@ -75,6 +84,8 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     ['verified_ok', 'Verified email (ok)', `verifier: ${args.verifier}`],
     ['catch_all', 'Catch-all (unconfirmable)', `verifier: ${args.verifier}`],
   ];
+  // Vibe-check steps only mean something for the vibe profile.
+  if (!leads.some((l) => l.profile === 'vibe')) for (let i = STEPS.length - 1; i >= 0; i--) if (['paid_product', 'not_polished', 'vibe_coded'].includes(STEPS[i][0])) STEPS.splice(i, 1);
   const OPTIONAL = new Set(['paid_product', 'not_polished', 'vibe_coded', 'finder_found_people', 'name_search_found', 'design_role_open', 'store_us_eu', 'overlay_found', 'login_checked', 'login_not_required', 'mail_domain_known']);
   for (let i = STEPS.length - 1; i >= 0; i--) if (OPTIONAL.has(STEPS[i][0]) && !total[STEPS[i][0]]) STEPS.splice(i, 1);
   const head = `| Step | Tool | ${rows.map((r) => r.source).join(' | ')} | All |`;

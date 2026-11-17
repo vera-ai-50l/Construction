@@ -76,8 +76,17 @@ const CTA = {
 const GENERIC_MAILBOX = /^(info|hello|hi|hey|contact|mail|email|sales|support|help|team|admin|press|media|pr|careers|jobs|hr|apply|cv|resumes?|recruiting|privacy|legal|security|abuse|compliance|billing|finance|accounts|partners?|partnerships|marketing|office|enquiries|inquiries|founders?|welcome|general|ops|operations|[a-z]+-ops|academic|academia|research|investors?|ir|feedback|community|events|noreply|no-reply|donotreply|grow|growth|owner|business|biz|bonjour|hola|ciao|kontakt|contacto|contato|service|services|orders?|shop|store|bookings?|reservations?|newsletter|news|dev|developers?|tech|webmaster|it|studio|social|content|partner|affiliates?|ads|growth-team|accounting|payments?|invoices?|bonjour|salut|datenschutz|dsgvo|gdpr|dpo|dpd|rgpd|founding|local)@/i;
 /** True for shared inboxes (hello@, info@, sales@ ...) rather than a person. */
 // Compound shared inboxes too: customercare@, retailersupport@, salesteam@, family@ ...
-const ROLE_PART = /(support|care|customer|service|help|contact|enquir|inquir|sales|admin|office|billing|booking|orders|team|hello|info|family|crew|squad|desk)/;
-export const isRoleMailbox = (email) => GENERIC_MAILBOX.test(email) || ROLE_PART.test(String(email).split("@")[0]);
+const ROLE_PART = /(support|care|customer|service|help|contact|connect|enquir|inquir|sales|admin|office|billing|booking|orders|team|hello|info|family|crew|squad|desk|partnership|hiring|careers|talent|recruit|quotes?|devs?$|developers|engineering|founders|ops$|growth)/;
+// A mailbox named after the company itself (acme@acme.com, briefguard@yahoo.com) is not a person.
+const COMPANY_BOX = (local, domain) => {
+  const stem = String(domain || '').split('.')[0].replace(/[^a-z0-9]/g, '');
+  const l = local.replace(/[^a-z0-9]/g, '');
+  return stem.length >= 4 && (l === stem || (l.length >= 5 && stem.startsWith(l)) || (stem.length >= 5 && l.startsWith(stem)));
+};
+export const isRoleMailbox = (email) => {
+  const [local = '', domain = ''] = String(email).toLowerCase().split('@');
+  return GENERIC_MAILBOX.test(email) || ROLE_PART.test(local) || COMPANY_BOX(local, domain);
+};
 const TITLE_RE = /\b(co-?founder|founder|ceo|chief executive|cto|chief technology|cpo|chief product|vp,? (of )?product|head of (product|design)|design lead|product lead)\b/i;
 const NAME_RE = /^[A-Z][a-zA-Z'’.-]+(?:\s+[A-Z][a-zA-Z'’.-]+){1,3}$/;
 // Capitalised phrases that look like names but are headings.
