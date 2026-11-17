@@ -4,7 +4,7 @@
 // title, then the company mail domain, then the domain.
 import { isSharedHost } from './domain.mjs';
 
-const clean = (s) => String(s || '').replace(/[®™©]/g, '').replace(/&amp;/g, '&').trim();
+const clean = (s) => String(s || '').replace(/[®™©]/g, '').replace(/&amp;/g, '&').replace(/,?\s+(inc|llc|ltd|gmbh|corp|co|s\.?a\.?s?|pty ltd)\.?$/i, '').trim();
 const pretty = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const titleHead = (l) => clean(l.site?.title).split(/\s+[|–—-]\s+|:\s/)[0].trim();
 

@@ -11,6 +11,7 @@ import { emailConfidence } from './confidence.mjs';
 import { remarks } from './remarks.mjs';
 import { isRoleMailbox } from './enrich/site.mjs';
 import { brandName } from './brand.mjs';
+import { tooBig } from './size.mjs';
 
 const { values: args, positionals } = parseArgs({ allowPositionals: true, options: { title: { type: 'string' }, top: { type: 'string' }, exclude: { type: 'string' } } });
 const dir = path.resolve(positionals[0] || 'out');
@@ -40,7 +41,7 @@ leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.to
 // (each by fit score); the sheet itself is sorted by fit score.
 if (args.top) {
   // German/Austrian companies cannot get cold email: last.
-  const tier = (l) => (/\.(de|at)$/.test(l.mail_domain || l.domain) ? 3 : personal(l) ? (l.contact.verification === 'ok' ? 0 : 1) : 2);
+  const tier = (l) => (tooBig(l) ? 4 : /\.(de|at)$/.test(l.mail_domain || l.domain) ? 3 : personal(l) ? (l.contact.verification === 'ok' ? 0 : 1) : 2);
   leads = [...leads].sort((a, b) => tier(a) - tier(b) || b.score.total - a.score.total).slice(0, Number(args.top));
   leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.total - a.score.total);
 }

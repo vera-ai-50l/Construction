@@ -194,7 +194,7 @@ let queue = [];
 if (args.finder === 'auto') args.finder = wanted.length === 1 && wanted[0] === 'vibe' ? 'none' : 'pipelinelabs';
 if (args['find-contacts']) {
   queue = kept
-    .filter((l) => l.site?.reachable && l.vibe?.verdict !== 'polished')
+    .filter((l) => l.site?.reachable && (l.profile !== 'vibe' || l.vibe?.verdict !== 'polished'))
     .sort((a, b) => b.score.total - a.score.total)
     .slice(0, Number(args['max-contacts']));
   await findContacts(queue, {

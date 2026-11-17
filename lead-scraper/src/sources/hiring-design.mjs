@@ -21,6 +21,13 @@ export const ATS_QUERIES = [
   'site:jobs.lever.co "product designer" SaaS startup',
 ];
 
+/** Number of open jobs on a board (public APIs). */
+export async function boardJobCount(ats, slug) {
+  const j = ats === 'ashby' ? await getJson(`https://api.ashbyhq.com/posting-api/job-board/${slug}`) : ats === 'greenhouse' ? await getJson(`https://boards-api.greenhouse.io/v1/boards/${slug}/jobs`) : await getJson(`https://api.lever.co/v0/postings/${slug}?mode=json`);
+  const list = Array.isArray(j) ? j : j?.jobs;
+  return Array.isArray(list) ? list.length : null;
+}
+
 /** Board slug -> { name, website } from the board's own public page or API. */
 async function boardCompany(ats, slug) {
   if (ats === 'ashby') {
@@ -61,7 +68,9 @@ export async function atsDesignRoles({ queries = ATS_QUERIES, pagesPerQuery = 2,
     const slug = (m[1] || m[2] || m[3] || m[4]).toLowerCase();
     if (!DESIGN_ROLE.test(`${r.title} ${r.description || ''}`)) continue;
     count('ats_design_posts');
-    if (!boards.has(slug)) boards.set(slug, { ats, slug, role: (r.title || '').split(/\s[-|@–]\s/)[0].slice(0, 60), text: `${r.title} ${r.description || ''}` });
+    const parts = (r.title || '').split(/\s[-|@–]\s/);
+    const role = parts.find((x) => DESIGN_ROLE.test(x)) || (`${r.title} ${r.description || ''}`.match(DESIGN_ROLE) || ['design'])[0];
+    if (!boards.has(slug)) boards.set(slug, { ats, slug, role: role.trim().slice(0, 60), text: `${r.title} ${r.description || ''}` });
   }
   log?.(`hiring: ${boards.size} companies with a design role on job boards`);
   const rows = [];
@@ -71,7 +80,8 @@ export async function atsDesignRoles({ queries = ATS_QUERIES, pagesPerQuery = 2,
       count('ats_no_website');
       continue;
     }
-    rows.push({ name: c.name || b.slug, website: c.website, source: 'ats-design-role', source_url: `${b.ats}:${b.slug}`, description: b.text.slice(0, 240), design_role: { title: b.role, board: b.ats } });
+    const jobs = await boardJobCount(b.ats, b.slug).catch(() => null);
+    rows.push({ name: c.name || b.slug, website: c.website, source: 'ats-design-role', source_url: `${b.ats}:${b.slug}`, description: b.text.slice(0, 240), design_role: { title: b.role, board: b.ats, slug: b.slug, board_jobs: jobs } });
   }
   count('ats_kept', rows.length);
   return rows;

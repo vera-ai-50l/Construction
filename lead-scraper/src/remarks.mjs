@@ -2,6 +2,7 @@
 // know before the teardown or the email (login walls, contact caveats, compliance).
 import { isRoleMailbox } from './enrich/site.mjs';
 import { isSharedHost } from './domain.mjs';
+import { OPEN_JOBS_MAX, openJobs } from './size.mjs';
 
 const NO_COLD_EMAIL = /\.(de|at)$/;
 
@@ -49,14 +50,14 @@ export function remarks(lead) {
     add('Signal', `raised ${f.amount_usd ? '$' + (f.amount_usd / 1e6).toFixed(f.amount_usd < 1e7 ? 1 : 0) + 'M ' : ''}${f.round !== 'undisclosed' ? f.round + ' ' : ''}on ${f.date} (${f.outlet})`);
     if (f.site_guessed) add('Check', 'website matched by company name, not linked in the article: confirm it is the same company');
   }
-  if (lead.design_role) add('Signal', `open "${lead.design_role.title}" role (${lead.design_role.board}): wants design help now`);
   const role = lead.hiring?.design_roles?.[0];
+  if (lead.design_role && !role) add('Signal', `open "${/design|ux|ui/i.test(lead.design_role.title) ? lead.design_role.title : 'design'}" role (${lead.design_role.board}): wants design help now`);
   if (role) add('Signal', `hiring "${role.title}"${lead.hiring.oldest_design_role_days ? ` (open ${lead.hiring.oldest_design_role_days} days)` : ''}`);
   if (lead.yc?.batch) add('Signal', `YC ${lead.yc.batch}${lead.yc.stage ? `, ${lead.yc.stage}` : ''}, team of ${lead.yc.team_size ?? '?'}`);
   if (lead.trustmrr?.revenue_30d_usd) add('Signal', `$${lead.trustmrr.revenue_30d_usd} revenue in the last 30 days (TrustMRR, Stripe-verified)`);
   if (/vibe/.test(lead.vibe?.verdict || '')) add('Signal', `${lead.vibe.verdict}: ${(lead.vibe.reasons || []).slice(0, 2).join('; ')}`);
   if (lead.vibe?.verdict === 'polished' && lead.profile === 'vibe') add('Fit', 'site looks professionally designed');
-  if (s.large_company_hint) add('Fit', 'large or public company: in-house design likely, long cycle');
+  if (s.large_company_hint || openJobs(lead) > OPEN_JOBS_MAX) add('Fit', `large company${openJobs(lead) ? ` (${openJobs(lead)} open jobs)` : ''}: in-house design likely, long cycle`);
 
   // Shopify stores (Type C).
   const st = lead.store;

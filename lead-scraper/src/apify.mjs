@@ -14,6 +14,19 @@ function headers() {
 }
 
 async function call(method, path, body) {
+  // Temporary server errors (502/503/504, dropped connections) are retried; others are not.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await callOnce(method, path, body);
+    } catch (e) {
+      const transient = /failed: 5\d\d|fetch failed|ECONNRESET|socket hang up|timeout/i.test(e.message);
+      if (!transient || attempt >= 4 || (method === 'POST' && !/fetch failed|ECONNRESET/.test(e.message))) throw e;
+      await sleep(3000 * (attempt + 1));
+    }
+  }
+}
+
+async function callOnce(method, path, body) {
   const res = await fetch(BASE + path, {
     method,
     headers: headers(),
