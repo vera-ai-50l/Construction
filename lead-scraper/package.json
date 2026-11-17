@@ -10,7 +10,8 @@
     "login": "node src/login.mjs",
     "pipeline": "NODE_USE_ENV_PROXY=1 node --no-warnings src/pipeline.mjs",
     "serve": "node --no-warnings src/server.mjs",
-    "sheet": "node --no-warnings src/lead-sheet.mjs"
+    "sheet": "node --no-warnings src/lead-sheet.mjs",
+    "tour": "node --no-warnings src/tour.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.8.0",
