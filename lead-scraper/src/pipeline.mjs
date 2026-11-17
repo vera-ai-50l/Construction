@@ -30,12 +30,12 @@ export const PRESETS = {
   // Type B: seed / Series A B2B SaaS, non-YC: funding news + companies hiring a product
   // designer (job boards, HN Who is hiring). Login check; finder database, then name search.
   type_b: {
-    args: ['--profile', 'type_b', '--sources', 'news,ats,hn', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
+    args: ['--profile', 'type_b', '--sources', 'news,ats,hn,jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
     limit: 60,
   },
   // Type C: US/EU Shopify brands. Storefronts are public, so no login check.
   type_c: {
-    args: ['--profile', 'type_c', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
+    args: ['--profile', 'type_c', '--sources', 'shopify,jobs', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
     limit: 110,
   },
 };
