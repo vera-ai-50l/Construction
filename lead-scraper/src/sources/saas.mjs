@@ -1,0 +1,8 @@
+// Shared test for Type B: is this a B2B software product with a real application
+// (dashboards, data, workflows), rather than hardware, biotech, consumer, services or
+// finance? Broad SaaS on purpose: not only AI evals and agents.
+export const SAAS = /\b(saas|software|platform|dashboards?|analytics|data (platform|infrastructure|pipelines?)|insights?|automation|workflows?|api|apis|developer tools?|devtools|observability|monitoring|security|compliance|crm|erp|hr ?tech|payroll|procurement|supply chain software|logistics (software|platform)|fintech|insurtech|regtech|legal ?tech|proptech software|healthtech platform|revenue (operations|intelligence)|sales (intelligence|platform)|marketing (platform|automation)|customer (support|success) platform|copilot|ai[- ]powered|ai[- ]native|ai agents?|llm|machine learning|b2b)\b/i;
+export const NOT_SAAS = /\b(biotech|biotec|life sciences|therapeutics?|drug|clinical[- ]stage|medical device|diagnostics? (kit|test)|hardware|robot(ic)?s?|chips?|semiconductors?|batter(y|ies)|electric vehicles?|\bev\b|satellites?|space(craft)?|rockets?|solar|wind farm|energy storage|nuclear|fusion|mining|drones?|food|beverage|restaurant|fashion|apparel|cosmetics|beauty brand|pet food|consumer (app|brand|goods)|dating app|game studio|video games?|crypto(currency)? (token|exchange)|stablecoin|venture (fund|firm)|vc fund|private equity|real estate fund|bank(ing)? licen[cs]e|lender|lending (platform|fund)|bnpl|manufactur(er|ing) plant|factory)\b/i;
+export const NOT_A_RAISE = /\b(acquires?|acquired|acquisition|merg(es|er)|ipo|layoffs?|lays off|shuts? down|files for bankruptcy|launches fund|closes fund|new fund|appoints|hires (ceo|cfo)|partners with|teams up)\b/i;
+
+export const isSaas = (text) => SAAS.test(text) && !NOT_SAAS.test(text);

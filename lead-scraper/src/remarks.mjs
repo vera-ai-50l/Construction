@@ -44,6 +44,12 @@ export function remarks(lead) {
   if (isSharedHost(lead.domain)) add('Site', 'app still on a builder host (no own domain)');
 
   // Buying signals and fit.
+  if (lead.funding) {
+    const f = lead.funding;
+    add('Signal', `raised ${f.amount_usd ? '$' + (f.amount_usd / 1e6).toFixed(f.amount_usd < 1e7 ? 1 : 0) + 'M ' : ''}${f.round !== 'undisclosed' ? f.round + ' ' : ''}on ${f.date} (${f.outlet})`);
+    if (f.site_guessed) add('Check', 'website matched by company name, not linked in the article: confirm it is the same company');
+  }
+  if (lead.design_role) add('Signal', `open "${lead.design_role.title}" role (${lead.design_role.board}): wants design help now`);
   const role = lead.hiring?.design_roles?.[0];
   if (role) add('Signal', `hiring "${role.title}"${lead.hiring.oldest_design_role_days ? ` (open ${lead.hiring.oldest_design_role_days} days)` : ''}`);
   if (lead.yc?.batch) add('Signal', `YC ${lead.yc.batch}${lead.yc.stage ? `, ${lead.yc.stage}` : ''}, team of ${lead.yc.team_size ?? '?'}`);

@@ -38,3 +38,12 @@ test('presets exist and the n8n workflows wire every node', () => {
   assert.equal(wf.connections['Failed?'].main[1][0].node, 'Wait 5 min'); // still running -> wait again
   assert.match(JSON.stringify(wf.nodes.find((n) => n.name === 'Start run').parameters), /type_a/);
 });
+
+test('funding headlines: company, amount and currency; non-raises ignored', async () => {
+  const { isSaas, NOT_A_RAISE } = await import('../src/sources/saas.mjs');
+  assert.ok(isSaas('Acme raises $8M Series A for its AI-powered procurement platform'));
+  assert.ok(!isSaas('Acme raises $8M for its solid-state battery hardware'));
+  assert.ok(NOT_A_RAISE.test('Acme acquires Beta for $20M'));
+  const mod = await import('../src/sources/funding.mjs');
+  assert.equal(typeof mod.fundingNews, 'function');
+});

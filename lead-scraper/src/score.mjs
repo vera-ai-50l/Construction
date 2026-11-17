@@ -80,6 +80,8 @@ export function score(lead) {
   if (team != null) commercial = Math.max(commercial, team >= 50 ? 16 : team >= 20 ? 13 : team >= 8 ? 10 : 7) + (lead.yc.stage === 'Growth' ? 3 : 0);
   const stars = lead.github?.stars;
   if (stars != null) commercial = Math.max(commercial, stars >= 10000 ? 10 : stars >= 3000 ? 8 : 6);
+  if (lead.funding?.amount_usd) commercial = Math.max(commercial, lead.funding.amount_usd >= 10e6 ? 16 : lead.funding.amount_usd >= 3e6 ? 13 : 10);
+  if (lead.design_role) commercial = Math.max(commercial, 12);
   if (s.pricing_url) commercial += 2;
   if ((lead.hiring.open_jobs || 0) >= 5) commercial += 2;
   if (s.large_company_hint) commercial -= 6; // can pay, but rarely buys from a small studio
@@ -96,7 +98,9 @@ export function score(lead) {
   if ((team != null && team <= 20) || lead.trustmrr) reach += 2;
 
   let timing = 0;
-  if (lead.hiring.design_roles.length) timing += 4;
+  if (lead.hiring.design_roles.length || lead.design_role) timing += 4;
+  const raisedDays = lead.funding?.date ? (Date.now() - Date.parse(lead.funding.date)) / 864e5 : null;
+  if (raisedDays != null) timing += raisedDays <= 180 ? 4 : raisedDays <= 365 ? 2 : 0;
   if ((lead.hiring.oldest_design_role_days || 0) >= 60) timing += 2;
   if ((lead.hiring.open_jobs || 0) > 0 || lead.yc?.is_hiring) timing += 1;
   if (s.ai_term_hits >= 3) timing += 2;

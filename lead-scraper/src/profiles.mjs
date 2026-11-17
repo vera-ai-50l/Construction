@@ -1,6 +1,10 @@
 // ICP profiles: where to find each customer type and what qualifies it.
 // type_a / type_b follow the positioning brief; the other three are the ICPs the
 // research report ranked, kept so the lead pools can be compared.
+import { fundingNews } from './sources/funding.mjs';
+import { atsDesignRoles, hnDesignHiring } from './sources/hiring-design.mjs';
+import { SAAS as SAAS_TERMS } from './sources/saas.mjs';
+import { registrableDomain } from './domain.mjs';
 import { shopifyStores } from './sources/shopify.mjs';
 import { commonCrawlApps } from './sources/commoncrawl.mjs';
 import { showHnApps } from './sources/showhn.mjs';
@@ -51,19 +55,36 @@ export const PROFILES = {
     // Tagged rather than filtered: fingerprints miss many AI-built apps.
   },
   type_b: {
-    label: 'B: seed / Series A AI SaaS with data-heavy dashboards',
+    label: 'B: seed / Series A B2B SaaS with a real application (dashboards, data, workflows)',
     offer: 'Dashboard Sprint',
-    describe: 'YC B2B AI companies from the last two years whose product is dashboards, analytics, monitoring, evals, tracing or agents; newest batch first (closest to the funding round).',
-    discover: async () =>
-      ycCompanies({
-        include: /\b(dashboards?|analytics|observability|monitoring|evals?|evaluation|tracing|insights?|reporting|data platform|data pipelines?|metrics|ai agents?|agent platform|llmops|bi\b|business intelligence)\b/i,
-        exclude: /\b(hardware|biotech|drug|robot(ics)?|satellite|consumer app)\b/i,
-        minYear: new Date().getFullYear() - 1,
-        minTeam: 2,
-        maxTeam: 40,
-        b2bOnly: true,
-        recentFirst: true,
-      }).then((rows) => rows.filter((r) => AI.test(r.description + ' ' + r.yc.tags.join(' ')))),
+    describe: 'Non-YC by default: recent seed / Series A raises from tech news feeds, companies hiring a product designer (Ashby/Greenhouse/Lever via Google, HN Who is hiring). Broad B2B SaaS, not only AI evals. --sources yc adds YC batches.',
+    discover: async ({ limit, offset, sources = '', log }) => {
+      const want = new Set((sources || 'news,ats,hn').split(',').map((x) => x.trim()));
+      const rows = [];
+      const run = async (name, fn) => {
+        if (!want.has(name)) return;
+        try {
+          const got = await fn();
+          log?.(`type_b: ${name}: ${got.length} candidates`);
+          rows.push(...got.slice(offset, offset + limit));
+        } catch (e) {
+          log?.(`type_b: ${name} skipped: ${e.message}`);
+        }
+      };
+      await run('news', () => fundingNews({ log }));
+      await run('ats', () => atsDesignRoles({ log }));
+      await run('hn', () => hnDesignHiring());
+      await run('yc', () =>
+        ycCompanies({ include: SAAS_TERMS, exclude: /\b(hardware|biotech|drug|robot(ics)?|satellite|consumer app)\b/i, minYear: 2022, maxYear: 2024, minTeam: 8, maxTeam: 60, b2bOnly: true }));
+      // Non-YC by default: drop companies that are in the YC dataset.
+      if (!want.has('yc')) {
+        const yc = new Set((await ycCompanies({ include: /./ }).catch(() => [])).map((r) => registrableDomain(r.website)));
+        const before = rows.length;
+        for (let i = rows.length - 1; i >= 0; i--) if (yc.has(registrableDomain(rows[i].website))) rows.splice(i, 1);
+        log?.(`type_b: removed ${before - rows.length} YC companies`);
+      }
+      return rows;
+    },
   },
   type_c: {
     label: 'C: US/EU Shopify brands (accessibility + conversion)',

@@ -43,7 +43,7 @@ const { values: args } = parseArgs({
     'access-check': { type: 'boolean', default: false },
     'min-revenue': { type: 'string', default: '500' },
     serp: { type: 'boolean', default: false },
-    sources: { type: 'string', default: 'trustmrr' },
+    sources: { type: 'string', default: '' },
     'keep-polished': { type: 'boolean', default: false },
     help: { type: 'boolean', default: false },
   },
@@ -63,7 +63,7 @@ Options:
   --verify-emails        check published emails with MillionVerifier (needs MILLIONVERIFIER_API_KEY)
   --skip-jobs            do not query job boards
   --min-revenue <usd>    vibe profile: minimum TrustMRR revenue in the last 30 days (default 500)
-  --sources <list>       vibe profile sources: trustmrr, google, commoncrawl, showhn (default trustmrr)
+  --sources <list>       vibe: trustmrr, google, commoncrawl, showhn (default trustmrr); type_b: news, ats, hn, yc (default news,ats,hn)
   --serp                 same as adding google to --sources (Apify, needs APIFY_TOKEN)
   --keep-polished        keep leads whose site looks professionally designed (dropped by default for vibe)
   --find-contacts        find a named decision-maker with a verified email (needs APIFY_TOKEN)
@@ -96,8 +96,8 @@ for (const name of wanted) {
     const rows = await PROFILES[name].discover({ limit, offset, minRevenue: Number(args['min-revenue']), serp: args.serp, sources: args.sources, log });
     log(`${name}: ${rows.length} discovered`);
     // type_a pages through its source itself; the others are sliced here.
-    const page = ['type_a', 'vibe', 'type_c'].includes(name) ? rows : rows.slice(offset);
-    candidates.push(...(name === 'vibe' ? page : page.slice(0, limit)).map((r) => ({ ...r, profile: name })));
+    const page = ['type_a', 'vibe', 'type_c', 'type_b'].includes(name) ? rows : rows.slice(offset);
+    candidates.push(...(['vibe', 'type_b'].includes(name) ? page : page.slice(0, limit)).map((r) => ({ ...r, profile: name })));
   } catch (e) {
     log(`${name}: discovery failed: ${e.message}`);
   }
@@ -117,7 +117,7 @@ for (const c of candidates) {
   const prev = byDomain.get(domain);
   if (prev) {
     prev.sources = [...new Set([...prev.sources, c.source])];
-    for (const k of ['yc', 'github', 'trustmrr', 'hn', 'cc', 'store']) if (c[k] && !prev[k]) prev[k] = c[k];
+    for (const k of ['yc', 'github', 'trustmrr', 'hn', 'cc', 'store', 'funding', 'design_role']) if (c[k] && !prev[k]) prev[k] = c[k];
   } else byDomain.set(domain, { ...c, domain, sources: [c.source] });
 }
 const leads = [...byDomain.values()];

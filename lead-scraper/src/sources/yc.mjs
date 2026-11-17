@@ -25,6 +25,7 @@ export async function ycCompanies(q) {
   const rows = all
     .filter((c) => c.status === 'Active' && c.website)
     .filter((c) => !q.minYear || batchYear(c.batch) >= q.minYear)
+    .filter((c) => !q.maxYear || batchYear(c.batch) <= q.maxYear)
     .filter((c) => !q.minTeam || (c.team_size || 0) >= q.minTeam)
     .filter((c) => !q.maxTeam || (c.team_size || 0) <= q.maxTeam)
     .filter((c) => !q.b2bOnly || /B2B|Industrials|Healthcare|Fintech/i.test(c.industry || ''))
