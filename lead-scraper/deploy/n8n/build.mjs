@@ -118,13 +118,15 @@ const FLOWS = [
   { preset: 'type_a', title: 'Leads: Type A (AI-built apps), weekly', sheetTab: 'Type A leads', cron: '17 7 * * 1' },
   { preset: 'type_b', title: 'Leads: Type B (funded AI SaaS), weekly', sheetTab: 'Type B leads', cron: '23 7 * * 2' },
   { preset: 'type_c', title: 'Leads: Type C (Shopify brands), weekly', sheetTab: 'Type C leads', cron: '29 7 * * 3' },
+  { preset: 'type_b_jobs', title: 'Leads: Type B hiring a designer (job-post signal), weekly', sheetTab: 'Type B leads - job posts', cron: '41 7 * * 4' },
+  { preset: 'type_c_jobs', title: 'Leads: Type C hiring a designer (job-post signal), weekly', sheetTab: 'Type C leads - job posts', cron: '47 7 * * 4' },
 ];
 for (const f of FLOWS) {
   const wf = workflow(f);
   // Sanity: every connection points at a node that exists.
   const names = new Set(wf.nodes.map((x) => x.name));
   for (const [from, { main }] of Object.entries(wf.connections)) for (const outs of main) for (const e of outs) if (!names.has(from) || !names.has(e.node)) throw new Error(`bad edge ${from} -> ${e.node}`);
-  const file = path.join(here, `${f.preset.replace('_', '-')}-leads.json`);
+  const file = path.join(here, `${f.preset.replace(/_/g, '-')}-leads.json`);
   writeFileSync(file, JSON.stringify(wf, null, 2));
   console.log(`wrote ${path.relative(process.cwd(), file)} (${wf.nodes.length} nodes)`);
 }

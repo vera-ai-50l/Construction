@@ -30,7 +30,7 @@ test('Shopify stores score on overlay, size signals and US/EU base', () => {
 });
 
 test('presets exist and the n8n workflows wire every node', () => {
-  assert.deepEqual(Object.keys(PRESETS), ['type_a', 'type_b', 'type_c']);
+  assert.deepEqual(Object.keys(PRESETS), ['type_a', 'type_b', 'type_c', 'type_b_jobs', 'type_c_jobs']);
   execFileSync(process.execPath, ['deploy/n8n/build.mjs']);
   const wf = JSON.parse(readFileSync('deploy/n8n/type-a-leads.json', 'utf8'));
   const names = new Set(wf.nodes.map((n) => n.name));

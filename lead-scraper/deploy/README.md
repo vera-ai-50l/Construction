@@ -71,5 +71,15 @@ Results land in `out/runs/`. Chromium must be installed for Playwright (`npx pla
 | `GET /runs` | all runs |
 | `GET /health` | up, busy, presets |
 
-Presets (`src/pipeline.mjs`): `type_a` (AI-built apps), `type_b` (funded AI SaaS with
-dashboards: YC, finder database, login check), `type_c` (US/EU Shopify brands).
+Presets (`src/pipeline.mjs`), each with its own weekly n8n workflow and sheet tab:
+
+| Preset | List | Sheet tab |
+| --- | --- | --- |
+| `type_a` | AI-built apps with paying users (TrustMRR, Show HN, Common Crawl) | Type A leads |
+| `type_b` | seed / Series A B2B SaaS, non-YC (funding news, job boards, HN) | Type B leads |
+| `type_c` | US/EU Shopify brands (Common Crawl stores) | Type C leads |
+| `type_b_jobs` | job-post signal: SaaS companies hiring a designer now | Type B leads - job posts |
+| `type_c_jobs` | job-post signal: Shopify brands hiring a designer now | Type C leads - job posts |
+
+Lists of the same type never repeat a company (`type_b` and `type_b_jobs` share one
+do-not-deliver set), so nobody gets two first emails.

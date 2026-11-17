@@ -26,19 +26,34 @@ export const PRESETS = {
     env: { CC_HOSTS: 'lovable.app,base44.app' },
     limit: 60,
   },
-  // Type B: funded AI SaaS with dashboards. Finder databases cover these companies.
-  // Type B: seed / Series A B2B SaaS, non-YC: funding news + companies hiring a product
-  // designer (job boards, HN Who is hiring). Login check; finder database, then name search.
+  // Type B: seed / Series A B2B SaaS, non-YC: funding news + design roles on job boards
+  // + HN Who is hiring. Login check; finder database, then name search.
   type_b: {
-    args: ['--profile', 'type_b', '--sources', 'news,ats,hn,jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
+    args: ['--profile', 'type_b', '--sources', 'news,ats,hn', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
     limit: 60,
   },
-  // Type C: US/EU Shopify brands. Storefronts are public, so no login check.
+  // Type C: US/EU Shopify brands from Common Crawl. Storefronts are public: no login check.
   type_c: {
-    args: ['--profile', 'type_c', '--sources', 'shopify,jobs', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
+    args: ['--profile', 'type_c', '--sources', 'shopify', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
     limit: 110,
   },
+  // Job-post signal (kept as its own list and sheet): companies hiring a designer right
+  // now (Himalayas, Remotive, We Work Remotely, Dribbble, job boards, HN), sorted by
+  // their own site into B (SaaS) or C (Shopify store). Not run for A: AI-built-app
+  // founders do not post on job boards.
+  type_b_jobs: {
+    args: ['--profile', 'type_b', '--sources', 'jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
+    limit: 80,
+  },
+  type_c_jobs: {
+    args: ['--profile', 'type_c', '--sources', 'jobs', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
+    limit: 80,
+  },
 };
+
+// Lists of the same ICP never repeat a company: "type_b" and "type_b_jobs" share one
+// do-not-deliver set (each still keeps its own state for where to read next).
+const icpOf = (preset) => preset.replace(/_jobs$/, '');
 
 function run(cmd, args, { env, log }) {
   return new Promise((resolve, reject) => {
@@ -71,7 +86,12 @@ export async function runPipeline({ preset = 'type_a', limit, offset, outDir, lo
   writeFileSync(path.join(outDir, 'run.json'), JSON.stringify({ preset, limit: limit || p.limit, offset, verifier, started_at: new Date().toISOString(), args: cliArgs.slice(2) }, null, 2));
   await run(process.execPath, cliArgs, { env: p.env, log });
   const seenFile = path.join(outDir, 'already-delivered.json');
-  writeFileSync(seenFile, JSON.stringify(state.delivered));
+  const sameIcp = Object.keys(PRESETS).filter((k) => k !== preset && icpOf(k) === icpOf(preset));
+  const others = sameIcp.flatMap((k) => {
+    const f = path.join(root, 'out', 'state', `${k}.json`);
+    return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')).delivered || [] : [];
+  });
+  writeFileSync(seenFile, JSON.stringify([...new Set([...state.delivered, ...others])]));
   await run(process.execPath, ['--no-warnings', 'src/lead-sheet.mjs', outDir, '--title', `${preset} ${new Date().toISOString().slice(0, 10)}`, '--exclude', seenFile], { log });
   const delivered = JSON.parse(readFileSync(path.join(outDir, 'leads-scored.json'), 'utf8')).map((r) => r.domain);
   writeFileSync(stateFile, JSON.stringify({ next_offset: offset + (limit || p.limit), delivered: [...new Set([...state.delivered, ...delivered])], last_run: outDir }, null, 2));
