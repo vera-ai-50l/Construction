@@ -55,6 +55,11 @@ export async function runActor(actor, input, { maxWaitSecs = 900, memoryMbytes, 
     await sleep(3000);
     final = (await call('GET', `/actor-runs/${run.id}`)).data;
   }
+  // Pay-per-event runs can lag in usageTotalUsd: price the charged events directly.
+  if (!final.usageTotalUsd && final.chargedEventCounts && final.pricingInfo?.pricingPerEvent?.actorChargeEvents) {
+    const prices = final.pricingInfo.pricingPerEvent.actorChargeEvents;
+    final.usageTotalUsd = Object.entries(final.chargedEventCounts).reduce((sum, [ev, n]) => sum + n * (prices[ev]?.eventPriceUsd || 0), 0);
+  }
   log(`apify: ${actor} returned ${items.length} items (usage $${(final.usageTotalUsd ?? 0).toFixed(3)})`);
   // Actual billed usage for the run, as Apify reports it.
   addCost(`apify:${actor}`, { units: items.length, usd: final.usageTotalUsd ?? 0, unit: 'item' });

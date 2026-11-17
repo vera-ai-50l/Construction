@@ -18,6 +18,8 @@ export function remarks(lead) {
     if (pa.mode === 'sales-gated') add('Teardown', 'no self-serve access: use the public site, demo videos or screenshots');
     if (pa.mode === 'waitlist') add('Teardown', 'product is behind a waitlist: public pages only');
     if (/self-serve/.test(pa.mode)) add('Teardown', 'a person signs up (work account) and saves the session for the dashboard teardown');
+  } else if (lead.store) {
+    add('Login NOT required', 'public storefront: the teardown can use the homepage, a collection, a product page and the cart');
   } else if (s.reachable) {
     if (s.public_demo_urls?.length || s.demo_embeds?.length) add('Login NOT required', 'public or embedded demo on the site');
     else if (s.app_urls?.length || s.login_urls?.length || s.signup_urls?.length) add('Login required', 'product sits behind sign-in; public pages only unless someone signs up');
@@ -54,9 +56,12 @@ export function remarks(lead) {
   const st = lead.store;
   if (st) {
     if (st.overlay) add('Signal', `accessibility overlay installed (${st.overlay}): overlays do not stop lawsuits`);
-    if (st.theme) add('Store', `${st.theme_store_id ? 'theme store' : 'custom'} theme "${st.theme}"${st.default_theme ? ' (Shopify default, never redesigned)' : ''}`);
+    if (st.theme) {
+      const base = st.theme_schema && st.theme_schema !== st.theme ? ` (built on ${st.theme_schema})` : '';
+      add('Store', st.default_theme ? `on Shopify's free ${st.theme_schema || st.theme} theme${st.theme !== (st.theme_schema || st.theme) ? ` ("${st.theme}")` : ''}: little or no custom design` : `${st.theme_store_id ? 'paid theme-store' : 'custom'} theme "${st.theme}"${base}`);
+    }
     if (st.country) add('Store', `based in ${st.country}${st.currency ? `, sells in ${st.currency}` : ''}`);
-    if (st.products != null) add('Store', `${st.products}${st.products_capped ? '+' : ''} products${st.last_product_update_days != null ? `, last product update ${st.last_product_update_days} days ago` : ''}`);
+    if (st.products != null) add('Store', `${st.products}${st.products_capped ? '+' : ''} products${st.newest_product_days != null ? `, newest added ${st.newest_product_days} days ago` : ''}`);
     if (st.images_missing_alt) add('Accessibility', `${st.images_missing_alt} of ${st.images} homepage images have no alt text`);
     if (st.paid_apps?.length) add('Size signal', `uses ${st.paid_apps.join(', ')}`);
   }

@@ -15,6 +15,7 @@ const { values: args, positionals: dirs } = parseArgs({
     out: { type: 'string' },
     'vibe-only': { type: 'boolean', default: true },
     all: { type: 'boolean', default: false },
+    only: { type: 'string', default: '' },
     verifier: { type: 'string', default: 'bounceverify' },
     'max-candidates': { type: 'string', default: '2' },
     'in-place': { type: 'boolean', default: false },
@@ -28,7 +29,8 @@ for (const d of dirs) {
   if (!existsSync(f)) continue;
   for (const l of JSON.parse(readFileSync(f, 'utf8'))) {
     const hasPerson = l.contact?.email && !isRoleMailbox(l.contact.email) && ['ok', 'catch_all'].includes(l.contact.verification);
-    if (hasPerson || !l.site?.reachable) continue;
+    const only = args.only ? args.only.split(',').map((x) => x.trim()) : null;
+    if (only ? !only.includes(l.domain) : hasPerson || !l.site?.reachable) continue;
     if (args['vibe-only'] && !args.all && !/vibe/.test(l.vibe?.verdict || '')) continue;
     // Names found by an earlier search are looked up again with today's rules.
     if (!byDomain.has(l.domain)) byDomain.set(l.domain, { ...l, search_people: undefined, filled_from: l.filled_from || path.basename(d) });

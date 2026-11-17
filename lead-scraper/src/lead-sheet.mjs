@@ -38,7 +38,8 @@ leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.to
 // --top N: verified mailboxes first, then catch-alls, then leads without a named email
 // (each by fit score); the sheet itself is sorted by fit score.
 if (args.top) {
-  const tier = (l) => (personal(l) ? (l.contact.verification === 'ok' ? 0 : 1) : 2);
+  // German/Austrian companies cannot get cold email: last.
+  const tier = (l) => (/\.(de|at)$/.test(l.mail_domain || l.domain) ? 3 : personal(l) ? (l.contact.verification === 'ok' ? 0 : 1) : 2);
   leads = [...leads].sort((a, b) => tier(a) - tier(b) || b.score.total - a.score.total).slice(0, Number(args.top));
   leads.sort((a, b) => Number(!!personal(b)) - Number(!!personal(a)) || b.score.total - a.score.total);
 }
@@ -63,7 +64,7 @@ const rows = leads.map((l, i) => {
     website: l.site.fetched_url || l.website,
     type: { vibe: 'A', type_a: 'A', type_b: 'B', type_c: 'C' }[l.profile] || l.profile,
     source: l.sources.join(', '),
-    login_required: l.product_access?.login_required || '',
+    login_required: l.product_access?.login_required || (l.store ? 'no' : ''),
     product_access: l.product_access?.detail || l.access?.evidence || '',
     first_name: c?.first_name || '',
     last_name: c?.last_name || '',

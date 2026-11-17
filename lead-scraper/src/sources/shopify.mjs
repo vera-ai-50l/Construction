@@ -95,8 +95,9 @@ export async function storeSignals(url) {
       const products = JSON.parse(p.text).products || [];
       s.products = products.length;
       s.products_capped = products.length === 250;
-      const last = Math.max(0, ...products.map((x) => Date.parse(x.updated_at || x.published_at || 0) || 0));
-      s.last_product_update_days = last ? Math.round((Date.now() - last) / 864e5) : null;
+      // Newest product published (updated_at changes on every inventory sync, so it says little).
+      const newest = Math.max(0, ...products.map((x) => Date.parse(x.published_at || x.created_at || 0) || 0));
+      s.newest_product_days = newest ? Math.round((Date.now() - newest) / 864e5) : null;
       s.price_range = products.length ? (() => {
         const prices = products.flatMap((x) => (x.variants || []).map((v) => Number(v.price))).filter((n) => n > 0);
         return prices.length ? [Math.min(...prices), Math.max(...prices)] : null;

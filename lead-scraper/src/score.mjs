@@ -51,7 +51,9 @@ function scoreStore(lead) {
   if (lead.emails?.some((e) => e.type === 'personal')) reach += 2;
   if (s.linkedin_company) reach += 1;
   let timing = 2;
-  if (st.last_product_update_days != null && st.last_product_update_days <= 30) timing += 4;
+  const fresh = st.newest_product_days ?? st.last_product_update_days;
+  if (fresh != null && fresh <= 30) timing += 4;
+  else if (fresh != null && fresh <= 90) timing += 2;
   if (st.overlay) timing += 3; // already worried about accessibility
   const fit = st.us_eu ? 5 : 1;
   const parts = { access, redesign: cap(redesign, 25), commercial: cap(commercial, 20), reach: cap(reach, 15), timing: cap(timing, 10), fit };
