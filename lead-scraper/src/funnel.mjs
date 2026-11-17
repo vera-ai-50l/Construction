@@ -14,6 +14,7 @@ const SOURCE_NOTES = {
   'funding-news': ['funding-news articles read (TechCrunch, Crunchbase News, Tech Funding News, BetaKit, GeekWire, Inc42, Startup Daily)', 'seed / Series A / undisclosed, $1-40M, B2B SaaS, last 9 months, website found'],
   'ats-design-role': ['design-role job posts on Ashby / Greenhouse / Lever (Google via Apify)', 'company website found on the job board'],
   'hn-hiring': ['HN Who is hiring posts (last 3 months)', 'design role + B2B SaaS, not YC, website given'],
+  'design-jobs': ['job posts read (Himalayas, Remotive, We Work Remotely, Dribbble, job boards via Google, HN)', 'design role, a real company (not a recruiter), website found; then sorted into A / B / C by its site'],
 };
 
 export function funnelReport({ candidates, leads, kept, queue, args }) {
@@ -28,9 +29,10 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     'funding-news': getCount('funding_articles'),
     'ats-design-role': getCount('ats_design_posts'),
     'hn-hiring': getCount('hn_hiring_posts'),
+    'design-jobs': getCount('design_jobs_read'),
     showhn: getCount('showhn_posts'),
   };
-  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept'), commoncrawl: getCount('commoncrawl_kept'), showhn: getCount('showhn_kept'), yc: getCount('yc_matched'), shopify: getCount('shopify_stores_kept'), 'funding-news': getCount('funding_kept'), 'ats-design-role': getCount('ats_kept'), 'hn-hiring': getCount('hn_hiring_kept') };
+  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept'), commoncrawl: getCount('commoncrawl_kept'), showhn: getCount('showhn_kept'), yc: getCount('yc_matched'), shopify: getCount('shopify_stores_kept'), 'funding-news': getCount('funding_kept'), 'ats-design-role': getCount('ats_kept'), 'hn-hiring': getCount('hn_hiring_kept'), 'design-jobs': getCount('design_jobs_companies') };
 
   const rows = [];
   for (const src of sources) {

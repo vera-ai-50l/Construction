@@ -2,6 +2,8 @@
 // type_a / type_b follow the positioning brief; the other three are the ICPs the
 // research report ranked, kept so the lead pools can be compared.
 import { fundingNews } from './sources/funding.mjs';
+import { designJobsFor } from './sources/design-jobs.mjs';
+import { storeSignals } from './sources/shopify.mjs';
 import { atsDesignRoles, hnDesignHiring } from './sources/hiring-design.mjs';
 import { SAAS as SAAS_TERMS } from './sources/saas.mjs';
 import { registrableDomain } from './domain.mjs';
@@ -43,6 +45,7 @@ export const PROFILES = {
       await run('google', () => serpFootprints({ log }));
       await run('commoncrawl', () => commonCrawlApps({ log }));
       await run('showhn', () => showHnApps());
+      await run('jobs', () => designJobsFor('A', { log }));
       return rows;
     },
   },
@@ -74,6 +77,7 @@ export const PROFILES = {
       await run('news', () => fundingNews({ log }));
       await run('ats', () => atsDesignRoles({ log }));
       await run('hn', () => hnDesignHiring());
+      await run('jobs', () => designJobsFor('B', { log }));
       await run('yc', () =>
         ycCompanies({ include: SAAS_TERMS, exclude: /\b(hardware|biotech|drug|robot(ics)?|satellite|consumer app)\b/i, minYear: 2022, maxYear: 2024, minTeam: 8, maxTeam: 60, b2bOnly: true }));
       // Non-YC by default: drop companies that are in the YC dataset.
@@ -90,7 +94,20 @@ export const PROFILES = {
     label: 'C: US/EU Shopify brands (accessibility + conversion)',
     offer: 'Accessibility + Conversion Fix',
     describe: 'Shopify stores on their own domain from Common Crawl, ranked by US/EU base, accessibility overlay installed, paid apps (size proxy) and missing alt text.',
-    discover: async ({ limit, offset, log }) => shopifyStores({ limit, offset, log }),
+    // Sources: shopify (Common Crawl stores, default) and jobs (stores hiring a designer).
+    discover: async ({ limit, offset, sources = '', log }) => {
+      const want = new Set((sources || 'shopify').split(',').map((x) => x.trim()));
+      const rows = want.has('shopify') ? await shopifyStores({ limit, offset, log }) : [];
+      if (want.has('jobs')) {
+        const hiring = await designJobsFor('C', { log });
+        for (const h of hiring.slice(offset, offset + limit)) {
+          const store = await storeSignals(h.website).catch(() => null);
+          if (store?.ok) rows.push({ ...h, name: (store.title || h.name).split(/\s+[|–—-]\s+/)[0].slice(0, 60), website: store.url, store });
+        }
+        log?.(`type_c: jobs: ${hiring.length} stores hiring a designer`);
+      }
+      return rows;
+    },
   },
   published_demo: {
     label: 'Report ICP 1: B2B SaaS with a published demo (AI-retrofit when AI terms appear)',
