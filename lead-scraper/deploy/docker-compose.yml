@@ -1,0 +1,28 @@
+# Lead pipeline API next to the n8n server in ../../infra (same Docker network), so the
+# n8n workflow can call http://leads:8787. Not published to the internet.
+#   cp .env.example .env   # fill in the keys
+#   docker compose up -d --build
+services:
+  leads:
+    build: ..
+    container_name: leads
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - leads_out:/app/out
+    expose:
+      - '8787'
+    networks: [n8n]
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+volumes:
+  leads_out:
+
+networks:
+  # The n8n stack's network. Docker names it <folder>_default; for infra/ copied to
+  # /opt/vera that is vera_default. Check with: docker network ls
+  n8n:
+    external: true
+    name: ${N8N_NETWORK:-vera_default}

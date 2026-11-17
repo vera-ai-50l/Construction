@@ -85,6 +85,8 @@ export async function findPeople(finderName, domains, { perDomain = 3, log } = {
     // Keep only people at the domains we asked about (some tools pad with lookalikes).
     const d = [...wanted].find((w) => p.domain === w || p.domain.endsWith('.' + w) || (p.email && p.email.endsWith('@' + w)));
     if (!d || !p.first_name) continue;
+    // Placeholder records some databases carry ("Test Lassiter" at "chefside test").
+    if (/^(test|demo|sample|john doe|jane doe)$/i.test(p.first_name) || /\btest\b/i.test(String(pick(it, 'companyName', 'company_name', 'organization.name')))) continue;
     const list = byDomain.get(d) || [];
     if (!list.some((x) => x.email && x.email === p.email)) list.push(p);
     byDomain.set(d, list);

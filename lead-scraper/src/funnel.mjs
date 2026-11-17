@@ -11,9 +11,11 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     trustmrr: getCount('trustmrr_pages_read'),
     'google-footprint': getCount('serp_results'),
     commoncrawl: getCount('commoncrawl_hosts'),
+    yc: getCount('yc_considered'),
+    shopify: getCount('shopify_stores_read'),
     showhn: getCount('showhn_posts'),
   };
-  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept'), commoncrawl: getCount('commoncrawl_kept'), showhn: getCount('showhn_kept') };
+  const passedBySource = { trustmrr: getCount('trustmrr_passed_filter'), 'google-footprint': getCount('serp_kept'), commoncrawl: getCount('commoncrawl_kept'), showhn: getCount('showhn_kept'), yc: getCount('yc_matched'), shopify: getCount('shopify_stores_kept') };
 
   const rows = [];
   for (const src of sources) {
@@ -30,6 +32,11 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
       paid_product: L.filter((l) => l.paid_product).length,
       not_polished: K.filter((l) => l.site?.reachable).length,
       vibe_coded: K.filter(VIBE).length,
+      design_role_open: K.filter((l) => l.hiring?.design_roles?.length).length,
+      store_us_eu: K.filter((l) => l.store?.us_eu).length,
+      overlay_found: K.filter((l) => l.store?.overlay).length,
+      login_checked: K.filter((l) => l.product_access && l.product_access.login_required !== 'unknown').length,
+      login_not_required: K.filter((l) => l.product_access?.login_required === 'no').length,
       sent_to_contact_finding: Q.length,
       mail_domain_known: Q.filter((l) => l.mail_domain).length,
       finder_found_people: Q.filter((l) => l.finder_people > 0).length,
@@ -54,6 +61,11 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     ['paid_product', 'Paid product', 'TrustMRR revenue, or prices/pricing found on the site'],
     ['not_polished', 'Not professionally designed', 'vibe check (fingerprints, design patterns, design spend)'],
     ['vibe_coded', 'Vibe-coded or likely', 'vibe check'],
+    ['design_role_open', 'Open design role (buying signal)', 'Ashby / Greenhouse / Lever job boards'],
+    ['store_us_eu', 'Store based in the US or EU', 'Shopify store settings (country, currency)'],
+    ['overlay_found', 'Accessibility overlay installed', 'script on the homepage (accessiBe, UserWay, AudioEye...)'],
+    ['login_checked', 'Login wall checked', 'sign-up / app page opened in a browser'],
+    ['login_not_required', 'Product visible without login', 'public demo, sandbox or embedded tour'],
     ['sent_to_contact_finding', 'Sent to contact finding', `top ${args['max-contacts']} by score`],
     ['mail_domain_known', 'Company mail domain known', 'own domain, or the domain a builder-hosted app publishes'],
     ['finder_found_people', 'Finder returned people', `finder: ${args.finder}`],
@@ -63,6 +75,8 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     ['verified_ok', 'Verified email (ok)', `verifier: ${args.verifier}`],
     ['catch_all', 'Catch-all (unconfirmable)', `verifier: ${args.verifier}`],
   ];
+  const OPTIONAL = new Set(['paid_product', 'not_polished', 'vibe_coded', 'finder_found_people', 'name_search_found', 'design_role_open', 'store_us_eu', 'overlay_found', 'login_checked', 'login_not_required', 'mail_domain_known']);
+  for (let i = STEPS.length - 1; i >= 0; i--) if (OPTIONAL.has(STEPS[i][0]) && !total[STEPS[i][0]]) STEPS.splice(i, 1);
   const head = `| Step | Tool | ${rows.map((r) => r.source).join(' | ')} | All |`;
   const sep = `| --- | --- | ${rows.map(() => '---').join(' | ')} | --- |`;
   const body = STEPS.map(([k, label, tool]) => `| ${label} | ${tool} | ${rows.map((r) => r[k] ?? '').join(' | ')} | ${total[k] ?? ''} |`);
@@ -85,5 +99,5 @@ export function funnelReport({ candidates, leads, kept, queue, args }) {
     '',
     'Free steps (TrustMRR pages, websites, job boards) cost nothing but time. Apify costs are the usage Apify reports for each run.',
   ].join('\n');
-  return { markdown, data: { rows, total, ledger, emails_verified: getCount('emails_verified') } };
+  return { markdown, data: { rows, total, ledger, steps: STEPS.map(([key, label, tool]) => ({ key, label, tool })), emails_verified: getCount('emails_verified') } };
 }

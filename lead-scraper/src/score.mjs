@@ -29,7 +29,38 @@ export function aiBuilt(site, lead) {
 
 const cap = (n, max) => Math.max(0, Math.min(max, n));
 
+// Type C (Shopify stores): the whole storefront is public, so access is full; the
+// questions are accessibility room, size, reach and timing.
+function scoreStore(lead) {
+  const st = lead.store;
+  const s = lead.site;
+  const access = 25;
+  let redesign = 8;
+  if (st.overlay) redesign += 7;
+  if (st.default_theme) redesign += 4;
+  if (st.images_missing_alt >= 10) redesign += 4;
+  else if (st.images_missing_alt >= 3) redesign += 2;
+  let commercial = 6 + Math.min(9, st.paid_apps.length * 3);
+  if (!st.theme_store_id && st.theme) commercial += 2; // custom theme: someone paid for it
+  if ((st.products || 0) >= 50) commercial += 2;
+  if (st.products_capped && st.paid_apps.length >= 4) commercial -= 4; // probably above the $25M band
+  let reach = 0;
+  if (lead.contact?.verification === 'ok') reach += 8;
+  else if (lead.contact) reach += 5;
+  if (s.people?.length) reach += 4;
+  if (lead.emails?.some((e) => e.type === 'personal')) reach += 2;
+  if (s.linkedin_company) reach += 1;
+  let timing = 2;
+  if (st.last_product_update_days != null && st.last_product_update_days <= 30) timing += 4;
+  if (st.overlay) timing += 3; // already worried about accessibility
+  const fit = st.us_eu ? 5 : 1;
+  const parts = { access, redesign: cap(redesign, 25), commercial: cap(commercial, 20), reach: cap(reach, 15), timing: cap(timing, 10), fit };
+  const total = Object.values(parts).reduce((a, b) => a + b, 0);
+  return { parts, total, priority: total >= 85 ? 1 : total >= 70 ? 2 : total >= 55 ? 3 : total >= 40 ? 4 : 5 };
+}
+
 export function score(lead) {
+  if (lead.store) return scoreStore(lead);
   const s = lead.site;
   const access = ACCESS_POINTS[lead.access.level] ?? 3;
 

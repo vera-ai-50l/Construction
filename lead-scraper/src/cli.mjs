@@ -18,6 +18,7 @@ import { buildFingerprints, vibeVerdict } from './enrich/vibe.mjs';
 import { findContacts } from './enrich/contacts.mjs';
 import { getText } from './http.mjs';
 import { funnelReport } from './funnel.mjs';
+import { remarks } from './remarks.mjs';
 import { writeFile } from 'node:fs/promises';
 
 const { values: args } = parseArgs({
@@ -39,6 +40,7 @@ const { values: args } = parseArgs({
     verifier: { type: 'string', default: 'bounceverify' },
     'max-candidates': { type: 'string', default: '3' },
     'name-search': { type: 'boolean', default: false },
+    'access-check': { type: 'boolean', default: false },
     'min-revenue': { type: 'string', default: '500' },
     serp: { type: 'boolean', default: false },
     sources: { type: 'string', default: 'trustmrr' },
@@ -71,6 +73,7 @@ Options:
   --verifier <name>      who verifies: bounceverify (Apify, ~$0.0009/email, default) or
                          mv (MillionVerifier; needs MILLIONVERIFIER_API_KEY, set MV_PRICE_USD)
   --max-candidates <n>   email guesses checked per lead, in rounds (default 3)
+  --access-check         open each lead's sign-up / app page in a browser: login required or not
   --name-search          leads with a mail domain but no name: one Google search each for a
                          founder's LinkedIn result title (Apify, ~$0.0045 per company)
   --max-contacts <n>     at most this many leads go through contact finding (default 100)
@@ -93,7 +96,7 @@ for (const name of wanted) {
     const rows = await PROFILES[name].discover({ limit, offset, minRevenue: Number(args['min-revenue']), serp: args.serp, sources: args.sources, log });
     log(`${name}: ${rows.length} discovered`);
     // type_a pages through its source itself; the others are sliced here.
-    const page = name === 'type_a' || name === 'vibe' ? rows : rows.slice(offset);
+    const page = ['type_a', 'vibe', 'type_c'].includes(name) ? rows : rows.slice(offset);
     candidates.push(...(name === 'vibe' ? page : page.slice(0, limit)).map((r) => ({ ...r, profile: name })));
   } catch (e) {
     log(`${name}: discovery failed: ${e.message}`);
@@ -114,7 +117,7 @@ for (const c of candidates) {
   const prev = byDomain.get(domain);
   if (prev) {
     prev.sources = [...new Set([...prev.sources, c.source])];
-    for (const k of ['yc', 'github', 'trustmrr', 'hn', 'cc']) if (c[k] && !prev[k]) prev[k] = c[k];
+    for (const k of ['yc', 'github', 'trustmrr', 'hn', 'cc', 'store']) if (c[k] && !prev[k]) prev[k] = c[k];
   } else byDomain.set(domain, { ...c, domain, sources: [c.source] });
 }
 const leads = [...byDomain.values()];
@@ -143,7 +146,7 @@ await pool(leads, Number(args.concurrency), async (lead) => {
   lead.emails = args['verify-emails'] ? await verifyEmails(lead.site.emails) : lead.site.emails;
   if (args.screenshots && !args['no-browser'] && lead.site.reachable) lead.render = await (await browserApi()).captureLead(lead, outDir);
   // Vibe-coded or professionally designed? Fingerprints always; design patterns in a browser.
-  if (lead.site.reachable) {
+  if (lead.site.reachable && !lead.store) {
     const home = await getText(homepage(lead.website));
     const fp = await buildFingerprints(lead.site.fetched_url || site, home.text || '');
     const slop = args['no-browser'] ? null : await (await browserApi()).slopScan(lead.site.fetched_url || site);
@@ -173,6 +176,19 @@ if (!args['keep-polished']) {
   if (kept.length < before) log(`dropped ${before - kept.length} polished sites (use --keep-polished to keep them)`);
 }
 
+// 3b2. Login wall: can a visitor see the product without a sales call?
+if (args['access-check'] && !args['no-browser']) {
+  const { probeAccess } = await import('./enrich/access.mjs');
+  let n = 0;
+  await pool(kept.filter((l) => l.site?.reachable), 3, async (lead) => {
+    lead.product_access = await probeAccess(lead);
+    if (++n % 10 === 0) log(`login checked ${n}`);
+  });
+  const { closeBrowser: closeAudit } = await import('./teardown/audit.mjs');
+  await closeAudit();
+  log(`login check: ${kept.filter((l) => l.product_access?.login_required === 'no').length} open, ${kept.filter((l) => l.product_access?.login_required === 'yes').length} behind login`);
+}
+
 // 3c. Named, verified decision-makers (batched to keep paid calls down).
 let queue = [];
 if (args.finder === 'auto') args.finder = wanted.length === 1 && wanted[0] === 'vibe' ? 'none' : 'pipelinelabs';
@@ -193,6 +209,7 @@ if (args['find-contacts']) {
 }
 
 // 4. Write
+for (const lead of kept) lead.remarks = remarks(lead);
 const files = await writeOutputs(kept, outDir);
 const byPriority = kept.reduce((m, l) => ((m[l.score.priority] = (m[l.score.priority] || 0) + 1), m), {});
 log(`wrote ${files.csv}`);

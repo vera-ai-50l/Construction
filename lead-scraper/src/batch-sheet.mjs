@@ -7,6 +7,7 @@ import path from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import ExcelJS from 'exceljs';
 import { toCsvRows } from './teardown/csv.mjs';
+import { emailConfidence, teardownConfidence } from './confidence.mjs';
 
 const dir = path.resolve(process.argv[2] || 'out/batch-40');
 const leads = JSON.parse(readFileSync(path.join(dir, 'leads.json'), 'utf8'));
@@ -21,35 +22,6 @@ const HOW = (src = '') =>
   : /company site/.test(src) ? 'Published on the company website'
   : src;
 const SOURCE = { trustmrr: 'TrustMRR (verified revenue)', commoncrawl: 'Common Crawl (Lovable-hosted app)', showhn: 'Hacker News Show HN', 'google-footprint': 'Google (builder footprint)' };
-
-/**
- * Email confidence, 0-100: will this reach the right person?
- * Verification sets the base; where the address and the name came from adjusts it.
- */
-export function emailConfidence(lead) {
-  const c = lead.contact;
-  let s = c.verification === 'ok' ? 85 : c.verification === 'catch_all' ? 55 : 20;
-  const src = c.email_source || '';
-  const why = [c.verification === 'ok' ? 'server confirmed the mailbox' : 'catch-all server: cannot be confirmed'];
-  if (/hn profile|^company site/.test(src)) (s += 10), why.push('address published by them');
-  else if (/trustmrr/.test(src)) (s += 5), why.push('name from their own TrustMRR listing');
-  else if (/google \(LinkedIn/.test(src)) (s -= 10), why.push('name found by search: check LinkedIn');
-  const emailDomain = c.email.split('@')[1];
-  const companyDomain = lead.mail_domain || lead.domain;
-  if (!/gmail|outlook|yahoo|icloud|proton/.test(emailDomain) && emailDomain !== companyDomain && !companyDomain.endsWith(emailDomain)) (s -= 15), why.push('address is on another domain');
-  return { score: Math.max(10, Math.min(98, s)), why: why.join('; ') };
-}
-
-/** Teardown confidence, 0-100: how specific and well-founded is the email's content? */
-export function teardownConfidence(t) {
-  if (!t) return { score: 0, why: 'no teardown' };
-  const used = t.email?.findings_used?.length || 0;
-  const reviewed = ['file', 'ai'].includes(t.send_row.review) || t.findings.some((f) => f.metric === 'reviewed');
-  const screens = Object.keys(t.shots || {}).length;
-  let s = 35 + used * 12 + (reviewed ? 15 : 0) + (screens >= 3 ? 5 : 0);
-  const why = [`${used} finding${used === 1 ? '' : 's'} in the email`, reviewed ? 'screens looked at by a person' : 'measured checks only', `${screens} screenshots`];
-  return { score: Math.min(95, s), why: why.join('; ') };
-}
 
 const band = (s) => (s >= 80 ? 'High' : s >= 55 ? 'Medium' : 'Low');
 const rows = leads.map((l, i) => {

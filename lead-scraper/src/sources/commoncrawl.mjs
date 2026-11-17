@@ -15,7 +15,7 @@ const AUTH_PATH = /\/(login|signin|sign-in|signup|sign-up|auth|register|dashboar
 // Throwaway projects: previews, copies, tutorials, random ids.
 const JUNK_HOST = /^(preview-|id-|[a-z0-9]{20,}\.)|\b(test|demo|copy|remix|clone|template|tutorial|my-app|untitled|hello-world|portfolio|resume|cv|wedding|birthday)\b/i;
 
-async function indexGet(url, log) {
+export async function indexGet(url, log) {
   const key = 'CC ' + url;
   const hit = await cacheGet(key);
   if (hit) return hit;
@@ -100,4 +100,28 @@ export async function commonCrawlApps({ hosts = (process.env.CC_HOSTS || BUILDER
   rows.sort((a, b) => b._rank - a._rank);
   count('commoncrawl_kept', rows.length);
   return rows;
+}
+
+/**
+ * Hostnames under a domain in the latest crawl (any status: a redirect still names the
+ * host). Reads at most `maxPages` index pages, spread across the index.
+ */
+export async function commonCrawlHostnames(domain, { maxPages = 2, crawl, log } = {}) {
+  crawl ||= await latestCrawl(log);
+  if (!crawl) throw new Error('Common Crawl index unavailable');
+  const base = `${INDEX}/${crawl}-index?url=*.${domain}&output=json&fl=url`;
+  const info = await indexGet(base + '&showNumPages=true', log);
+  const pages = info ? JSON.parse(info).pages || 0 : 0;
+  const pick = Array.from({ length: Math.min(maxPages, pages) }, (_, i) => Math.floor((i * pages) / Math.min(maxPages, pages)));
+  const hosts = new Set();
+  for (const p of pick) {
+    await sleep(5000);
+    const text = await indexGet(`${base}&page=${p}`, log);
+    for (const line of (text || '').split('\n')) {
+      const m = line.match(/"url":\s*"https?:\/\/([^/"]+)/);
+      if (m) hosts.add(m[1].toLowerCase());
+    }
+  }
+  log?.(`commoncrawl: ${domain}: ${hosts.size} hosts from ${pick.length} of ${pages} index pages`);
+  return [...hosts];
 }

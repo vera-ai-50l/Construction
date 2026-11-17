@@ -7,7 +7,10 @@
     "leads": "NODE_USE_ENV_PROXY=1 node --no-warnings src/cli.mjs",
     "test": "node --test test/*.test.mjs",
     "teardown": "NODE_USE_ENV_PROXY=1 node --no-warnings src/teardown-cli.mjs",
-    "login": "node src/login.mjs"
+    "login": "node src/login.mjs",
+    "pipeline": "NODE_USE_ENV_PROXY=1 node --no-warnings src/pipeline.mjs",
+    "serve": "node --no-warnings src/server.mjs",
+    "sheet": "node --no-warnings src/lead-sheet.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.8.0",

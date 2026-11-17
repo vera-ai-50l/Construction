@@ -1,0 +1,418 @@
+{
+  "name": "Leads: Type B (funded AI SaaS), weekly",
+  "nodes": [
+    {
+      "id": "97ddc8a1-430d-48ad-8da7-62b98d4c6698",
+      "name": "Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "23 7 * * 2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "eecf5fa9-a301-4239-8d84-f4e7bd3c034b",
+      "name": "Run now",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "51816d8d-4daa-43b2-849f-229d1b073102",
+      "name": "Start run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://leads:8787/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"preset\":\"type_b\"}",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Leads API"
+        }
+      }
+    },
+    {
+      "id": "2393ca49-bb3d-416e-8238-3bdcf4b2e8f7",
+      "name": "Wait 5 min",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "amount": 5,
+        "unit": "minutes"
+      },
+      "webhookId": "284cf4c5-0297-459e-86f2-8c045d7b4b78"
+    },
+    {
+      "id": "6cfaca3e-bffd-4f6a-81d1-f8c344ce96d5",
+      "name": "Check run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "url": "=http://leads:8787/runs/{{ $('Start run').first().json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Leads API"
+        }
+      }
+    },
+    {
+      "id": "52b6bd96-6a9c-47e8-87d8-e27cc4760074",
+      "name": "Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "12122295-9a6f-4ca1-8c40-3f5b5568156a",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "done",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "825871c2-7599-4f0f-8e0b-194b4cc178eb",
+      "name": "Failed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "12c1ce46-9ad7-4be6-8868-618b8499b0b7",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "failed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "970291b2-df36-4bde-857f-d81284222733",
+      "name": "Stop: run failed",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        500
+      ],
+      "parameters": {
+        "errorMessage": "={{ \"Lead run failed: \" + $json.error }}"
+      }
+    },
+    {
+      "id": "6c5b0ff7-d17e-44b4-8ef5-c0d7060db07c",
+      "name": "Get scored leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "url": "=http://leads:8787/runs/{{ $json.id }}/leads.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Leads API"
+        }
+      }
+    },
+    {
+      "id": "56ddc42e-b62c-401f-8c0b-5900dd0e335b",
+      "name": "One row per lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// The API returns an array of scored leads; n8n may hand it over as one item or many.\nconst run = $('Check run').first().json;\nconst rows = $input.all().flatMap((i) => (Array.isArray(i.json) ? i.json : Array.isArray(i.json.data) ? i.json.data : [i.json]));\nreturn rows.map((r) => ({ json: { run_date: (run.finished_at || \"\").slice(0, 10), run_id: run.id, ...r } }));"
+      }
+    },
+    {
+      "id": "b76b4c59-a6b7-4563-83fe-281192039f20",
+      "name": "Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        200
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Type B leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "domain"
+          ],
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "28a73cc3-f316-4085-8170-fbeaf3a10668",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const run = $('Check run').first().json;\nreturn [{ json: { run_id: run.id, leads: run.leads, with_named_email: run.with_named_email, cost_usd: run.cost_usd, rows_written: $input.all().length, funnel: run.funnel } }];"
+      }
+    },
+    {
+      "id": "e75ed6af-f61d-4097-842f-4ceedbdeda39",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -120
+      ],
+      "parameters": {
+        "width": 760,
+        "height": 280,
+        "content": "## Leads: Type B (funded AI SaaS), weekly\nRuns the type_b lead pipeline (no teardowns) and writes the scored leads, with remarks, to the Google Sheet tab \"Type B leads\" (rows are updated by domain).\n\n1. Create a **Header Auth** credential named \"Leads API\": name `Authorization`, value `Bearer <LEADS_API_TOKEN from deploy/.env>`; select it in the three HTTP nodes.\n2. Connect Google Sheets in **Google Sheet** and paste your sheet URL. Create the tab first; the header row is written on the first run.\n3. The leads API must run on the same Docker network (lead-scraper/deploy). Test with **Run now**; a run takes 20-40 minutes."
+      }
+    }
+  ],
+  "connections": {
+    "Schedule": {
+      "main": [
+        [
+          {
+            "node": "Start run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run now": {
+      "main": [
+        [
+          {
+            "node": "Start run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start run": {
+      "main": [
+        [
+          {
+            "node": "Wait 5 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5 min": {
+      "main": [
+        [
+          {
+            "node": "Check run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check run": {
+      "main": [
+        [
+          {
+            "node": "Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Done?": {
+      "main": [
+        [
+          {
+            "node": "Get scored leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failed?": {
+      "main": [
+        [
+          {
+            "node": "Stop: run failed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 5 min",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get scored leads": {
+      "main": [
+        [
+          {
+            "node": "One row per lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per lead": {
+      "main": [
+        [
+          {
+            "node": "Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {}
+}

@@ -114,20 +114,6 @@ export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 
   });
   if (offHost.length) log(`company sites read for builder-hosted apps: ${offHost.length}`);
 
-  // 0b. Still nobody named, but a company mail domain: one Google search per company
-  //     for a founder's LinkedIn result title (paid, about $0.0045 per company).
-  if (nameSearch) {
-    const anonymous = leads.filter((l) => mailDomain(l) && !knownPeople(l).length);
-    if (anonymous.length) {
-      try {
-        await searchFounderNames(anonymous.map((l) => Object.assign(l, { mail_domain: mailDomain(l) })), { log });
-        log(`founder name search: ${anonymous.filter((l) => l.search_people?.length).length}/${anonymous.length} named`);
-      } catch (e) {
-        log(`founder name search failed: ${e.message.slice(0, 160)}`);
-      }
-    }
-  }
-
   // 1. People
   let found = new Map();
   if (finder !== 'none') {
@@ -138,6 +124,20 @@ export async function findContacts(leads, { finder = 'pipelinelabs', verifier = 
       log(`finder ${finder} failed: ${e.message.slice(0, 160)}`);
     }
   }
+  // 1b. Still nobody named (finder and free sources found no one), but a company mail domain: one Google search per company
+  //     for a founder's LinkedIn result title (paid, about $0.0045 per company).
+  if (nameSearch) {
+    const anonymous = leads.filter((l) => mailDomain(l) && !knownPeople(l, found.get(mailDomain(l)) || []).length);
+    if (anonymous.length) {
+      try {
+        await searchFounderNames(anonymous.map((l) => Object.assign(l, { mail_domain: mailDomain(l) })), { log });
+        log(`founder name search: ${anonymous.filter((l) => l.search_people?.length).length}/${anonymous.length} named`);
+      } catch (e) {
+        log(`founder name search failed: ${e.message.slice(0, 160)}`);
+      }
+    }
+  }
+
   const state = leads.map((lead) => {
     lead.mail_domain = mailDomain(lead);
     const fromFinder = found.get(lead.mail_domain) || [];

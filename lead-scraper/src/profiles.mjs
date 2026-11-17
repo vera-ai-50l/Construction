@@ -1,6 +1,7 @@
 // ICP profiles: where to find each customer type and what qualifies it.
 // type_a / type_b follow the positioning brief; the other three are the ICPs the
 // research report ranked, kept so the lead pools can be compared.
+import { shopifyStores } from './sources/shopify.mjs';
 import { commonCrawlApps } from './sources/commoncrawl.mjs';
 import { showHnApps } from './sources/showhn.mjs';
 import { ycCompanies } from './sources/yc.mjs';
@@ -50,18 +51,25 @@ export const PROFILES = {
     // Tagged rather than filtered: fingerprints miss many AI-built apps.
   },
   type_b: {
-    label: 'B: funded AI SaaS with data-heavy dashboards',
+    label: 'B: seed / Series A AI SaaS with data-heavy dashboards',
     offer: 'Dashboard Sprint',
-    describe: 'Recent YC B2B companies whose product is analytics, monitoring, evals, agents or data tooling.',
+    describe: 'YC B2B AI companies from the last two years whose product is dashboards, analytics, monitoring, evals, tracing or agents; newest batch first (closest to the funding round).',
     discover: async () =>
       ycCompanies({
         include: /\b(dashboards?|analytics|observability|monitoring|evals?|evaluation|tracing|insights?|reporting|data platform|data pipelines?|metrics|ai agents?|agent platform|llmops|bi\b|business intelligence)\b/i,
         exclude: /\b(hardware|biotech|drug|robot(ics)?|satellite|consumer app)\b/i,
-        minYear: 2023,
+        minYear: new Date().getFullYear() - 1,
         minTeam: 2,
-        maxTeam: 80,
+        maxTeam: 40,
         b2bOnly: true,
+        recentFirst: true,
       }).then((rows) => rows.filter((r) => AI.test(r.description + ' ' + r.yc.tags.join(' ')))),
+  },
+  type_c: {
+    label: 'C: US/EU Shopify brands (accessibility + conversion)',
+    offer: 'Accessibility + Conversion Fix',
+    describe: 'Shopify stores on their own domain from Common Crawl, ranked by US/EU base, accessibility overlay installed, paid apps (size proxy) and missing alt text.',
+    discover: async ({ limit, offset, log }) => shopifyStores({ limit, offset, log }),
   },
   published_demo: {
     label: 'Report ICP 1: B2B SaaS with a published demo (AI-retrofit when AI terms appear)',

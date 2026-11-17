@@ -1,4 +1,5 @@
 // Source: the public YC company dataset (https://github.com/yc-oss/api), refreshed daily.
+import { count } from '../ledger.mjs';
 import { getJson } from '../http.mjs';
 
 const ALL = 'https://yc-oss.github.io/api/companies/all.json';
@@ -20,7 +21,8 @@ const batchYear = (batch) => {
 export async function ycCompanies(q) {
   const all = await getJson(ALL);
   if (!Array.isArray(all)) throw new Error('Could not load the YC dataset');
-  return all
+  count('yc_considered', all.length);
+  const rows = all
     .filter((c) => c.status === 'Active' && c.website)
     .filter((c) => !q.minYear || batchYear(c.batch) >= q.minYear)
     .filter((c) => !q.minTeam || (c.team_size || 0) >= q.minTeam)
@@ -28,8 +30,12 @@ export async function ycCompanies(q) {
     .filter((c) => !q.b2bOnly || /B2B|Industrials|Healthcare|Fintech/i.test(c.industry || ''))
     .filter((c) => q.include.test(text(c)))
     .filter((c) => !q.exclude || !q.exclude.test(text(c)))
-    // Hiring companies first, then bigger teams: more budget and more product surface.
-    .sort((a, b) => Number(!!b.isHiring) - Number(!!a.isHiring) || (b.team_size || 0) - (a.team_size || 0))
+    // Default: hiring companies first, then bigger teams. q.recentFirst: newest batch
+    // first (closest to the funding round), then hiring.
+    .sort((a, b) =>
+      q.recentFirst
+        ? batchYear(b.batch) - batchYear(a.batch) || batchSeason(b.batch) - batchSeason(a.batch) || Number(!!b.isHiring) - Number(!!a.isHiring)
+        : Number(!!b.isHiring) - Number(!!a.isHiring) || (b.team_size || 0) - (a.team_size || 0))
     .map((c) => ({
       name: c.name,
       website: c.website,
@@ -45,4 +51,8 @@ export async function ycCompanies(q) {
         tags: c.tags || [],
       },
     }));
+  count('yc_matched', rows.length);
+  return rows;
 }
+// Within a year: Winter < Spring < Summer < Fall.
+const batchSeason = (b = '') => ({ winter: 1, x: 1, w: 1, spring: 2, summer: 3, s: 3, fall: 4, f: 4 })[String(b).toLowerCase().match(/^(winter|spring|summer|fall|[wxsf])/)?.[1]] || 0;
