@@ -1,0 +1,252 @@
+<title>Kyre Send Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one column of email cards under a sticky toolbar; a second tab lists today's sign-ups. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #1b2330; --muted: #5d6676; --line: #dfe3ea; --accent: #2f4fd6;
+  --ok: #1f7a4d; --ok-bg: #e3f3ea; --warn: #8a5a00; --warn-bg: #fbf0d6; --bad: #a23a2a; --bad-bg: #f8e3df; --info-bg: #e8ecfb;
+  --display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
+  --text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161d; --panel: #1a2029; --ink: #e6e9ef; --muted: #9aa3b2; --line: #2c3442; --accent: #8ea2ff;
+  --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2f14; --bad: #f19a8a; --bad-bg: #3d211c; --info-bg: #222b45; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12161d; --panel: #1a2029; --ink: #e6e9ef; --muted: #9aa3b2; --line: #2c3442; --accent: #8ea2ff;
+  --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2f14; --bad: #f19a8a; --bad-bg: #3d211c; --info-bg: #222b45; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--text); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
+.wrap { max-width: 880px; margin: 0 auto }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; justify-content: space-between }
+h1 { font-family: var(--display); font-size: 22px; margin: 0; letter-spacing: -0.01em }
+.sub { color: var(--muted); font-size: 13px }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+select, button, input, textarea { font: inherit; color: inherit }
+select, input[type=text], textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100% }
+select { width: auto }
+textarea { min-height: 120px; resize: vertical; line-height: 1.5 }
+button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; cursor: pointer }
+button:hover { border-color: var(--accent) }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600 }
+button.approve { background: var(--ok-bg); color: var(--ok); border-color: transparent; font-weight: 600 }
+button.skip { background: var(--bad-bg); color: var(--bad); border-color: transparent }
+button[disabled] { opacity: .5; cursor: default }
+.tabs { display: flex; gap: 4px }
+.tabs a { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--muted); font-weight: 500 }
+.tabs a.on { background: var(--info-bg); color: var(--ink) }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; background: var(--panel); cursor: pointer; font-variant-numeric: tabular-nums }
+.chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600 }
+.note { background: var(--info-bg); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; font-size: 13px }
+.cards { display: grid; gap: 12px; margin-top: 14px }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0 }
+.card.approved { border-left: 4px solid var(--ok) }
+.card.skipped { opacity: .7 }
+.card.pushed { border-left: 4px solid var(--accent) }
+.head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.head h2 { font-family: var(--display); font-size: 16px; margin: 0 }
+.pill { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px }
+.p-ok { background: var(--ok-bg); color: var(--ok) } .p-warn { background: var(--warn-bg); color: var(--warn) }
+.p-bad { background: var(--bad-bg); color: var(--bad) } .p-info { background: var(--info-bg); color: var(--accent) }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 13px }
+.mono { font-family: var(--mono); font-size: 13px; color: var(--ink); user-select: all; overflow-wrap: anywhere }
+label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 500 }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px }
+details[open] summary { margin-bottom: 8px }
+.fields { display: grid; gap: 10px }
+.findings { font-size: 13px; color: var(--muted); white-space: pre-wrap }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end }
+.empty { text-align: center; color: var(--muted); padding: 40px 12px; border: 1px dashed var(--line); border-radius: 10px; margin-top: 16px }
+.login { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start }
+.login input[type=checkbox] { width: 18px; height: 18px; margin-top: 3px }
+.saved { color: var(--ok); font-size: 12px }
+a { color: var(--accent) }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="title-row">
+      <div>
+        <h1>Kyre Send Desk</h1>
+        <div class="sub" id="status">Connecting to the desk…</div>
+      </div>
+      <div class="row">
+        <label style="display:flex;align-items:center;gap:6px" for="day">Day <select id="day"></select></label>
+        <nav class="tabs"><a href="#emails" id="tab-emails" class="on">Emails</a><a href="#logins" id="tab-logins">Log in</a></nav>
+      </div>
+    </div>
+    <div class="row" id="toolbar">
+      <div class="chips" id="filters"></div>
+      <span style="flex:1"></span>
+      <button class="primary" id="approve-verified" type="button">Approve all verified</button>
+    </div>
+  </header>
+  <div id="run" class="note" hidden></div>
+  <main id="emails"><div class="cards" id="cards"></div></main>
+  <main id="logins" hidden><div class="cards" id="login-cards"></div></main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const state = { rawQueue: [], queue: [], pushed: new Set(), logins: [], runs: [], day: '', filter: 'all', canWrite: true, db: null };
+// A row counts as in SalesHandy once the push run wrote pushed/<same id>.
+const mergeQueue = () => { state.queue = state.rawQueue.map((d) => (state.pushed.has(d._id) ? { ...d, status: 'pushed' } : d)) };
+const STATUS = { pending: ['Waiting for you', 'p-info'], approved: ['Approved', 'p-ok'], skipped: ['Skipped', 'p-bad'], pushed: ['In SalesHandy', 'p-info'], needs_login: ['Needs login', 'p-warn'] };
+
+function days() {
+  return [...new Set([...state.queue.map((d) => d.date), ...state.logins.map((d) => d.date)].filter(Boolean))].sort().reverse();
+}
+function renderDays() {
+  const ds = days();
+  if (!state.day || !ds.includes(state.day)) state.day = ds[0] || '';
+  $('day').innerHTML = ds.length ? ds.map((d) => `<option value="${d}" ${d === state.day ? 'selected' : ''}>${d}</option>`).join('') : '<option>No days yet</option>';
+}
+function today() { return state.queue.filter((d) => d.date === state.day) }
+
+function render() {
+  renderDays();
+  const rows = today();
+  const count = (s) => rows.filter((r) => r.status === s).length;
+  const verifiedPending = rows.filter((r) => r.status === 'pending' && r.send_group?.startsWith('1'));
+  const f = [['all', `All ${rows.length}`], ['pending', `Waiting ${count('pending')}`], ['approved', `Approved ${count('approved')}`], ['pushed', `In SalesHandy ${count('pushed')}`], ['skipped', `Skipped ${count('skipped')}`]];
+  $('filters').innerHTML = f.map(([k, l]) => `<button type="button" class="chip ${state.filter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('');
+  const ab = $('approve-verified');
+  ab.textContent = `Approve all verified (${verifiedPending.length})`;
+  ab.disabled = !state.canWrite || !verifiedPending.length;
+  const run = state.runs.find((r) => r.date === state.day);
+  $('run').hidden = !run;
+  if (run) $('run').textContent = run.summary || '';
+  const shown = rows.filter((r) => state.filter === 'all' || r.status === state.filter)
+    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(a.send_group).localeCompare(String(b.send_group)) || (b.email_confidence || 0) - (a.email_confidence || 0));
+  $('cards').innerHTML = shown.length ? shown.map(card).join('') : `<div class="empty">${rows.length ? 'Nothing in this filter.' : 'No emails for this day yet. The daily run writes them here each morning; approved ones go to SalesHandy at the next push.'}</div>`;
+  const ls = state.logins.filter((d) => d.date === state.day);
+  $('login-cards').innerHTML = ls.length ? ls.map(loginCard).join('') : '<div class="empty">No sign-ups needed for this day.</div>';
+}
+
+function card(r) {
+  const [label, cls] = STATUS[r.status] || [r.status, 'p-info'];
+  const verified = String(r.send_group || '').startsWith('1');
+  const locked = r.status === 'pushed' || !state.canWrite;
+  const ro = locked ? 'readonly' : '';
+  return `<article class="card ${esc(r.status)}" data-id="${esc(r._id)}">
+    <div class="head">
+      <h2>${r.website ? `<a href="${esc(r.website)}" target="_blank" rel="noopener">${esc(r.company)}</a>` : esc(r.company)}</h2>
+      <span class="pill p-info">Type ${esc(r.list || '?')}</span>
+      <span class="pill ${verified ? 'p-ok' : 'p-warn'}">${verified ? 'Verified' : 'Catch-all'}</span>
+      <span class="pill ${cls}">${esc(label)}</span>
+    </div>
+    <div class="meta"><span>To <span class="mono">${esc(r.email)}</span></span>${r.first_name ? `<span>${esc(r.first_name)} ${esc(r.last_name || '')}</span>` : ''}<span>Seen on: ${esc(r.lead_finding_from || 'homepage')}</span>${r.email_confidence ? `<span>Email confidence ${esc(r.email_confidence)}</span>` : ''}</div>
+    <div class="fields">
+      <label for="s-${esc(r._id)}">Subject <input type="text" id="s-${esc(r._id)}" data-field="subject" value="${esc(r.subject)}" ${ro}></label>
+      <label for="b-${esc(r._id)}">Email <textarea id="b-${esc(r._id)}" data-field="email_body" ${ro}>${esc(r.email_body)}</textarea></label>
+      <details><summary>Follow-ups and alternative subject</summary>
+        <div class="fields">
+          <label for="a-${esc(r._id)}">Alternative subject <input type="text" id="a-${esc(r._id)}" data-field="subject_alt" value="${esc(r.subject_alt)}" ${ro}></label>
+          <label for="f1-${esc(r._id)}">Follow-up 1 <textarea id="f1-${esc(r._id)}" data-field="followup_1" ${ro}>${esc(r.followup_1)}</textarea></label>
+          <label for="f2-${esc(r._id)}">Follow-up 2 <textarea id="f2-${esc(r._id)}" data-field="followup_2" ${ro}>${esc(r.followup_2)}</textarea></label>
+        </div>
+      </details>
+      ${r.findings ? `<details><summary>What we found</summary><div class="findings">${esc(r.findings)}</div></details>` : ''}
+    </div>
+    <div class="actions">
+      <span class="saved" data-saved hidden>Saved</span>
+      ${r.status === 'pushed' ? '' : `
+      ${r.status !== 'skipped' ? `<button type="button" class="skip" data-act="skipped" ${state.canWrite ? '' : 'disabled'}>Skip</button>` : ''}
+      ${r.status !== 'pending' ? `<button type="button" data-act="pending" ${state.canWrite ? '' : 'disabled'}>Back to waiting</button>` : ''}
+      ${r.status !== 'approved' ? `<button type="button" class="approve" data-act="approved" ${state.canWrite ? '' : 'disabled'}>Approve</button>` : ''}`}
+    </div>
+  </article>`;
+}
+
+function loginCard(r) {
+  return `<article class="card" data-login="${esc(r._id)}">
+    <div class="login">
+      <input type="checkbox" id="l-${esc(r._id)}" ${r.done ? 'checked' : ''} ${state.canWrite ? '' : 'disabled'} aria-label="Logged in to ${esc(r.company)}">
+      <div class="fields">
+        <div class="head"><h2>${esc(r.company)}</h2><span class="pill ${/free/.test(r.way_in) ? 'p-ok' : 'p-warn'}">${esc(r.way_in || '')}</span>${r.verification ? `<span class="pill ${r.verification === 'ok' ? 'p-ok' : 'p-warn'}">${r.verification === 'ok' ? 'Verified' : 'Catch-all'}</span>` : ''}</div>
+        <div class="meta">${r.sign_up_url ? `<a href="${esc(r.sign_up_url)}" target="_blank" rel="noopener">Open sign-up page</a>` : ''}<span>Contact <span class="mono">${esc(r.email || '')}</span></span><span>${esc(r.list || '')}</span></div>
+        ${r.save_session ? `<div class="mono">${esc(r.save_session)}</div>` : ''}
+      </div>
+    </div>
+  </article>`;
+}
+
+async function update(id, coll, patch, el) {
+  try {
+    await state.db.collection(coll).doc(id).update({ ...patch, updated_at: new Date().toISOString() });
+    const s = el?.closest('.card')?.querySelector('[data-saved]');
+    if (s) { s.hidden = false; setTimeout(() => (s.hidden = true), 1500) }
+  } catch (e) {
+    if (e?.code === 'invalid_argument') { state.canWrite = false; render() }
+    $('status').textContent = `Could not save (${e?.code || 'error'}). Try again in a moment.`;
+  }
+}
+
+document.addEventListener('click', async (ev) => {
+  const chip = ev.target.closest('[data-f]');
+  if (chip) { state.filter = chip.dataset.f; render(); return }
+  const act = ev.target.closest('[data-act]');
+  if (act) { const id = act.closest('[data-id]').dataset.id; act.disabled = true; await update(id, 'queue', { status: act.dataset.act }, act); return }
+});
+document.addEventListener('change', (ev) => {
+  const t = ev.target;
+  if (t.matches('[data-field]')) {
+    const id = t.closest('[data-id]').dataset.id;
+    const r = state.queue.find((x) => x._id === id);
+    if (r && r[t.dataset.field] !== t.value) update(id, 'queue', { [t.dataset.field]: t.value, edited: true }, t);
+  }
+  if (t.matches('[data-login] input[type=checkbox]')) update(t.closest('[data-login]').dataset.login, 'logins', { done: t.checked, done_at: t.checked ? new Date().toISOString() : '' }, t);
+  if (t.id === 'day') { state.day = t.value; render() }
+});
+$('approve-verified').addEventListener('click', async () => {
+  const b = $('approve-verified');
+  b.disabled = true;
+  for (const r of today().filter((x) => x.status === 'pending' && String(x.send_group).startsWith('1'))) await update(r._id, 'queue', { status: 'approved' });
+});
+
+function route() {
+  const v = location.hash === '#logins' ? 'logins' : 'emails';
+  $('emails').hidden = v !== 'emails';
+  $('logins').hidden = v !== 'logins';
+  $('toolbar').hidden = v !== 'emails';
+  $('tab-emails').classList.toggle('on', v === 'emails');
+  $('tab-logins').classList.toggle('on', v === 'logins');
+}
+window.addEventListener('hashchange', route);
+route();
+render();
+
+(async () => {
+  const db = await window.claude?.use?.('db');
+  if (!db) { $('status').textContent = 'Open this page in Claude (signed in) to use the desk.'; return }
+  state.db = db;
+  const user = await window.claude.use('user');
+  const cw = user ? await user.can('data.write') : null;
+  state.canWrite = cw !== false;
+  const timer = setTimeout(() => ($('status').textContent = 'The desk is taking a while to load. It may be out of date.'), 10000);
+  const onErr = (e) => { clearTimeout(timer); $('status').textContent = `The desk could not load (${e.code}).` };
+  const sub = (coll, key, q) => (q || db.collection(coll)).onSnapshot((snap) => {
+    const docs = snap.docs.map((d) => ({ _id: d.id, ...d.data() }));
+    if (key === 'pushed') state.pushed = new Set(docs.map((d) => d._id));
+    else if (key === 'queue') state.rawQueue = docs;
+    else state[key] = docs;
+    mergeQueue();
+    if (!snap.metadata.fromCache) clearTimeout(timer);
+    const t = state.queue.filter((d) => d.date === state.day);
+    $('status').textContent = `${t.filter((d) => d.status === 'pending').length} waiting for you · ${t.filter((d) => d.status === 'approved').length} approved · ${t.filter((d) => d.status === 'pushed').length} in SalesHandy${state.canWrite ? '' : ' · read only'}`;
+    render();
+  }, onErr);
+  sub('queue', 'queue', db.collection('queue').orderBy('date', 'desc').limit(600));
+  sub('pushed', 'pushed', db.collection('pushed').orderBy('date', 'desc').limit(600));
+  sub('logins', 'logins', db.collection('logins').orderBy('date', 'desc').limit(300));
+  sub('runs', 'runs', db.collection('runs').orderBy('date', 'desc').limit(60));
+})();
+</script>

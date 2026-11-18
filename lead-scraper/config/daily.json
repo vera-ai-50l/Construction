@@ -1,0 +1,14 @@
+{
+  "presets": {
+    "type_a": { "limit": 40 },
+    "type_b": { "limit": 40 },
+    "type_b_jobs": { "limit": 30 },
+    "type_c": { "limit": 60 },
+    "type_c_jobs": { "limit": 30 }
+  },
+  "maxTeardowns": 45,
+  "maxLogins": 15,
+  "dailyBudgetUsd": 3,
+  "approveBy": "1 pm IST",
+  "pushAt": "about 1:40 pm IST"
+}
