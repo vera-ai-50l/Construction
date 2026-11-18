@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to config/saleshandy.json and fill in the step IDs (node src/saleshandy-setup.mjs lists them). Kyre only: never Vera's sequences.",
+  "dailyCap": 40,
+  "catchAllDailyCap": 30,
+  "steps": {
+    "A": { "verified": "", "catch_all": "" },
+    "B": { "verified": "", "catch_all": "" },
+    "C": { "verified": "", "catch_all": "" }
+  },
+  "veraSequenceNameMatch": "vera"
+}

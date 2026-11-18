@@ -1,0 +1,218 @@
+{
+  "name": "Kyre: Telegram alerts (replies + daily run)",
+  "nodes": [
+    {
+      "id": "c132a4af-e4ea-44ea-8d22-4f3b5c73c83e",
+      "name": "SalesHandy events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kyre-replies",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "644f5b42-1d24-46d6-8324-f6c4b4c69a32",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Kyre webhook secret"
+        }
+      }
+    },
+    {
+      "id": "07fbc400-404d-4362-88f3-1e51c5dd7400",
+      "name": "Read the event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Generated from lead-scraper/src/replies.mjs. Edit there, then rebuild.\nfunction saleshandyAlert(body) {\n  const flat = {};\n  const walk = (o, p = '') => {\n    if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) walk(v, p ? `${p}.${k}` : k);\n    else flat[p.toLowerCase()] = o;\n  };\n  walk(body || {});\n  const find = (...names) => {\n    for (const n of names) for (const [k, v] of Object.entries(flat)) if ((k === n || k.endsWith(`.${n}`)) && v != null && v !== '') return String(v);\n    return '';\n  };\n  const strip = (s) => String(s || '').replace(/<style[\\s\\S]*?<\\/style>/gi, ' ').replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&apos;/g, \"'\").replace(/&quot;/g, '\"').replace(/[ \\t]+/g, ' ').trim();\n  const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n  const event = find('event', 'webhookevent', 'eventtype', 'type').toLowerCase();\n  const email = find('email', 'prospectemail', 'contactemail', 'toemail').toLowerCase();\n  const name = [find('firstname', 'first name', 'first_name'), find('lastname', 'last name', 'last_name')].filter(Boolean).join(' ') || find('name', 'prospectname');\n  const company = find('company', 'companyname', 'company name');\n  const sequence = find('sequencename', 'sequencetitle', 'sequence.title', 'sequence.name');\n  const subject = find('subject', 'emailsubject');\n  // The reply text: keep only the new part, not the quoted thread.\n  let reply = strip(find('replycontent', 'replytext', 'replybody', 'emailbody', 'body', 'content', 'message', 'text'));\n  reply = reply.split(/\\n?On .{5,80} wrote:|\\n-{2,}\\s*Original Message|\\nFrom: /i)[0].trim().slice(0, 700);\n\n  let kind = 'reply';\n  if (/bounce/.test(event)) kind = 'bounce';\n  else if (/unsubscrib/.test(event)) kind = 'unsubscribe';\n  else if (/sequence-paused|sequence_paused/.test(event)) kind = 'sequence_paused';\n  else if (/account/.test(event)) kind = 'account_problem';\n  else if (/out of (the )?office|auto(matic)?[- ]?reply|on (annual )?leave|vacation|away until|currently away|limited access to (my )?email/i.test(reply)) kind = 'out_of_office';\n  else if (/unsubscribe|remove me|stop (emailing|contacting)|not interested|no thanks|no, thanks|don'?t (email|contact)|please stop/i.test(reply)) kind = 'unsubscribe';\n  else if (/^\\s*(yes|yep|yeah|sure|ok(ay)?|please do|go ahead)\\b|send (it|me|over|the before)|interested|sounds good|would love|let'?s (talk|chat|do)|book|call|happy to|keen|curious/i.test(reply)) kind = 'interested';\n  else if (/not (right )?now|maybe later|next (month|quarter|year)|after (the|our)|busy|circle back|reach out (later|again)/i.test(reply)) kind = 'not_now';\n  else if (/\\?/.test(reply)) kind = 'question';\n\n  const head = {\n    interested: '🔥 <b>Interested reply</b>',\n    question: '❓ <b>Question in a reply</b>',\n    reply: '💬 <b>New reply</b>',\n    not_now: '🕓 <b>Not now</b>',\n    unsubscribe: '🚫 <b>Unsubscribe / not interested</b>',\n    bounce: '⚠️ <b>Bounce</b>',\n    sequence_paused: '⏸️ <b>Sequence paused</b>',\n    account_problem: '🔌 <b>Sending account problem</b>',\n  }[kind];\n  const next = {\n    interested: 'Reply today: send the before/after (mock of the screen in their teardown).',\n    question: 'Answer their question today.',\n    reply: 'Read and answer today.',\n    not_now: 'Thank them; note a follow-up date.',\n    unsubscribe: 'Nothing to do: blocked from further emails.',\n    bounce: 'Address blocked. If bounces climb past 3% today, pause sending.',\n    sequence_paused: 'Check the sequence in SalesHandy (bounce limit or a sending issue).',\n    account_problem: 'Reconnect the inbox in SalesHandy, or sends stop.',\n  }[kind];\n  const notify = kind !== 'out_of_office';\n  const who = [name, company && `(${company})`].filter(Boolean).join(' ') || email || 'Unknown prospect';\n  const lines = [\n    `${head || '💬 <b>SalesHandy event</b>'}: ${esc(who)}`,\n    email && `✉️ ${esc(email)}`,\n    reply && `\\n“${esc(reply)}”`,\n    subject && `\\nTheir teardown: <i>${esc(subject)}</i>`,\n    sequence && `Sequence: ${esc(sequence)}`,\n    next && `\\n👉 ${next}`,\n    'Open SalesHandy inbox: https://my.saleshandy.com/unified-inbox',\n  ].filter(Boolean);\n  return { notify, kind, email, text: lines.join('\\n'), urgent: kind === 'interested' || kind === 'question' };\n}\n\nreturn { json: saleshandyAlert($json.body || $json) };"
+      }
+    },
+    {
+      "id": "26c33330-fdcd-4d22-8393-30889ab44bbc",
+      "name": "Worth a ping?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e9e0acc4-d440-43a6-80e2-9c19a0b4e574",
+              "leftValue": "={{ $json.notify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "894a674b-69f8-44a6-86ac-093a292418f1",
+      "name": "Telegram: reply alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        -60
+      ],
+      "parameters": {
+        "chatId": "PASTE_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true,
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Kyre Telegram bot"
+        }
+      }
+    },
+    {
+      "id": "0634d732-ddf5-4a0f-8d44-8c2d686e64f3",
+      "name": "Daily run notice",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "kyre-notify",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "fc8dd351-fd81-40da-8452-f84bba1de43e",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Kyre webhook secret"
+        }
+      }
+    },
+    {
+      "id": "b743b052-78ad-4a5b-8e82-df4faac5a04e",
+      "name": "Telegram: daily notice",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ],
+      "parameters": {
+        "chatId": "PASTE_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.body.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true,
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ON_IMPORT",
+          "name": "Kyre Telegram bot"
+        }
+      }
+    },
+    {
+      "id": "8c103cd6-0eb1-4d6d-893d-70e02894d9ec",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -320
+      ],
+      "parameters": {
+        "width": 760,
+        "height": 260,
+        "content": "## Kyre: Telegram alerts\n1. Telegram: message @BotFather, /newbot, copy the token into a **Telegram** credential named \"Kyre Telegram bot\". Send your bot a message, then get your chat id (e.g. from @userinfobot) and paste it into both Telegram nodes (Chat ID).\n2. Create a **Header Auth** credential \"Kyre webhook secret\": name `X-Kyre-Key`, value = a long random string (`openssl rand -hex 24`). Select it on both webhooks.\n3. Activate. SalesHandy webhook URL: `https://<your-n8n>/webhook/kyre-replies` (create it with `node src/saleshandy-setup.mjs webhook ...`). Daily notices: `https://<your-n8n>/webhook/kyre-notify`."
+      }
+    }
+  ],
+  "connections": {
+    "SalesHandy events": {
+      "main": [
+        [
+          {
+            "node": "Read the event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read the event": {
+      "main": [
+        [
+          {
+            "node": "Worth a ping?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Worth a ping?": {
+      "main": [
+        [
+          {
+            "node": "Telegram: reply alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Daily run notice": {
+      "main": [
+        [
+          {
+            "node": "Telegram: daily notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {}
+}
