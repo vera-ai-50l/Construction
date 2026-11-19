@@ -1,5 +1,7 @@
 # Handover: Kyre outbound (leads → teardowns → SalesHandy)
 
+> **Newer:** `KYRE-HANDOFF.md` (19 Nov) tells the whole story since, including the Send Desk, scheduled runs, SalesHandy batches and the signal-engine plan. Read that first.
+
 Paste this whole file into the new Claude session, then upload the data zip (`kyre-lead-data.zip`, sent
 separately because it holds prospect names and emails). Everything below is what the founder asked for
 and what was decided over 16–18 Nov 2026. Read it fully before doing anything.
