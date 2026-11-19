@@ -29,6 +29,7 @@ export const PRESETS = {
   // Type B: seed / Series A B2B SaaS, non-YC: funding news + design roles on job boards
   // + HN Who is hiring. Login check; finder database, then name search.
   type_b: {
+    feed: true,
     args: ['--profile', 'type_b', '--sources', 'news,ats,hn', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
     limit: 60,
   },
@@ -42,10 +43,12 @@ export const PRESETS = {
   // their own site into B (SaaS) or C (Shopify store). Not run for A: AI-built-app
   // founders do not post on job boards.
   type_b_jobs: {
+    feed: true,
     args: ['--profile', 'type_b', '--sources', 'jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3', '--access-check'],
     limit: 80,
   },
   type_c_jobs: {
+    feed: true,
     args: ['--profile', 'type_c', '--sources', 'jobs', '--skip-jobs', '--find-contacts', '--finder', 'pipelinelabs', '--name-search', '--max-candidates', '3'],
     limit: 80,
   },
@@ -77,7 +80,10 @@ export async function runPipeline({ preset = 'type_a', limit, offset, outDir, lo
   const stateFile = path.join(root, 'out', 'state', `${preset}.json`);
   mkdirSync(path.dirname(stateFile), { recursive: true });
   const state = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { next_offset: 0, delivered: [] };
-  offset ??= state.next_offset;
+  // Feeds (funding news, job boards, HN) only list what is current, so they are never paged:
+  // every run reads them from the top and already-delivered companies are skipped instead.
+  if (p.feed) offset = 0;
+  else offset ??= state.next_offset;
   outDir ||= path.join(root, 'out', 'runs', `${new Date().toISOString().slice(0, 10)}-${preset}`);
   mkdirSync(outDir, { recursive: true });
   // MillionVerifier when its key is set (cheaper per check at volume), else bounceverify on Apify.
@@ -94,7 +100,7 @@ export async function runPipeline({ preset = 'type_a', limit, offset, outDir, lo
   writeFileSync(seenFile, JSON.stringify([...new Set([...state.delivered, ...others])]));
   await run(process.execPath, ['--no-warnings', 'src/lead-sheet.mjs', outDir, '--title', `${preset} ${new Date().toISOString().slice(0, 10)}`, '--exclude', seenFile], { log });
   const delivered = JSON.parse(readFileSync(path.join(outDir, 'leads-scored.json'), 'utf8')).map((r) => r.domain);
-  writeFileSync(stateFile, JSON.stringify({ next_offset: offset + (limit || p.limit), delivered: [...new Set([...state.delivered, ...delivered])], last_run: outDir }, null, 2));
+  writeFileSync(stateFile, JSON.stringify({ next_offset: p.feed ? 0 : offset + (limit || p.limit), delivered: [...new Set([...state.delivered, ...delivered])], last_run: outDir }, null, 2));
   return { outDir, files: ['leads-scored.xlsx', 'leads-scored.csv', 'leads-scored.json', 'funnel.md', 'leads.json'].map((f) => path.join(outDir, f)) };
 }
 

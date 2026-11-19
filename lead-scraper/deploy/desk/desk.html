@@ -1,252 +1,607 @@
 <title>Kyre Send Desk</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one column of email cards under a sticky toolbar; a second tab lists today's sign-ups. */
+/* Layout: sticky masthead; overview band (KPIs, funnel, schedule, history, list mix) over an
+   inbox-style workspace: email list on the left, the email as it will arrive on the right. */
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --ink: #1b2330; --muted: #5d6676; --line: #dfe3ea; --accent: #2f4fd6;
-  --ok: #1f7a4d; --ok-bg: #e3f3ea; --warn: #8a5a00; --warn-bg: #fbf0d6; --bad: #a23a2a; --bad-bg: #f8e3df; --info-bg: #e8ecfb;
-  --display: "Space Grotesk", "IBM Plex Sans", system-ui, sans-serif;
-  --text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bg: #f2f3f8; --panel: #ffffff; --sunk: #f7f8fc; --ink: #15162b; --muted: #5b5e78; --faint: #8b8ea8; --line: #e1e3ee;
+  --accent: #3d35c9; --accent-ink: #ffffff; --accent-soft: #ebeafd;
+  --s1: #2a78d6; --s2: #eb6834;
+  --ok: #1d7a4b; --ok-bg: #e2f4ea; --warn: #8a5a00; --warn-bg: #fbf0d4; --bad: #b0392a; --bad-bg: #fbe5e1;
+  --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --text: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 12px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #12161d; --panel: #1a2029; --ink: #e6e9ef; --muted: #9aa3b2; --line: #2c3442; --accent: #8ea2ff;
-  --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2f14; --bad: #f19a8a; --bad-bg: #3d211c; --info-bg: #222b45; color-scheme: dark } }
+  --bg: #0e0f1d; --panel: #171a2c; --sunk: #12142a; --ink: #e8e9f5; --muted: #a3a6c2; --faint: #747897; --line: #282b45;
+  --accent: #a29cff; --accent-ink: #14132e; --accent-soft: #24234a;
+  --s1: #3987e5; --s2: #d95926;
+  --ok: #6fd3a0; --ok-bg: #15332a; --warn: #f0c46a; --warn-bg: #352b12; --bad: #f19a8a; --bad-bg: #3b1f1b; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #12161d; --panel: #1a2029; --ink: #e6e9ef; --muted: #9aa3b2; --line: #2c3442; --accent: #8ea2ff;
-  --ok: #6fd3a0; --ok-bg: #173527; --warn: #f0c46a; --warn-bg: #3a2f14; --bad: #f19a8a; --bad-bg: #3d211c; --info-bg: #222b45; color-scheme: dark }
+  --bg: #0e0f1d; --panel: #171a2c; --sunk: #12142a; --ink: #e8e9f5; --muted: #a3a6c2; --faint: #747897; --line: #282b45;
+  --accent: #a29cff; --accent-ink: #14132e; --accent-soft: #24234a;
+  --s1: #3987e5; --s2: #d95926;
+  --ok: #6fd3a0; --ok-bg: #15332a; --warn: #f0c46a; --warn-bg: #352b12; --bad: #f19a8a; --bad-bg: #3b1f1b; color-scheme: dark }
+
 * { box-sizing: border-box }
 body { background: var(--bg); color: var(--ink); font-family: var(--text); font-size: 14px; line-height: 1.5;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px }
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 56px }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg) }
-.wrap { max-width: 880px; margin: 0 auto }
-header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px }
-.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; justify-content: space-between }
-h1 { font-family: var(--display); font-size: 22px; margin: 0; letter-spacing: -0.01em }
-.sub { color: var(--muted); font-size: 13px }
-.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
-select, button, input, textarea { font: inherit; color: inherit }
-select, input[type=text], textarea { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100% }
-select { width: auto }
-textarea { min-height: 120px; resize: vertical; line-height: 1.5 }
-button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; cursor: pointer }
-button:hover { border-color: var(--accent) }
-button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
-button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600 }
-button.approve { background: var(--ok-bg); color: var(--ok); border-color: transparent; font-weight: 600 }
-button.skip { background: var(--bad-bg); color: var(--bad); border-color: transparent }
-button[disabled] { opacity: .5; cursor: default }
-.tabs { display: flex; gap: 4px }
-.tabs a { padding: 6px 12px; border-radius: 6px; text-decoration: none; color: var(--muted); font-weight: 500 }
-.tabs a.on { background: var(--info-bg); color: var(--ink) }
-.chips { display: flex; flex-wrap: wrap; gap: 6px }
-.chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 12px; background: var(--panel); cursor: pointer; font-variant-numeric: tabular-nums }
-.chip.on { border-color: var(--accent); color: var(--accent); font-weight: 600 }
-.note { background: var(--info-bg); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; font-size: 13px }
-.cards { display: grid; gap: 12px; margin-top: 14px }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; min-width: 0 }
-.card.approved { border-left: 4px solid var(--ok) }
-.card.skipped { opacity: .7 }
-.card.pushed { border-left: 4px solid var(--accent) }
-.head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
-.head h2 { font-family: var(--display); font-size: 16px; margin: 0 }
-.pill { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px }
-.p-ok { background: var(--ok-bg); color: var(--ok) } .p-warn { background: var(--warn-bg); color: var(--warn) }
-.p-bad { background: var(--bad-bg); color: var(--bad) } .p-info { background: var(--info-bg); color: var(--accent) }
-.meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 13px }
-.mono { font-family: var(--mono); font-size: 13px; color: var(--ink); user-select: all; overflow-wrap: anywhere }
-label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 500 }
-details summary { cursor: pointer; color: var(--muted); font-size: 13px }
-details[open] summary { margin-bottom: 8px }
-.fields { display: grid; gap: 10px }
-.findings { font-size: 13px; color: var(--muted); white-space: pre-wrap }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end }
-.empty { text-align: center; color: var(--muted); padding: 40px 12px; border: 1px dashed var(--line); border-radius: 10px; margin-top: 16px }
-.login { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start }
-.login input[type=checkbox] { width: 18px; height: 18px; margin-top: 3px }
-.saved { color: var(--ok); font-size: 12px }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px }
 a { color: var(--accent) }
+button, input, textarea, select { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.num { font-variant-numeric: tabular-nums }
+.mono { font-family: var(--mono); font-size: 12.5px }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint) }
+
+/* Masthead */
+.mast { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--bg); padding-block: 14px 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto }
+.brand h1 { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: -.02em; margin: 0 }
+.brand h1 b { color: var(--accent); font-weight: 700 }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted) }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint) }
+.live.on i { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg) }
+.days { display: flex; gap: 4px; overflow-x: auto; max-width: 100%; scrollbar-width: none }
+.days button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; white-space: nowrap; color: var(--muted) }
+.days button.on { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600 }
+
+/* Overview */
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 2px; min-width: 0 }
+.kpi .v { font-family: var(--display); font-size: 34px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em }
+.kpi .s { font-size: 12.5px; color: var(--muted) }
+.kpi.hot { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+.kpi.hot .eyebrow, .kpi.hot .s { color: var(--accent-ink); opacity: .85 }
+.band { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px }
+.band2 { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0 }
+.panel h2 { font-family: var(--display); font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -.01em }
+.ph { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted) }
+.legend span { display: inline-flex; align-items: center; gap: 6px }
+.legend i { width: 10px; height: 10px; border-radius: 3px }
+
+/* Funnel */
+.funnel { display: grid; gap: 8px }
+.frow { display: grid; grid-template-columns: 128px minmax(0, 1fr) 44px; align-items: center; gap: 10px; font-size: 13px }
+.frow .lbl { color: var(--muted) }
+.track { height: 22px; background: var(--sunk); border-radius: 6px; overflow: hidden }
+.fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; transition: width .4s ease }
+.frow .val { text-align: right; font-weight: 600 }
+.frow .drop { grid-column: 2 / 4; font-size: 11.5px; color: var(--faint); margin-top: -4px }
+
+/* Schedule */
+.sched { display: grid; gap: 0 }
+.step { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding-block: 8px; position: relative }
+.step + .step::before { content: ""; position: absolute; left: 10px; top: -6px; height: 14px; width: 2px; background: var(--line) }
+.dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; border: 2px solid var(--line); background: var(--panel); color: var(--faint) }
+.dot.done { background: var(--ok); border-color: var(--ok); color: var(--panel) }
+.dot.now { border-color: var(--accent); color: var(--accent) }
+.step b { display: block; font-weight: 600 }
+.step small { color: var(--muted); font-size: 12.5px; display: block }
+.when { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap }
+.note { background: var(--sunk); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: var(--muted) }
+
+/* History + mix charts */
+.hist { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 6px }
+.yax { position: relative; height: 140px; font-size: 11px; color: var(--faint); text-align: right }
+.yax span { position: absolute; right: 0; transform: translateY(-50%) }
+.plot { position: relative; height: 140px; border-bottom: 1px solid var(--line) }
+.grid-l { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line) }
+.cols { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 6px }
+.col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; border-radius: 4px; cursor: default; position: relative }
+.col .seg { border-radius: 4px 4px 0 0; min-height: 0 }
+.col .seg + .seg { border-radius: 0 }
+.col.sel::after { content: ""; position: absolute; inset: -4px -3px -4px; border: 1.5px solid var(--accent); border-radius: 6px }
+.col:hover .seg { filter: brightness(1.08) }
+.xax { display: flex; gap: 6px; font-size: 10.5px; color: var(--faint); margin-top: 4px }
+.xax span { flex: 1; text-align: center; white-space: nowrap; overflow: hidden }
+.mix { display: grid; gap: 10px }
+.mrow { display: grid; grid-template-columns: 22px minmax(0, 1fr) 32px; align-items: center; gap: 10px }
+.mrow .k { font-family: var(--display); font-weight: 700; font-size: 15px }
+.stack { display: flex; gap: 2px; height: 22px; background: var(--sunk); border-radius: 6px; overflow: hidden }
+.stack div { display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; min-width: 0 }
+.mrow .t { text-align: right; font-weight: 600 }
+.mrow small { grid-column: 2 / 4; color: var(--faint); font-size: 11.5px; margin-top: -6px }
+.tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: pre; transform: translate(-50%, calc(-100% - 10px)) }
+
+/* Workspace */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: end }
+.tabs button { border: 0; background: none; padding: 10px 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px }
+.tabs button.on { color: var(--ink); border-color: var(--accent) }
+.tabs .count { font-size: 11px; background: var(--sunk); border-radius: 999px; padding: 1px 7px; margin-left: 6px; color: var(--muted) }
+.tabs .spacer { flex: 1 }
+.kbd { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-bottom: 10px }
+.kbd b { border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; color: var(--muted); font-weight: 500; background: var(--panel) }
+.work { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 12px; align-items: start }
+.list { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; min-width: 0 }
+.lhead { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); align-items: center }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted) }
+.chip.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600 }
+.bulk { margin-left: auto; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 12.5px; padding: 3px 4px }
+.bulk[disabled] { color: var(--faint); cursor: default }
+.rows { max-height: 720px; overflow-y: auto }
+.row { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: var(--panel); padding: 12px 12px 12px 14px; display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 4px 10px; position: relative }
+.row:hover { background: var(--sunk) }
+.row.on { background: var(--accent-soft) }
+.row .st { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--faint) }
+.st.pending { background: var(--accent) } .st.approved { background: var(--ok) } .st.skipped { background: var(--bad) } .st.pushed { background: var(--s1) }
+.row .top { display: flex; gap: 8px; align-items: baseline; min-width: 0 }
+.row .co { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.row .who { color: var(--faint); font-size: 12px; white-space: nowrap; margin-left: auto }
+.row .sub { grid-column: 2; color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.row .tags { grid-column: 2; display: flex; gap: 4px; flex-wrap: wrap }
+.pill { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 1px 6px; display: inline-flex; align-items: center; gap: 5px }
+.pill i { width: 7px; height: 7px; border-radius: 2px }
+.p-list { background: var(--sunk); color: var(--muted) }
+.p-ok { background: var(--ok-bg); color: var(--ok) } .p-warn { background: var(--warn-bg); color: var(--warn) } .p-bad { background: var(--bad-bg); color: var(--bad) }
+.p-acc { background: var(--accent-soft); color: var(--accent) }
+.empty { padding: 36px 20px; text-align: center; color: var(--muted); display: grid; gap: 6px; justify-items: center }
+.empty b { font-family: var(--display); font-size: 16px; color: var(--ink) }
+
+/* Email preview */
+.mail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); display: grid; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px) }
+.mhead { padding: 16px 20px; border-bottom: 1px solid var(--line); display: grid; gap: 8px }
+.mhead h3 { font-family: var(--display); font-size: 21px; margin: 0; letter-spacing: -.01em; display: flex; flex-wrap: wrap; align-items: center; gap: 8px }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted) }
+.facts .mono { color: var(--ink) }
+.copy { border: 0; background: none; color: var(--accent); font-size: 12px; padding: 0 4px }
+.mbody { padding: 16px 20px; display: grid; gap: 14px }
+.envelope { border: 1px solid var(--line); border-radius: 10px; overflow: hidden }
+.envhead { background: var(--sunk); padding: 10px 14px; display: grid; gap: 6px; font-size: 13px; border-bottom: 1px solid var(--line) }
+.envhead .r { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; align-items: baseline }
+.envhead .r > span:first-child { color: var(--faint); font-size: 12px }
+.subj { font-weight: 600; overflow-wrap: anywhere }
+.ab { display: inline-flex; gap: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 2px; margin-left: 6px; vertical-align: middle }
+.ab button { border: 0; background: none; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 4px; color: var(--muted) }
+.ab button.on { background: var(--ink); color: var(--bg) }
+.letter { padding: 16px 18px; white-space: pre-wrap; font-size: 14.5px; line-height: 1.65; max-width: 68ch; overflow-wrap: anywhere }
+.letter .sig { color: var(--faint) }
+.seq { display: grid; gap: 10px }
+.fu { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px }
+.fu .day { font-family: var(--mono); font-size: 11.5px; color: var(--faint); padding-top: 3px }
+.fu .day b { display: block; color: var(--ink); font-weight: 500 }
+.fu .txt { white-space: pre-wrap; font-size: 13.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 12px; overflow-wrap: anywhere }
+.found { background: var(--sunk); border-radius: 8px; padding: 12px 14px; font-size: 13px; white-space: pre-wrap; color: var(--muted) }
+.edit { display: grid; gap: 10px }
+.edit label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600 }
+.edit input, .edit textarea { width: 100%; border: 1px solid var(--line); background: var(--sunk); border-radius: 8px; padding: 8px 10px; font-size: 14px; line-height: 1.55 }
+.edit textarea { min-height: 150px; resize: vertical }
+.bar { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--panel); border-radius: 0 0 var(--r) var(--r) }
+.bar .saved { color: var(--ok); font-size: 12.5px; margin-right: auto }
+.bar .info { color: var(--muted); font-size: 12.5px; margin-right: auto }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 13.5px }
+.btn:hover { border-color: var(--faint) }
+.btn.go { background: var(--ok); border-color: var(--ok); color: var(--panel) }
+.btn.no { color: var(--bad) }
+.btn[disabled] { opacity: .5; cursor: default }
+.back { display: none; border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0; justify-self: start }
+
+/* Sign-ups */
+.signups { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden }
+.sprog { padding: 14px 16px; display: grid; gap: 8px; border-bottom: 1px solid var(--line) }
+.sprog .track { height: 8px }
+.sprog .fill { background: var(--ok) }
+.srow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: start }
+.srow:last-child { border-bottom: 0 }
+.srow input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ok) }
+.srow.done .co { text-decoration: line-through; color: var(--faint) }
+.srow .co { font-weight: 600 }
+.srow .m { font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px }
+.srow .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
+.srow .acts a, .srow .acts button { font-size: 12.5px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; text-decoration: none; background: var(--panel); color: var(--ink) }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 30 }
+
+@media (max-width: 1000px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) }
+  .band, .band2 { grid-template-columns: minmax(0, 1fr) }
+}
+@media (max-width: 760px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .kpi.hot { grid-column: 1 / -1 }
+  .work { grid-template-columns: minmax(0, 1fr) }
+  .work.detail .list { display: none }
+  .work:not(.detail) .mail { display: none }
+  .mail { position: static }
+  .back { display: inline-block }
+  .kbd { display: none }
+  .frow { grid-template-columns: 96px minmax(0, 1fr) 40px }
+  .srow { grid-template-columns: 24px minmax(0, 1fr) }
+  .srow .acts { grid-column: 2; justify-content: flex-start }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important } }
 </style>
 
 <div class="wrap">
-  <header class="top">
-    <div class="title-row">
-      <div>
-        <h1>Kyre Send Desk</h1>
-        <div class="sub" id="status">Connecting to the desk…</div>
-      </div>
-      <div class="row">
-        <label style="display:flex;align-items:center;gap:6px" for="day">Day <select id="day"></select></label>
-        <nav class="tabs"><a href="#emails" id="tab-emails" class="on">Emails</a><a href="#logins" id="tab-logins">Log in</a></nav>
-      </div>
-    </div>
-    <div class="row" id="toolbar">
-      <div class="chips" id="filters"></div>
-      <span style="flex:1"></span>
-      <button class="primary" id="approve-verified" type="button">Approve all verified</button>
-    </div>
+  <header class="mast">
+    <div class="brand"><h1>Kyre <b>Send Desk</b></h1><span class="live" id="live"><i></i><span id="live-text">Connecting…</span></span></div>
+    <nav class="days" id="days" aria-label="Day"></nav>
   </header>
-  <div id="run" class="note" hidden></div>
-  <main id="emails"><div class="cards" id="cards"></div></main>
-  <main id="logins" hidden><div class="cards" id="login-cards"></div></main>
+
+  <section class="kpis" id="kpis" aria-label="Today at a glance"></section>
+
+  <section class="band">
+    <div class="panel">
+      <div class="ph"><h2>Today's funnel</h2><span class="eyebrow" id="funnel-day"></span></div>
+      <div class="funnel" id="funnel"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Today's runs</h2><span class="eyebrow">India time · Mon–Fri</span></div>
+      <div class="sched" id="sched"></div>
+    </div>
+  </section>
+
+  <section class="band2">
+    <div class="panel">
+      <div class="ph"><h2>Emails written, last 14 days</h2>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Verified</span><span><i style="background:var(--s2)"></i>Catch-all</span></div></div>
+      <div class="hist"><div class="yax" id="yax"></div><div><div class="plot" id="plot"></div><div class="xax" id="xax"></div></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>By list</h2>
+        <div class="legend"><span><i style="background:var(--s1)"></i>Verified</span><span><i style="background:var(--s2)"></i>Catch-all</span></div></div>
+      <div class="mix" id="mix"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-emails" class="on">Emails<span class="count" id="c-emails">0</span></button>
+      <button type="button" role="tab" id="tab-signups">Sign-ups<span class="count" id="c-signups">0</span></button>
+      <span class="spacer"></span>
+      <span class="kbd"><b>J</b> <b>K</b> move · <b>A</b> approve · <b>S</b> skip · <b>E</b> edit</span>
+    </div>
+    <div class="work" id="work" style="margin-top:12px">
+      <div class="list">
+        <div class="lhead" id="filters"></div>
+        <div class="rows" id="rows"></div>
+      </div>
+      <article class="mail" id="mail" aria-live="polite"></article>
+    </div>
+    <div class="signups" id="signups" hidden style="margin-top:12px"></div>
+  </section>
 </div>
+<div class="tip" id="tip" hidden></div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const state = { rawQueue: [], queue: [], pushed: new Set(), logins: [], runs: [], day: '', filter: 'all', canWrite: true, db: null };
-// A row counts as in SalesHandy once the push run wrote pushed/<same id>.
-const mergeQueue = () => { state.queue = state.rawQueue.map((d) => (state.pushed.has(d._id) ? { ...d, status: 'pushed' } : d)) };
-const STATUS = { pending: ['Waiting for you', 'p-info'], approved: ['Approved', 'p-ok'], skipped: ['Skipped', 'p-bad'], pushed: ['In SalesHandy', 'p-info'], needs_login: ['Needs login', 'p-warn'] };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const S = { raw: [], queue: [], pushed: new Map(), logins: [], runs: [], day: '', filter: 'pending', sel: '', edit: false, variant: 'a', tab: 'emails', canWrite: true, db: null, loaded: false };
+const LISTS = { A: 'AI-built apps', B: 'B2B SaaS', C: 'Shopify stores' };
+const STATUS = { pending: ['Waiting', 'p-acc'], approved: ['Approved', 'p-ok'], skipped: ['Skipped', 'p-bad'], pushed: ['In SalesHandy', 'p-list'] };
+const isVerified = (r) => String(r.send_group || '').startsWith('1') || r.email_verification === 'ok';
+const fmtDay = (d, opts = { weekday: 'short', day: 'numeric', month: 'short' }) => (d ? new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', opts) : '');
+const istNow = () => new Date(Date.now() + 5.5 * 3600e3);
+const istToday = () => istNow().toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
-function days() {
-  return [...new Set([...state.queue.map((d) => d.date), ...state.logins.map((d) => d.date)].filter(Boolean))].sort().reverse();
+function merge() {
+  S.queue = S.raw.map((d) => (S.pushed.has(d._id) ? { ...d, status: 'pushed', pushed_step: S.pushed.get(d._id).step } : d));
 }
+function days() {
+  const ds = new Set([...S.queue.map((d) => d.date), ...S.logins.map((d) => d.date), ...S.runs.filter((r) => r.stage).map((r) => r.date)].filter(Boolean));
+  return [...ds].sort().reverse();
+}
+const dayRows = () => S.queue.filter((d) => d.date === S.day);
+const runFor = (stage) => S.runs.find((r) => r.date === S.day && r.stage === stage && !String(r._id).includes('dry'));
+
+/* ---------- overview ---------- */
 function renderDays() {
   const ds = days();
-  if (!state.day || !ds.includes(state.day)) state.day = ds[0] || '';
-  $('day').innerHTML = ds.length ? ds.map((d) => `<option value="${d}" ${d === state.day ? 'selected' : ''}>${d}</option>`).join('') : '<option>No days yet</option>';
+  if (!S.day || !ds.includes(S.day)) S.day = ds[0] || istToday();
+  $('days').innerHTML = (ds.length ? ds : [S.day]).slice(0, 10).map((d) => `<button type="button" data-day="${d}" class="${d === S.day ? 'on' : ''}">${d === istToday() ? 'Today' : fmtDay(d)}</button>`).join('');
 }
-function today() { return state.queue.filter((d) => d.date === state.day) }
+
+function renderKpis() {
+  const rows = dayRows();
+  const n = (s) => rows.filter((r) => r.status === s).length;
+  const logins = S.logins.filter((l) => l.date === S.day);
+  const run = runFor('collect');
+  const ver = rows.filter((r) => r.status === 'pending' && isVerified(r)).length;
+  const k = [
+    ['hot', 'Waiting for you', n('pending'), n('pending') ? `${ver} verified, ${n('pending') - ver} catch-all` : 'All reviewed'],
+    ['', 'Approved', n('approved'), n('approved') ? 'Go to SalesHandy at 1:37 pm' : 'None yet'],
+    ['', 'In SalesHandy', n('pushed'), 'Sending in their sequences'],
+    ['', 'Sign-ups to do', logins.filter((l) => !l.done).length, `${logins.filter((l) => l.done).length} of ${logins.length} done`],
+    ['', 'Spent on leads', run?.spent_usd != null ? `$${Number(run.spent_usd).toFixed(2)}` : '–', 'Daily budget $3.00'],
+  ];
+  $('kpis').innerHTML = k.map(([c, l, v, s]) => `<div class="kpi ${c}"><span class="eyebrow">${l}</span><span class="v num">${v}</span><span class="s">${s}</span></div>`).join('');
+}
+
+function renderFunnel() {
+  const rows = dayRows();
+  const run = runFor('collect');
+  const scored = run?.runs ? run.runs.reduce((a, r) => a + (Number(r.scored) || 0), 0) : null;
+  const steps = [
+    ['Leads scored', scored, 'Found by the morning run across A, B and C'],
+    ['Emails written', rows.length, 'Teardown written from the screenshots'],
+    ['Approved', rows.filter((r) => r.status === 'approved' || r.status === 'pushed').length, ''],
+    ['In SalesHandy', rows.filter((r) => r.status === 'pushed').length, ''],
+  ].filter((s) => s[1] != null);
+  const max = Math.max(1, ...steps.map((s) => s[1]));
+  $('funnel-day').textContent = fmtDay(S.day, { weekday: 'long', day: 'numeric', month: 'long' });
+  $('funnel').innerHTML = steps.map(([l, v, hint], i) => {
+    const prev = i ? steps[i - 1][1] : null;
+    const drop = prev ? `${Math.round((v / prev) * 100)}% of ${steps[i - 1][0].toLowerCase()}` : hint;
+    return `<div class="frow" data-tip="${esc(`${l}: ${v}`)}"><span class="lbl">${l}</span><div class="track"><div class="fill" style="width:${(v / max) * 100}%"></div></div><span class="val num">${v}</span>${drop ? `<span class="drop">${esc(drop)}</span>` : ''}</div>`;
+  }).join('');
+}
+
+function renderSched() {
+  const collect = runFor('collect');
+  const push = runFor('push');
+  const isToday = S.day === istToday();
+  const now = istNow();
+  const mins = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const dueIn = (h, m) => {
+    const d = h * 60 + m - mins;
+    return d > 0 ? `in ${d >= 60 ? `${Math.floor(d / 60)} h ` : ''}${d % 60} min` : '';
+  };
+  const at = (iso) => (iso ? new Date(Date.parse(iso) + 5.5 * 3600e3).toISOString().slice(11, 16) : '');
+  const pending = dayRows().filter((r) => r.status === 'pending').length;
+  const steps = [
+    { dot: collect ? 'done' : 'now', t: 'Collect run', s: collect ? `Ran at ${at(collect.at)} IST. ${collect.queued ?? dayRows().length} emails written, ${collect.logins ?? 0} sign-ups listed.` : 'Finds leads, writes the teardowns, fills this desk.', w: '6:41 am' },
+    { dot: !pending && dayRows().length ? 'done' : 'now', t: 'You review', s: pending ? `${pending} emails waiting. Approve or skip each one.` : 'Nothing waiting.', w: 'by 1:00 pm' },
+    { dot: push ? 'done' : '', t: 'Push to SalesHandy', s: push ? push.summary : `Sends what you approved into the Kyre sequences.${isToday && dueIn(13, 37) ? ` Next push ${dueIn(13, 37)}.` : ''}`, w: '1:37 pm' },
+    { dot: '', t: 'Replies', s: 'Every reply or bounce pings Telegram within seconds.', w: 'all day' },
+  ];
+  const sum = collect?.summary ? `<div class="note">${esc(collect.summary)}</div>` : '';
+  $('sched').innerHTML = steps.map((x, i) => `<div class="step"><span class="dot ${x.dot}">${x.dot === 'done' ? '✓' : i + 1}</span><div><b>${x.t}</b><small>${esc(x.s)}</small></div><span class="when">${x.w}</span></div>`).join('') + sum;
+}
+
+function renderHistory() {
+  const end = days()[0] || istToday();
+  const span = Array.from({ length: 14 }, (_, i) => addDays(end, i - 13));
+  const data = span.map((d) => {
+    const rows = S.queue.filter((r) => r.date === d);
+    return { d, v: rows.filter(isVerified).length, c: rows.filter((r) => !isVerified(r)).length, p: rows.filter((r) => r.status === 'pushed').length };
+  });
+  const max = Math.max(4, ...data.map((x) => x.v + x.c));
+  const top = Math.ceil(max / 4) * 4;
+  $('yax').innerHTML = [top, top / 2, 0].map((t, i) => `<span class="num" style="top:${i * 50}%">${t}</span>`).join('');
+  $('plot').innerHTML = [0, 50].map((p) => `<div class="grid-l" style="top:${p}%"></div>`).join('') +
+    `<div class="cols">${data.map((x) => `<div class="col ${x.d === S.day ? 'sel' : ''}" data-day="${x.d}" data-tip="${esc(`${fmtDay(x.d)}\n${x.v} verified · ${x.c} catch-all\n${x.p} in SalesHandy`)}">${x.c ? `<div class="seg" style="height:${(x.c / top) * 100}%;background:var(--s2)"></div>` : ''}${x.v ? `<div class="seg" style="height:${(x.v / top) * 100}%;background:var(--s1)"></div>` : ''}</div>`).join('')}</div>`;
+  $('xax').innerHTML = data.map((x, i) => `<span>${i % 2 === 1 || i === 13 ? fmtDay(x.d, { day: 'numeric' }) : ''}</span>`).join('');
+}
+
+function renderMix() {
+  const rows = dayRows();
+  const lists = ['A', 'B', 'C'].map((k) => {
+    const r = rows.filter((x) => String(x.list || 'A').toUpperCase().startsWith(k));
+    return { k, v: r.filter(isVerified).length, c: r.filter((x) => !isVerified(x)).length };
+  });
+  const max = Math.max(1, ...lists.map((l) => l.v + l.c));
+  $('mix').innerHTML = lists.map((l) => {
+    const t = l.v + l.c;
+    return `<div class="mrow" data-tip="${esc(`${l.k}: ${LISTS[l.k]}\n${l.v} verified · ${l.c} catch-all`)}"><span class="k">${l.k}</span>
+      <div class="stack" style="width:${t ? Math.max(8, (t / max) * 100) : 100}%">${l.v ? `<div style="flex:${l.v};background:var(--s1)">${l.v}</div>` : ''}${l.c ? `<div style="flex:${l.c};background:var(--s2)">${l.c}</div>` : ''}</div>
+      <span class="t num">${t}</span><small>${LISTS[l.k]}</small></div>`;
+  }).join('');
+}
+
+/* ---------- workspace ---------- */
+function filtered() {
+  const order = { pending: 0, approved: 1, pushed: 2, skipped: 3 };
+  return dayRows()
+    .filter((r) => S.filter === 'all' || r.status === S.filter)
+    .sort((a, b) => order[a.status] - order[b.status] || (isVerified(b) ? 1 : 0) - (isVerified(a) ? 1 : 0) || String(a.company).localeCompare(String(b.company)));
+}
+
+function renderList() {
+  const rows = dayRows();
+  const n = (s) => rows.filter((r) => r.status === s).length;
+  const verifiedWaiting = rows.filter((r) => r.status === 'pending' && isVerified(r)).length;
+  $('c-emails').textContent = n('pending') || rows.length;
+  const f = [['pending', 'Waiting', n('pending')], ['approved', 'Approved', n('approved')], ['pushed', 'In SalesHandy', n('pushed')], ['skipped', 'Skipped', n('skipped')], ['all', 'All', rows.length]];
+  $('filters').innerHTML = f.map(([k, l, c]) => `<button type="button" class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${l} <span class="num">${c}</span></button>`).join('') +
+    `<button type="button" class="bulk" id="bulk" ${!S.canWrite || !verifiedWaiting ? 'disabled' : ''}>Approve ${verifiedWaiting} verified</button>`;
+  const list = filtered();
+  if (!list.some((r) => r._id === S.sel)) S.sel = list[0]?._id || '';
+  $('rows').innerHTML = list.length
+    ? list.map((r) => `<button type="button" class="row ${r._id === S.sel ? 'on' : ''}" data-id="${esc(r._id)}">
+        <span class="st ${r.status}" aria-label="${STATUS[r.status]?.[0] || r.status}"></span>
+        <span class="top"><span class="co">${esc(r.company)}</span><span class="who">${esc(r.first_name || '')}</span></span>
+        <span class="sub">${esc(r.subject)}</span>
+        <span class="tags"><span class="pill p-list">${esc(String(r.list || 'A')[0])}</span><span class="pill ${isVerified(r) ? 'p-ok' : 'p-warn'}"><i style="background:${isVerified(r) ? 'var(--s1)' : 'var(--s2)'}"></i>${isVerified(r) ? 'Verified' : 'Catch-all'}</span>${r.edited ? '<span class="pill p-list">Edited</span>' : ''}</span>
+      </button>`).join('')
+    : `<div class="empty"><b>${rows.length ? 'Nothing here' : S.loaded ? 'No emails for this day' : 'Loading the desk…'}</b><span>${rows.length ? 'Try another filter.' : 'The 6:41 am run writes the day’s emails here.'}</span></div>`;
+}
+
+function para(t) {
+  return esc(t).replace(/\n{2,}/g, '\n\n');
+}
+
+function renderMail() {
+  const r = S.queue.find((x) => x._id === S.sel);
+  if (!r) {
+    $('mail').innerHTML = `<div class="empty" style="padding:64px 20px"><b>${S.loaded ? 'Pick an email' : 'Loading…'}</b><span>Each one is a teardown of the company’s own site, written from its screenshots.</span></div>`;
+    return;
+  }
+  const [label, cls] = STATUS[r.status] || [r.status, 'p-list'];
+  const locked = r.status === 'pushed' || !S.canWrite;
+  const subj = S.variant === 'b' && r.subject_alt ? r.subject_alt : r.subject;
+  const head = `<div class="mhead">
+      <button type="button" class="back" id="back">← All emails</button>
+      <h3>${r.website ? `<a href="${esc(r.website)}" target="_blank" rel="noopener">${esc(r.company)}</a>` : esc(r.company)}
+        <span class="pill ${cls}">${label}</span></h3>
+      <div class="facts"><span>Type ${esc(String(r.list || 'A')[0])} · ${esc(r.list_name || LISTS[String(r.list || 'A')[0]] || '')}</span><span>Seen on ${esc(r.lead_finding_from || 'their site')}</span>${r.email_confidence ? `<span>Email confidence <b class="num">${esc(r.email_confidence)}</b></span>` : ''}</div>
+    </div>`;
+  let body;
+  if (S.edit && !locked) {
+    const f = (id, l, k, ta) => `<label for="${id}">${l}${ta ? `<textarea id="${id}" data-field="${k}">${esc(r[k])}</textarea>` : `<input id="${id}" type="text" data-field="${k}" value="${esc(r[k])}">`}</label>`;
+    body = `<div class="mbody edit">${f('e-subject', 'Subject (variant A)', 'subject')}${f('e-subject-alt', 'Subject (variant B)', 'subject_alt')}${f('e-body', 'Email', 'email_body', 1)}${f('e-f1', 'Follow-up · day 4', 'followup_1', 1)}${f('e-f2', 'Follow-up · day 9', 'followup_2', 1)}<span class="note">Changes save when you leave a box.</span></div>`;
+  } else {
+    body = `<div class="mbody">
+      <div class="envelope">
+        <div class="envhead">
+          <div class="r"><span>To</span><span><span class="mono">${esc(r.email)}</span><button type="button" class="copy" data-copy="${esc(r.email)}">Copy</button> ${esc([r.first_name, r.last_name].filter(Boolean).join(' '))}</span></div>
+          <div class="r"><span>Subject</span><span><span class="subj">${esc(subj)}</span>${r.subject_alt ? `<span class="ab" role="group" aria-label="Subject variant"><button type="button" data-v="a" class="${S.variant === 'a' ? 'on' : ''}">A</button><button type="button" data-v="b" class="${S.variant === 'b' ? 'on' : ''}">B</button></span>` : ''}</span></div>
+        </div>
+        <div class="letter">${para(r.email_body)}\n\n<span class="sig">Not relevant? Reply "no" and I won't email again.</span></div>
+      </div>
+      <div class="seq">
+        <span class="eyebrow">Follow-ups, same thread, only if no reply</span>
+        ${[['4', r.followup_1], ['9', r.followup_2]].map(([d, t]) => `<div class="fu"><span class="day"><b>Day ${d}</b>${d === '4' ? '+3 days' : '+5 days'}</span><div class="txt">${para(t)}</div></div>`).join('')}
+      </div>
+      ${r.findings ? `<div><span class="eyebrow">What the screenshots showed</span><div class="found">${esc(r.findings)}</div></div>` : ''}
+    </div>`;
+  }
+  const bar = r.status === 'pushed'
+    ? `<div class="bar"><span class="info">In SalesHandy${r.pushed_step === 'already in SalesHandy' ? ' (added there directly)' : ''}. Edit it there if needed.</span></div>`
+    : `<div class="bar"><span class="saved" id="saved" hidden>Saved</span><span class="info" id="bar-info">${S.canWrite ? '' : 'View only: you can’t change this desk.'}</span>
+        ${r.status !== 'skipped' ? `<button type="button" class="btn no" data-act="skipped" ${S.canWrite ? '' : 'disabled'}>Skip</button>` : `<button type="button" class="btn" data-act="pending" ${S.canWrite ? '' : 'disabled'}>Undo skip</button>`}
+        <button type="button" class="btn" id="edit-btn" ${S.canWrite ? '' : 'disabled'}>${S.edit ? 'Done editing' : 'Edit'}</button>
+        ${r.status === 'approved' ? `<button type="button" class="btn" data-act="pending" ${S.canWrite ? '' : 'disabled'}>Unapprove</button>` : `<button type="button" class="btn go" data-act="approved" ${S.canWrite ? '' : 'disabled'}>Approve</button>`}
+      </div>`;
+  $('mail').innerHTML = head + body + bar;
+}
+
+function renderSignups() {
+  const ls = S.logins.filter((l) => l.date === S.day).sort((a, b) => Number(!!a.done) - Number(!!b.done) || String(a.company).localeCompare(String(b.company)));
+  const done = ls.filter((l) => l.done).length;
+  $('c-signups').textContent = ls.length - done;
+  $('signups').innerHTML = ls.length
+    ? `<div class="sprog"><div class="ph"><b>${done} of ${ls.length} signed up</b><span class="eyebrow">Logged-in teardowns are the strongest emails</span></div><div class="track"><div class="fill" style="width:${(done / ls.length) * 100}%"></div></div></div>` +
+      ls.map((l) => `<div class="srow ${l.done ? 'done' : ''}" data-login="${esc(l._id)}">
+        <input type="checkbox" id="l-${esc(l._id)}" ${l.done ? 'checked' : ''} ${S.canWrite ? '' : 'disabled'} aria-label="Signed up to ${esc(l.company)}">
+        <div><label class="co" for="l-${esc(l._id)}">${esc(l.company)}</label><div class="m"><span>${esc(l.list || '')}</span><span>${esc(l.way_in || '')}</span>${l.verification ? `<span class="pill ${l.verification === 'ok' ? 'p-ok' : 'p-warn'}">${l.verification === 'ok' ? 'Verified' : 'Catch-all'}</span>` : ''}</div></div>
+        <div class="acts">${l.sign_up_url ? `<a href="${esc(l.sign_up_url)}" target="_blank" rel="noopener">Open sign-up</a>` : ''}${l.save_session ? `<button type="button" data-copy="${esc(l.save_session)}">Copy save-session command</button>` : ''}</div>
+      </div>`).join('')
+    : `<div class="empty"><b>No sign-ups for this day</b><span>Products behind a login show up here for you to sign up to.</span></div>`;
+}
 
 function render() {
-  renderDays();
-  const rows = today();
-  const count = (s) => rows.filter((r) => r.status === s).length;
-  const verifiedPending = rows.filter((r) => r.status === 'pending' && r.send_group?.startsWith('1'));
-  const f = [['all', `All ${rows.length}`], ['pending', `Waiting ${count('pending')}`], ['approved', `Approved ${count('approved')}`], ['pushed', `In SalesHandy ${count('pushed')}`], ['skipped', `Skipped ${count('skipped')}`]];
-  $('filters').innerHTML = f.map(([k, l]) => `<button type="button" class="chip ${state.filter === k ? 'on' : ''}" data-f="${k}">${l}</button>`).join('');
-  const ab = $('approve-verified');
-  ab.textContent = `Approve all verified (${verifiedPending.length})`;
-  ab.disabled = !state.canWrite || !verifiedPending.length;
-  const run = state.runs.find((r) => r.date === state.day);
-  $('run').hidden = !run;
-  if (run) $('run').textContent = run.summary || '';
-  const shown = rows.filter((r) => state.filter === 'all' || r.status === state.filter)
-    .sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1) || String(a.send_group).localeCompare(String(b.send_group)) || (b.email_confidence || 0) - (a.email_confidence || 0));
-  $('cards').innerHTML = shown.length ? shown.map(card).join('') : `<div class="empty">${rows.length ? 'Nothing in this filter.' : 'No emails for this day yet. The daily run writes them here each morning; approved ones go to SalesHandy at the next push.'}</div>`;
-  const ls = state.logins.filter((d) => d.date === state.day);
-  $('login-cards').innerHTML = ls.length ? ls.map(loginCard).join('') : '<div class="empty">No sign-ups needed for this day.</div>';
+  renderDays(); renderKpis(); renderFunnel(); renderSched(); renderHistory(); renderMix(); renderList(); renderMail(); renderSignups();
+  $('work').hidden = S.tab !== 'emails';
+  $('signups').hidden = S.tab !== 'signups';
+  $('tab-emails').classList.toggle('on', S.tab === 'emails');
+  $('tab-signups').classList.toggle('on', S.tab === 'signups');
 }
 
-function card(r) {
-  const [label, cls] = STATUS[r.status] || [r.status, 'p-info'];
-  const verified = String(r.send_group || '').startsWith('1');
-  const locked = r.status === 'pushed' || !state.canWrite;
-  const ro = locked ? 'readonly' : '';
-  return `<article class="card ${esc(r.status)}" data-id="${esc(r._id)}">
-    <div class="head">
-      <h2>${r.website ? `<a href="${esc(r.website)}" target="_blank" rel="noopener">${esc(r.company)}</a>` : esc(r.company)}</h2>
-      <span class="pill p-info">Type ${esc(r.list || '?')}</span>
-      <span class="pill ${verified ? 'p-ok' : 'p-warn'}">${verified ? 'Verified' : 'Catch-all'}</span>
-      <span class="pill ${cls}">${esc(label)}</span>
-    </div>
-    <div class="meta"><span>To <span class="mono">${esc(r.email)}</span></span>${r.first_name ? `<span>${esc(r.first_name)} ${esc(r.last_name || '')}</span>` : ''}<span>Seen on: ${esc(r.lead_finding_from || 'homepage')}</span>${r.email_confidence ? `<span>Email confidence ${esc(r.email_confidence)}</span>` : ''}</div>
-    <div class="fields">
-      <label for="s-${esc(r._id)}">Subject <input type="text" id="s-${esc(r._id)}" data-field="subject" value="${esc(r.subject)}" ${ro}></label>
-      <label for="b-${esc(r._id)}">Email <textarea id="b-${esc(r._id)}" data-field="email_body" ${ro}>${esc(r.email_body)}</textarea></label>
-      <details><summary>Follow-ups and alternative subject</summary>
-        <div class="fields">
-          <label for="a-${esc(r._id)}">Alternative subject <input type="text" id="a-${esc(r._id)}" data-field="subject_alt" value="${esc(r.subject_alt)}" ${ro}></label>
-          <label for="f1-${esc(r._id)}">Follow-up 1 <textarea id="f1-${esc(r._id)}" data-field="followup_1" ${ro}>${esc(r.followup_1)}</textarea></label>
-          <label for="f2-${esc(r._id)}">Follow-up 2 <textarea id="f2-${esc(r._id)}" data-field="followup_2" ${ro}>${esc(r.followup_2)}</textarea></label>
-        </div>
-      </details>
-      ${r.findings ? `<details><summary>What we found</summary><div class="findings">${esc(r.findings)}</div></details>` : ''}
-    </div>
-    <div class="actions">
-      <span class="saved" data-saved hidden>Saved</span>
-      ${r.status === 'pushed' ? '' : `
-      ${r.status !== 'skipped' ? `<button type="button" class="skip" data-act="skipped" ${state.canWrite ? '' : 'disabled'}>Skip</button>` : ''}
-      ${r.status !== 'pending' ? `<button type="button" data-act="pending" ${state.canWrite ? '' : 'disabled'}>Back to waiting</button>` : ''}
-      ${r.status !== 'approved' ? `<button type="button" class="approve" data-act="approved" ${state.canWrite ? '' : 'disabled'}>Approve</button>` : ''}`}
-    </div>
-  </article>`;
+/* ---------- actions ---------- */
+function toast(t) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = t; document.body.append(el);
+  setTimeout(() => el.remove(), 1800);
 }
-
-function loginCard(r) {
-  return `<article class="card" data-login="${esc(r._id)}">
-    <div class="login">
-      <input type="checkbox" id="l-${esc(r._id)}" ${r.done ? 'checked' : ''} ${state.canWrite ? '' : 'disabled'} aria-label="Logged in to ${esc(r.company)}">
-      <div class="fields">
-        <div class="head"><h2>${esc(r.company)}</h2><span class="pill ${/free/.test(r.way_in) ? 'p-ok' : 'p-warn'}">${esc(r.way_in || '')}</span>${r.verification ? `<span class="pill ${r.verification === 'ok' ? 'p-ok' : 'p-warn'}">${r.verification === 'ok' ? 'Verified' : 'Catch-all'}</span>` : ''}</div>
-        <div class="meta">${r.sign_up_url ? `<a href="${esc(r.sign_up_url)}" target="_blank" rel="noopener">Open sign-up page</a>` : ''}<span>Contact <span class="mono">${esc(r.email || '')}</span></span><span>${esc(r.list || '')}</span></div>
-        ${r.save_session ? `<div class="mono">${esc(r.save_session)}</div>` : ''}
-      </div>
-    </div>
-  </article>`;
-}
-
-async function update(id, coll, patch, el) {
+async function save(coll, id, patch) {
+  if (!S.db || !S.canWrite) return false;
   try {
-    await state.db.collection(coll).doc(id).update({ ...patch, updated_at: new Date().toISOString() });
-    const s = el?.closest('.card')?.querySelector('[data-saved]');
-    if (s) { s.hidden = false; setTimeout(() => (s.hidden = true), 1500) }
+    await S.db.collection(coll).doc(id).update({ ...patch, updated_at: new Date().toISOString() });
+    return true;
   } catch (e) {
-    if (e?.code === 'invalid_argument') { state.canWrite = false; render() }
-    $('status').textContent = `Could not save (${e?.code || 'error'}). Try again in a moment.`;
+    if (e?.code === 'invalid_argument' || e?.code === 'not_granted') { S.canWrite = false; render() }
+    toast(`Not saved (${e?.code || 'error'}). Try again.`);
+    return false;
   }
+}
+async function setStatus(id, status) {
+  const r = S.raw.find((x) => x._id === id);
+  if (!r || S.pushed.has(id)) return;
+  const before = r.status;
+  r.status = status; merge();
+  if (status !== 'pending' && S.filter === 'pending') {
+    const list = filtered();
+    S.sel = list.find((x) => x._id !== id)?._id || '';
+  }
+  S.edit = false; render();
+  if (!(await save('queue', id, { status }))) { r.status = before; merge(); render() }
+  else toast(status === 'approved' ? 'Approved' : status === 'skipped' ? 'Skipped' : 'Back to waiting');
+}
+function move(step) {
+  const list = filtered();
+  const i = list.findIndex((r) => r._id === S.sel);
+  const next = list[Math.min(list.length - 1, Math.max(0, i + step))];
+  if (next) { S.sel = next._id; S.edit = false; renderList(); renderMail(); document.querySelector(`.row[data-id="${CSS.escape(next._id)}"]`)?.scrollIntoView({ block: 'nearest' }) }
 }
 
 document.addEventListener('click', async (ev) => {
-  const chip = ev.target.closest('[data-f]');
-  if (chip) { state.filter = chip.dataset.f; render(); return }
-  const act = ev.target.closest('[data-act]');
-  if (act) { const id = act.closest('[data-id]').dataset.id; act.disabled = true; await update(id, 'queue', { status: act.dataset.act }, act); return }
+  const t = ev.target;
+  const day = t.closest('[data-day]');
+  if (day) { S.day = day.dataset.day; S.sel = ''; S.edit = false; render(); return }
+  const chip = t.closest('[data-f]');
+  if (chip) { S.filter = chip.dataset.f; S.sel = ''; renderList(); renderMail(); return }
+  const row = t.closest('.row');
+  if (row) { S.sel = row.dataset.id; S.edit = false; S.variant = 'a'; $('work').classList.add('detail'); renderList(); renderMail(); return }
+  if (t.closest('#back')) { $('work').classList.remove('detail'); return }
+  const v = t.closest('[data-v]');
+  if (v) { S.variant = v.dataset.v; renderMail(); return }
+  const act = t.closest('[data-act]');
+  if (act) { act.disabled = true; await setStatus(S.sel, act.dataset.act); return }
+  if (t.closest('#edit-btn')) { S.edit = !S.edit; renderMail(); return }
+  const cp = t.closest('[data-copy]');
+  if (cp) {
+    try { await navigator.clipboard.writeText(cp.dataset.copy); toast('Copied') }
+    catch { const s = window.getSelection(); const rg = document.createRange(); rg.selectNodeContents(cp.previousElementSibling || cp); s.removeAllRanges(); s.addRange(rg); toast('Selected: press Ctrl/Cmd+C') }
+    return;
+  }
+  if (t.closest('#bulk')) {
+    const ids = dayRows().filter((r) => r.status === 'pending' && isVerified(r)).map((r) => r._id);
+    t.closest('#bulk').disabled = true;
+    for (const id of ids) { const r = S.raw.find((x) => x._id === id); r.status = 'approved'; merge(); render(); await save('queue', id, { status: 'approved' }) }
+    toast(`Approved ${ids.length} verified`);
+    return;
+  }
+  if (t.closest('#tab-emails')) { S.tab = 'emails'; render(); return }
+  if (t.closest('#tab-signups')) { S.tab = 'signups'; render() }
 });
-document.addEventListener('change', (ev) => {
+document.addEventListener('change', async (ev) => {
   const t = ev.target;
   if (t.matches('[data-field]')) {
-    const id = t.closest('[data-id]').dataset.id;
-    const r = state.queue.find((x) => x._id === id);
-    if (r && r[t.dataset.field] !== t.value) update(id, 'queue', { [t.dataset.field]: t.value, edited: true }, t);
+    const r = S.raw.find((x) => x._id === S.sel);
+    if (r && r[t.dataset.field] !== t.value) { r[t.dataset.field] = t.value; r.edited = true; merge(); if (await save('queue', r._id, { [t.dataset.field]: t.value, edited: true })) toast('Saved') }
   }
-  if (t.matches('[data-login] input[type=checkbox]')) update(t.closest('[data-login]').dataset.login, 'logins', { done: t.checked, done_at: t.checked ? new Date().toISOString() : '' }, t);
-  if (t.id === 'day') { state.day = t.value; render() }
+  const lr = t.closest('[data-login]');
+  if (lr && t.type === 'checkbox') {
+    const l = S.logins.find((x) => x._id === lr.dataset.login);
+    if (l) { l.done = t.checked; renderSignups(); renderKpis(); await save('logins', l._id, { done: t.checked, done_at: t.checked ? new Date().toISOString() : '' }) }
+  }
 });
-$('approve-verified').addEventListener('click', async () => {
-  const b = $('approve-verified');
-  b.disabled = true;
-  for (const r of today().filter((x) => x.status === 'pending' && String(x.send_group).startsWith('1'))) await update(r._id, 'queue', { status: 'approved' });
+document.addEventListener('keydown', (ev) => {
+  if (ev.target.closest('input, textarea, select') || ev.metaKey || ev.ctrlKey || ev.altKey || S.tab !== 'emails') return;
+  const k = ev.key.toLowerCase();
+  if (k === 'j' || ev.key === 'ArrowDown') { ev.preventDefault(); move(1) }
+  else if (k === 'k' || ev.key === 'ArrowUp') { ev.preventDefault(); move(-1) }
+  else if (k === 'a' && S.canWrite) setStatus(S.sel, 'approved');
+  else if (k === 's' && S.canWrite) setStatus(S.sel, 'skipped');
+  else if (k === 'e' && S.canWrite) { S.edit = !S.edit; renderMail() }
 });
+const tip = $('tip');
+document.addEventListener('pointerover', (ev) => {
+  const el = ev.target.closest('[data-tip]');
+  if (!el) { tip.hidden = true; return }
+  const b = el.getBoundingClientRect();
+  tip.textContent = el.dataset.tip; tip.hidden = false;
+  tip.style.left = `${Math.min(window.innerWidth - 90, Math.max(90, b.left + b.width / 2))}px`; tip.style.top = `${b.top}px`;
+});
+document.addEventListener('scroll', () => (tip.hidden = true), { passive: true });
 
-function route() {
-  const v = location.hash === '#logins' ? 'logins' : 'emails';
-  $('emails').hidden = v !== 'emails';
-  $('logins').hidden = v !== 'logins';
-  $('toolbar').hidden = v !== 'emails';
-  $('tab-emails').classList.toggle('on', v === 'emails');
-  $('tab-logins').classList.toggle('on', v === 'logins');
-}
-window.addEventListener('hashchange', route);
-route();
 render();
 
+/* ---------- live data ---------- */
 (async () => {
   const db = await window.claude?.use?.('db');
-  if (!db) { $('status').textContent = 'Open this page in Claude (signed in) to use the desk.'; return }
-  state.db = db;
-  const user = await window.claude.use('user');
-  const cw = user ? await user.can('data.write') : null;
-  state.canWrite = cw !== false;
-  const timer = setTimeout(() => ($('status').textContent = 'The desk is taking a while to load. It may be out of date.'), 10000);
-  const onErr = (e) => { clearTimeout(timer); $('status').textContent = `The desk could not load (${e.code}).` };
-  const sub = (coll, key, q) => (q || db.collection(coll)).onSnapshot((snap) => {
-    const docs = snap.docs.map((d) => ({ _id: d.id, ...d.data() }));
-    if (key === 'pushed') state.pushed = new Set(docs.map((d) => d._id));
-    else if (key === 'queue') state.rawQueue = docs;
-    else state[key] = docs;
-    mergeQueue();
-    if (!snap.metadata.fromCache) clearTimeout(timer);
-    const t = state.queue.filter((d) => d.date === state.day);
-    $('status').textContent = `${t.filter((d) => d.status === 'pending').length} waiting for you · ${t.filter((d) => d.status === 'approved').length} approved · ${t.filter((d) => d.status === 'pushed').length} in SalesHandy${state.canWrite ? '' : ' · read only'}`;
+  if (!db) { $('live-text').textContent = 'Open in Claude, signed in, to use the desk'; S.loaded = true; render(); return }
+  S.db = db;
+  try { const user = await window.claude.use('user'); const cw = user ? await user.can('data.write') : null; S.canWrite = cw !== false } catch {}
+  const timer = setTimeout(() => ($('live-text').textContent = 'Taking a while to load…'), 10000);
+  let pendingFirst = 4;
+  const sub = (coll, apply, q) => (q || db.collection(coll)).onSnapshot((snap) => {
+    apply(snap.docs.map((d) => ({ _id: d.id, ...d.data() })));
+    if (!snap.metadata.fromCache && pendingFirst > 0 && --pendingFirst === 0) { clearTimeout(timer); S.loaded = true }
+    merge();
+    $('live').classList.add('on');
+    $('live-text').textContent = S.canWrite ? 'Live' : 'Live · view only';
     render();
-  }, onErr);
-  sub('queue', 'queue', db.collection('queue').orderBy('date', 'desc').limit(600));
-  sub('pushed', 'pushed', db.collection('pushed').orderBy('date', 'desc').limit(600));
-  sub('logins', 'logins', db.collection('logins').orderBy('date', 'desc').limit(300));
-  sub('runs', 'runs', db.collection('runs').orderBy('date', 'desc').limit(60));
+  }, (e) => { clearTimeout(timer); $('live-text').textContent = `Could not load (${e.code})` });
+  sub('queue', (d) => (S.raw = d), db.collection('queue').orderBy('date', 'desc').limit(800));
+  sub('pushed', (d) => (S.pushed = new Map(d.map((x) => [x._id, x]))), db.collection('pushed').orderBy('date', 'desc').limit(800));
+  sub('logins', (d) => (S.logins = d), db.collection('logins').orderBy('date', 'desc').limit(300));
+  sub('runs', (d) => (S.runs = d), db.collection('runs').orderBy('date', 'desc').limit(60));
 })();
 </script>
