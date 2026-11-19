@@ -39,6 +39,23 @@ export const createField = async (label, fieldType = 'long-text') => payload(awa
 export const createWebhook = async ({ name, url, events, headers = {} }) => payload(await call('POST', '/v1/webhook/create', { name, webhookUrl: url, webhookEvent: events, headers }));
 export const setSequenceStatus = async (ids, status) => payload(await call('POST', '/v1/sequences/status', { sequenceIds: ids, status }));
 
+export const sequenceSenders = async (id) => payload(await call('GET', `/v1/sequences/${id}/email-accounts`))?.emailAccount || [];
+export const sequenceSettings = async (id) => payload(await call('GET', `/v1/sequences/${id}/settings`));
+export const updateSettings = async (id, settings) => payload(await call('PATCH', `/v1/sequences/${id}/settings`, { settings }));
+export const schedules = async () => payload(await call('GET', '/v1/schedules')) || [];
+export const emailAccounts = async () => payload(await call('POST', '/v1/email-accounts', { pageSize: 100 }))?.emails || [];
+
+// Kyre never sends from Vera. A sender counts as Kyre only on a kyre domain, never a vera one.
+export const isKyreSender = (email) => /@([a-z0-9-]+\.)*[a-z0-9-]*kyre[a-z0-9-]*\.[a-z]+$/i.test(email || '') && !/vera/i.test(email || '');
+/** Throw unless every sender of this sequence is a Kyre inbox (and there is at least one). */
+export async function assertKyreSenders(id, title = id) {
+  const senders = (await sequenceSenders(id)).map((e) => e.fromEmail);
+  if (!senders.length) throw new Error(`"${title}" has no sending inbox: attach Kyre inboxes first`);
+  const bad = senders.filter((e) => !isKyreSender(e));
+  if (bad.length) throw new Error(`"${title}" sends from ${bad.join(', ')}: Kyre only sends from Kyre inboxes`);
+  return senders;
+}
+
 /** Every prospect in the account (any sequence, including ones added by hand): [{email, created_at}]. */
 export async function allProspects() {
   const out = [];

@@ -20,7 +20,7 @@ import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { parseCsv } from './sources/seed.mjs';
 import { isRoleMailbox } from './enrich/site.mjs';
-import { importProspects, sequences, allProspects } from './saleshandy.mjs';
+import { importProspects, sequences, allProspects, assertKyreSenders } from './saleshandy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = path.join(root, 'config', 'saleshandy.json');
@@ -49,8 +49,11 @@ const domainOf = (r) => String(r.email || '').split('@')[1]?.toLowerCase() || ''
 /** Split "Hi Ana,\n\nPara 1\n\nPara 2..." into the greeting and its paragraphs. */
 export function splitEmail(text) {
   const parts = String(text || '').replace(/\r/g, '').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
-  const greeting = /^(hi|hello|hey|dear)\b.{0,40},?$/i.test(parts[0] || '') ? parts.shift() : '';
-  return { greeting, paras: parts };
+  const isGreeting = (x) => /^(hi|hello|hey|dear)\b.{0,40},?$/i.test(x || '');
+  // A line above the greeting is the inbox preview (preheader), not part of the letter.
+  const opener = !isGreeting(parts[0]) && isGreeting(parts[1]) ? parts.shift() : '';
+  const greeting = isGreeting(parts[0]) ? parts.shift() : '';
+  return { opener, greeting, paras: parts };
 }
 const firstAndRest = (paras) => [paras[0] || '', paras.slice(1).join('\n\n')];
 
@@ -68,7 +71,7 @@ export function toProspect(r) {
   const [f2a, f2b] = firstAndRest(f2.paras);
   return {
     'First Name': r.first_name || '', 'Last Name': r.last_name || '', Email: r.email, Company: r.company || '', Website: r.website || '',
-    Subject: r.subject || '', 'Subject Alt': r.subject_alt || r.subject || '', Greeting: greeting,
+    Subject: r.subject || '', 'Subject Alt': r.subject_alt || r.subject || '', Opener: main.opener, Greeting: greeting,
     'Body 1': main.paras[0] || '', 'Body 2': main.paras[1] || '', 'Body 3': main.paras.slice(2).join('\n\n'),
     'Follow Up 1A': f1a, 'Follow Up 1B': f1b, 'Follow Up 2A': f2a, 'Follow Up 2B': f2b,
     'Send Group': r.send_group || '', 'Email Verification': r.email_verification || '', 'Email Confidence': r.email_confidence || '',
@@ -141,9 +144,12 @@ export async function push({ queue, live = false, today = new Date().toISOString
     const owner = new Map();
     for (const s of all) for (const st of s.steps || s.sequenceSteps || []) owner.set(String(st.id || st.stepId), String(s.title || s.name || ''));
     const vera = new RegExp(cfg.veraSequenceNameMatch || 'vera', 'i');
+    const seqOf = new Map();
+    for (const s of all) for (const st of s.steps || s.sequenceSteps || []) seqOf.set(String(st.id || st.stepId), s.id);
     for (const step of byStep.keys()) {
       if (!owner.has(String(step))) throw new Error(`step ${step} not found in your SalesHandy sequences: check config/saleshandy.json`);
       if (vera.test(owner.get(String(step)))) throw new Error(`step ${step} belongs to "${owner.get(String(step))}": Kyre never sends through Vera`);
+      await assertKyreSenders(seqOf.get(String(step)), owner.get(String(step)));
     }
   }
   for (const [step, list] of byStep) {

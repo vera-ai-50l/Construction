@@ -1,16 +1,11 @@
 {
-  "_comment": "Step 1 of each Kyre sequence (created 19 Nov from 'Kyre · Teardown · 17 Nov final (20)', all paused). Step IDs are not secrets. Kyre only: never Vera's sequences.",
+  "_comment": "Step 1 IDs per list for the daily push. Empty = the push holds those emails back. The six A/B/C sequences made on 19 Nov were cleared (they had picked up a Vera inbox) and are to be deleted; new batches use 'node src/saleshandy-setup.mjs batch'. Kyre only: never Vera's sequences or inboxes.",
   "dailyCap": 40,
   "catchAllDailyCap": 30,
   "steps": {
-    "A": { "verified": "AYzM45BNak", "catch_all": "LVPXnlJDzl" },
-    "B": { "verified": "bZwpLv0MwQ", "catch_all": "Oqwmmv0Jwj" },
-    "C": { "verified": "BVaDNAMvwo", "catch_all": "glwGA9Qea6" }
-  },
-  "sequences": {
-    "A": { "verified": "8Jwo7y0xwO", "catch_all": "9pa8ZxkLwy" },
-    "B": { "verified": "Z6zx7V2daA", "catch_all": "k4Pex0WXwn" },
-    "C": { "verified": "WjzRN1WdzA", "catch_all": "klw6koleP1" }
+    "A": { "verified": "", "catch_all": "" },
+    "B": { "verified": "", "catch_all": "" },
+    "C": { "verified": "", "catch_all": "" }
   },
   "veraSequenceNameMatch": "vera"
 }
