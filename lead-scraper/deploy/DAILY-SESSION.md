@@ -49,6 +49,10 @@ Restore the memory (who was already found or emailed), in both runs:
 
 1. ArtifactData `list`, collection `ledger`, `query.limit` 1000, `out_dir` = `$M`.
 2. `node src/daily.mjs restore --from $M`
+3. Learn who is already in SalesHandy (any sequence, also people the founder added by hand):
+   `node src/daily.mjs sync --date $D --from $M`. If it prints `manifests`, call ArtifactData
+   `batch` with each file's array. If it says SalesHandy is not reachable, carry on: the push
+   checks SalesHandy again before adding anyone.
 
 ## Collect run (morning)
 
@@ -113,6 +117,8 @@ Restore the memory (who was already found or emailed), in both runs:
 1. ArtifactData `query`, collection `queue`, `query.where` `[["status","==","approved"],["date",">=","<$W>"]]`,
    `query.limit` 1000, `out_dir` = `$M`.
 2. ArtifactData `query`, collection `pushed`, `query.where` `[["date",">=","<$W>"]]`, `query.limit` 1000, `out_dir` = `$M`.
+   Then run `node src/daily.mjs sync --date $D --from $M` again and batch its manifests, so
+   rows already in SalesHandy show as "In SalesHandy" on the desk.
 3. `node src/daily.mjs push --from $M --date $D --live --notify`
    - If it says `config/saleshandy.json missing`, stop there: it already told Telegram.
    - If it throws (e.g. a step belongs to a Vera sequence, or SalesHandy refuses), do not

@@ -18,8 +18,9 @@ async function call(method, path, body, { retries = 3 } = {}) {
     });
     const text = await res.text();
     if (res.ok) return text ? JSON.parse(text) : null;
-    if (res.status >= 500 && attempt < retries) {
-      await sleep(2000 * (attempt + 1));
+    // SalesHandy answers rate limits with a 400 "Rate Limit exceeded": wait and retry those too.
+    if ((res.status >= 500 || res.status === 429 || /rate limit/i.test(text)) && attempt < retries) {
+      await sleep((/rate limit/i.test(text) || res.status === 429 ? 15000 : 2000) * (attempt + 1));
       continue;
     }
     const hint = res.status === 401 ? ' (check SALESHANDY_API_KEY)' : '';
@@ -30,13 +31,24 @@ const payload = (r) => r?.payload ?? r?.data ?? r;
 
 export const sequences = async (name = '') => payload(await call('GET', `/v1/sequences?pageSize=100${name ? `&sequenceName=${encodeURIComponent(name)}` : ''}`));
 export const steps = async (sequenceId) => payload(await call('GET', `/v1/sequences/${sequenceId}/steps`));
-export const fields = async () => payload(await call('GET', '/v1/fields'));
+export const fields = async () => payload(await call('GET', '/v1/fields?systemFields=false'));
 export const webhooks = async () => payload(await call('GET', '/v1/webhook?pageSize=100'));
 export const createSequence = async (title, opts = {}) => payload(await call('POST', '/v1/sequences', { title, ...opts }));
 export const createStep = async (sequenceId, step) => payload(await call('POST', `/v1/sequences/${sequenceId}/steps`, step));
 export const createField = async (label, fieldType = 'long-text') => payload(await call('POST', '/v1/fields', { label, fieldType }));
 export const createWebhook = async ({ name, url, events, headers = {} }) => payload(await call('POST', '/v1/webhook/create', { name, webhookUrl: url, webhookEvent: events, headers }));
 export const setSequenceStatus = async (ids, status) => payload(await call('POST', '/v1/sequences/status', { sequenceIds: ids, status }));
+
+/** Every prospect in the account (any sequence, including ones added by hand): [{email, created_at}]. */
+export async function allProspects() {
+  const out = [];
+  for (let page = 1; page <= 200; page++) {
+    const p = payload(await call('GET', `/v1/prospects?pageSize=100&page=${page}`)) || [];
+    for (const x of p) if (x.email) out.push({ email: String(x.email).toLowerCase().trim(), created_at: x.createdAt || '' });
+    if (p.length < 100) break;
+  }
+  return out;
+}
 
 /** Add prospects (objects keyed by SalesHandy field names) to a sequence step. */
 export async function importProspects(stepId, prospectList, { conflictAction = 'noUpdate', log = () => {} } = {}) {
@@ -55,9 +67,12 @@ export async function importProspects(stepId, prospectList, { conflictAction = '
 }
 
 // The Kyre custom fields our CSV fills (created once with ensureFields).
+// The custom fields the Kyre sequences use (they already exist in the account; ensureFields
+// creates any that are missing, e.g. in a fresh account).
 export const KYRE_FIELDS = [
-  ['Subject', 'text'], ['Subject Alt', 'text'], ['Email Body', 'long-text'], ['Follow Up 1', 'long-text'], ['Follow Up 2', 'long-text'],
-  ['Send Group', 'text'], ['Email Verification', 'text'], ['Email Confidence', 'number'], ['Lead Source', 'text'], ['Kyre List', 'text'], ['Lead Finding From', 'text'],
+  ['Subject', 'text'], ['Subject Alt', 'text'], ['Greeting', 'text'], ['Body 1', 'long-text'], ['Body 2', 'long-text'], ['Body 3', 'long-text'],
+  ['Follow Up 1A', 'long-text'], ['Follow Up 1B', 'long-text'], ['Follow Up 2A', 'long-text'], ['Follow Up 2B', 'long-text'],
+  ['Send Group', 'text'], ['Email Verification', 'text'], ['Email Confidence', 'number'],
 ];
 
 export async function ensureFields({ dryRun = true, log = () => {} } = {}) {

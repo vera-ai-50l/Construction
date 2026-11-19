@@ -20,7 +20,7 @@ import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { parseCsv } from './sources/seed.mjs';
 import { isRoleMailbox } from './enrich/site.mjs';
-import { importProspects, sequences } from './saleshandy.mjs';
+import { importProspects, sequences, allProspects } from './saleshandy.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = path.join(root, 'config', 'saleshandy.json');
@@ -46,13 +46,33 @@ const listOf = (r) => {
 const groupOf = (r) => (/^1|verified|^ok$/i.test(r.send_group || r.email_verification || '') ? 'verified' : 'catch_all');
 const domainOf = (r) => String(r.email || '').split('@')[1]?.toLowerCase() || '';
 
-/** SalesHandy prospect: system fields + the Kyre custom fields. */
+/** Split "Hi Ana,\n\nPara 1\n\nPara 2..." into the greeting and its paragraphs. */
+export function splitEmail(text) {
+  const parts = String(text || '').replace(/\r/g, '').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+  const greeting = /^(hi|hello|hey|dear)\b.{0,40},?$/i.test(parts[0] || '') ? parts.shift() : '';
+  return { greeting, paras: parts };
+}
+const firstAndRest = (paras) => [paras[0] || '', paras.slice(1).join('\n\n')];
+
+/**
+ * SalesHandy prospect in the fields the Kyre sequences already use:
+ * {{Greeting}} {{Body 1}} {{Body 2}} {{Body 3}}, follow-ups {{Follow Up 1A}} {{Follow Up 1B}}
+ * and {{Follow Up 2A}} {{Follow Up 2B}}, subjects {{Subject}} / {{Subject Alt}} (A/B variants).
+ */
 export function toProspect(r) {
+  const main = splitEmail(r.email_body);
+  const f1 = splitEmail(r.followup_1);
+  const f2 = splitEmail(r.followup_2);
+  const greeting = main.greeting || f1.greeting || (r.first_name ? `Hi ${r.first_name},` : 'Hi,');
+  const [f1a, f1b] = firstAndRest(f1.paras);
+  const [f2a, f2b] = firstAndRest(f2.paras);
   return {
     'First Name': r.first_name || '', 'Last Name': r.last_name || '', Email: r.email, Company: r.company || '', Website: r.website || '',
-    Subject: r.subject || '', 'Subject Alt': r.subject_alt || '', 'Email Body': r.email_body || '', 'Follow Up 1': r.followup_1 || '', 'Follow Up 2': r.followup_2 || '',
+    Subject: r.subject || '', 'Subject Alt': r.subject_alt || r.subject || '', Greeting: greeting,
+    'Body 1': main.paras[0] || '', 'Body 2': main.paras[1] || '', 'Body 3': main.paras.slice(2).join('\n\n'),
+    'Follow Up 1A': f1a, 'Follow Up 1B': f1b, 'Follow Up 2A': f2a, 'Follow Up 2B': f2b,
     'Send Group': r.send_group || '', 'Email Verification': r.email_verification || '', 'Email Confidence': r.email_confidence || '',
-    'Lead Finding From': r.lead_finding_from || '', 'Kyre List': listOf(r),
+    'Lead Source': `Kyre ${listOf(r)} · ${r.lead_finding_from || 'public site'}`,
   };
 }
 
@@ -91,6 +111,12 @@ export function plan(rows, cfg, pushed, today) {
   return out;
 }
 
+/** SalesHandy prospects as pushed-log entries (date = the day they were added, India time). */
+export async function saleshandyLog() {
+  const istDay = (iso) => (iso ? new Date(Date.parse(iso) + 5.5 * 3600e3).toISOString().slice(0, 10) : 'earlier');
+  return (await allProspects()).map((p) => ({ date: istDay(p.created_at), email: p.email, domain: p.email.split('@')[1], company: '', list: '', group: '', step: 'saleshandy', source: 'saleshandy' }));
+}
+
 function loadPushed() {
   return existsSync(PUSHED) ? JSON.parse(readFileSync(PUSHED, 'utf8')) : { log: [] };
 }
@@ -99,7 +125,10 @@ export async function push({ queue, live = false, today = new Date().toISOString
   const cfg = loadConfig();
   const rows = readQueue(queue);
   const pushed = loadPushed();
-  const decisions = plan(rows, cfg, pushed, today);
+  // Live: SalesHandy itself is the truth. Anyone already in any sequence (also ones added by
+  // hand) is never added again, and people added today count toward today's cap.
+  const known = live ? await saleshandyLog() : [];
+  const decisions = plan(rows, cfg, { log: [...pushed.log, ...known.filter((k) => !pushed.log.some((p) => p.email === k.email))] }, today);
   const go = decisions.filter((d) => !d.skip);
   // One import per step.
   const byStep = new Map();

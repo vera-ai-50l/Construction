@@ -4,6 +4,7 @@
 // (looking at screenshots and writing the emails) and move files to and from the Send Desk.
 //
 //   node src/daily.mjs restore  --from <dir>        desk ledger -> out/state (memory)
+//   node src/daily.mjs sync     [--from <dir>]      who is already in SalesHandy -> memory + desk
 //   node src/daily.mjs collect  [--date D]          run the lead presets, pick today's leads
 //   node src/daily.mjs teardown [--date D]          screenshots + measured findings + briefs
 //        (Claude reads out/daily/D/briefs.md and writes out/daily/D/emails/<domain>.json)
@@ -21,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { runPipeline } from './pipeline.mjs';
 import { isRoleMailbox } from './enrich/site.mjs';
 import { toCsvRows } from './teardown/csv.mjs';
-import { push } from './push.mjs';
+import { push, saleshandyLog } from './push.mjs';
 import { notify } from './notify.mjs';
 import { DESK_URL, queueDoc, queueId, loginId, writeDocs, readDocs, restoreState, stateDocs } from './desk.mjs';
 
@@ -293,6 +294,37 @@ export async function pushApproved({ date, from, live = false, notifyToo = false
   return { approved: approved.length, pushed: went.length, live, reasons: result.reasons, manifests: res.manifests };
 }
 
+/**
+ * Learn everyone already in SalesHandy (any sequence, also added by hand): merge into
+ * out/state/pushed.json so collect never picks them, save them to the desk ledger, and mark
+ * desk rows (from --from) that are already in SalesHandy as pushed.
+ */
+export async function sync({ date, from, log = console.error }) {
+  const dir = dayDir(date);
+  const pushedFile = path.join(STATE, 'pushed.json');
+  const local = readJson(pushedFile, { log: [] });
+  const known = new Set(local.log.map((p) => p.email));
+  let sh;
+  try {
+    sh = await saleshandyLog();
+  } catch (e) {
+    log(`sync skipped: ${e.message.slice(0, 200)}`);
+    return { skipped: 'SalesHandy not reachable (key missing?)' };
+  }
+  const fresh = sh.filter((p) => !known.has(p.email));
+  mkdirSync(STATE, { recursive: true });
+  writeFileSync(pushedFile, JSON.stringify({ log: [...local.log, ...fresh] }, null, 2));
+  const docs = [];
+  const stamp = new Date().toISOString().slice(11, 16).replace(':', '');
+  if (fresh.length) docs.push({ collection: 'ledger', doc_id: `pushed-saleshandy-${date}-${stamp}`, data: { date, note: 'already in SalesHandy (synced)', log: fresh } });
+  const inSh = new Set(sh.map((p) => p.email));
+  const done = new Set(from ? readDocs(from, 'pushed').map((d) => d._id) : []);
+  const rows = from ? readDocs(from, 'queue').filter((d) => inSh.has(String(d.email).toLowerCase()) && !done.has(d._id)) : [];
+  for (const r of rows) docs.push({ collection: 'pushed', doc_id: r._id, data: { date, email: r.email, company: r.company, list: r.list, step: 'already in SalesHandy', pushed_at: new Date().toISOString() } });
+  const res = docs.length ? writeDocs(path.join(dir, `desk-sync-${stamp}`), docs) : { manifests: [] };
+  return { in_saleshandy: sh.length, new_to_memory: fresh.length, desk_rows_already_there: rows.length, manifests: res.manifests };
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const [cmd] = process.argv.slice(2);
   const { values: a } = parseArgs({ args: process.argv.slice(3), options: { date: { type: 'string' }, from: { type: 'string' }, presets: { type: 'string' }, 'max-teardowns': { type: 'string' }, live: { type: 'boolean', default: false }, notify: { type: 'boolean', default: false } } });
@@ -303,6 +335,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     out = restoreState(readDocs(a.from, 'ledger'), STATE);
   } else if (cmd === 'collect') out = await collect({ date, presets: a.presets?.split(','), maxTeardowns: a['max-teardowns'] && Number(a['max-teardowns']) });
   else if (cmd === 'teardown') out = await teardown({ date });
+  else if (cmd === 'sync') out = await sync({ date, from: a.from });
   else if (cmd === 'finalize') out = await finalize({ date, notifyToo: a.notify });
   else if (cmd === 'push') {
     if (!a.from) throw new Error('--from <dir saved by ArtifactData query of "queue" and list of "pushed"> is required');

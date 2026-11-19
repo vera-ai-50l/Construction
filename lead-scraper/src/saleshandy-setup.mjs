@@ -16,7 +16,7 @@
 import { parseArgs } from 'node:util';
 import { sequences, steps, createSequence, createStep, createWebhook, webhooks, ensureFields } from './saleshandy.mjs';
 
-const { values: a, positionals } = parseArgs({ allowPositionals: true, options: { from: { type: 'string' }, live: { type: 'boolean', default: false }, url: { type: 'string' }, 'secret-header': { type: 'string', default: 'X-Kyre-Key' }, prefix: { type: 'string', default: 'Kyre' } } });
+const { values: a, positionals } = parseArgs({ allowPositionals: true, options: { from: { type: 'string' }, live: { type: 'boolean', default: false }, one: { type: 'boolean', default: false }, url: { type: 'string' }, 'secret-header': { type: 'string', default: 'X-Kyre-Key' }, prefix: { type: 'string', default: 'Kyre' } } });
 const cmd = positionals[0] || 'list';
 const VERA = /vera/i;
 const arr = (x) => (Array.isArray(x) ? x : x?.sequences || x?.steps || x?.data || []);
@@ -39,24 +39,39 @@ if (cmd === 'list') {
   const names = [
     ['A', 'AI App Glow-Up'], ['B', 'Dashboard Sprint'], ['C', 'Accessibility + Conversion Fix'],
   ].flatMap(([k, offer]) => [[`${a.prefix} ${k} · ${offer} · verified`], [`${a.prefix} ${k} · ${offer} · catch-all`]]).map(([t]) => t);
-  const existing = new Set(arr(await sequences()).map((s) => s.title));
+  const all = arr(await sequences());
+  const ordered = [...srcSteps].sort((x, y) => x.number - y.number);
+  const want = ordered.map((st) => st.relativeDays);
   for (const title of names) {
-    if (existing.has(title)) {
+    const have = all.find((s) => s.title === title);
+    const haveSteps = have ? arr(await steps(have.id)).length : 0;
+    if (have && haveSteps >= ordered.length) {
       console.log(`exists: ${title}`);
       continue;
     }
     if (!a.live) {
-      console.log(`[dry run] would create "${title}" with ${srcSteps.length} steps`);
+      console.log(`[dry run] would ${have ? 'finish' : 'create'} "${title}" with ${ordered.length} steps`);
       continue;
     }
-    const seq = await createSequence(title);
-    const id = seq?.id || seq?.sequenceId;
-    for (const st of srcSteps) {
-      const variants = (st.variants || []).filter((v) => v.payload || v.subject || v.content).map((v) => ({ payload: v.payload || { subject: v.subject, content: v.content } }));
-      if (!variants.length) continue;
-      await createStep(id, { type: 'Email', variants, absoluteDays: st.absoluteDays || st.relativeDays || st.waitDays || 1 });
+    let id = have?.id;
+    if (!id) {
+      const made = await createSequence(title);
+      id = made?.id || made?.sequenceId || made?.sequence?.id || arr(await sequences(title)).find((s) => s.title === title)?.id;
+      if (!id) throw new Error(`created "${title}" but could not read its id`);
     }
-    console.log(`created "${title}" (${id}), paused: attach Kyre inboxes + schedule in SalesHandy, then resume`);
+    // relativeDays is the wait after the previous step (0, 3, 5); absoluteDays is the send day (1, 4, 9).
+    let day = 1;
+    for (const [i, st] of ordered.entries()) {
+      if (i > 0) day += Number(st.relativeDays) || 1;
+      if (i < haveSteps) continue;
+      const variants = (st.variants || []).map((v) => { const p = v.payload || v; return { payload: { subject: p.subject || '', content: p.content || '' } }; }).filter((v) => v.payload.content);
+      if (!variants.length) continue;
+      await createStep(id, { type: 1, variants, absoluteDays: day }); // type 1 = Email (the API refuses the name)
+    }
+    const made = arr(await steps(id)).sort((x, y) => x.number - y.number).map((st) => st.relativeDays);
+    console.log(`${have ? 'finished' : 'created'} "${title}" (${id}), paused. Waits ${made.join('/')} days (template ${want.join('/')})`);
+    if (made.join() !== want.join()) throw new Error(`step timing differs from the template: stopping so you can check "${title}" in SalesHandy`);
+    if (a.one) break;
   }
 } else if (cmd === 'webhook') {
   if (!a.url) throw new Error('--url https://<your n8n>/webhook/kyre-replies is required');

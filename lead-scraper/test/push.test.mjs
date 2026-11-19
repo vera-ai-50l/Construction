@@ -35,9 +35,20 @@ test('a list without a step is never guessed', () => {
   assert.match(d[0].skip, /no SalesHandy step set for list C/);
 });
 
-test('prospect fields carry the teardown email', () => {
-  const p = toProspect(row('ana@one.io', { first_name: 'Ana', subject: 's', email_body: 'b', followup_1: 'f1', followup_2: 'f2' }));
+test('prospect fields fill the sequence template (Greeting, Body 1-3, Follow Up 1A-2B)', () => {
+  const p = toProspect(row('ana@one.io', {
+    first_name: 'Ana', subject: 's', subject_alt: 'Ana, about your homepage',
+    email_body: 'Hi Ana,\n\nThe hero says nothing.\n\nI went through it on a phone.\n\nWant the before/after?',
+    followup_1: 'Hi Ana,\n\nOne more thing.\n\nHappy to include it.',
+    followup_2: 'Hi Ana,\n\nLast note from me.\n\nReply "yes".',
+  }));
   assert.equal(p.Email, 'ana@one.io');
-  assert.equal(p['Email Body'], 'b');
-  assert.equal(p['Kyre List'], 'A');
+  assert.equal(p.Greeting, 'Hi Ana,');
+  assert.equal(p['Body 1'], 'The hero says nothing.');
+  assert.equal(p['Body 3'], 'Want the before/after?');
+  assert.equal(p['Follow Up 1A'], 'One more thing.');
+  assert.equal(p['Follow Up 1B'], 'Happy to include it.');
+  assert.equal(p['Follow Up 2B'], 'Reply "yes".');
+  assert.equal(p['Subject Alt'], 'Ana, about your homepage');
+  assert.match(p['Lead Source'], /^Kyre A/);
 });
