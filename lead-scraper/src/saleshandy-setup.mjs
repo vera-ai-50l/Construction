@@ -11,7 +11,7 @@
 //   node src/saleshandy-setup.mjs batch --csv <file> --title "Kyre · Free report · 20 Nov (25)" --from "<template sequence>"
 //        [--schedule "<schedule name>"] [--senders a@trykyre.com,b@trykyre.com] [--live] [--start]
 //        one CSV -> one new sequence: the template's steps, settings and schedule; the line above
-//        "Hi <name>," goes in the preheader (inbox preview); Kyre inboxes only; every push check
+//        "Hi <name>," opens the body (inbox preview); Kyre inboxes only; every push check
 //        (shared inboxes, DE/AT, anyone already in SalesHandy, daily caps). --start resumes it.
 //   node src/saleshandy-setup.mjs webhook --url https://<n8n>/webhook/kyre-replies --secret-header X-Kyre-Key [--live]
 //
@@ -120,7 +120,10 @@ if (cmd === 'list') {
     let day = 1;
     for (const [i, st] of srcSteps.entries()) {
       if (i > 0) day += Number(st.relativeDays) || 1;
-      const variants = st.variants.map((v) => ({ payload: { subject: v.payload.subject || '', content: v.payload.content || '', preheader: i === 0 ? '{{Opener}}' : v.payload.preheader || '' } }));
+      // The attention line opens the body (inbox previews show it). Not the preheader: SalesHandy
+      // fails every send with "Pre-Header line is too long" when a merge field is used there.
+      const opener = (c) => (i === 0 && !c.includes('{{Opener}}') ? `<div>{{Opener}}</div><div><br></div>${c}` : c);
+      const variants = st.variants.map((v) => ({ payload: { subject: v.payload.subject || '', content: opener(v.payload.content || ''), preheader: '' } }));
       await createStep(id, { type: 1, variants, absoluteDays: day });
     }
     const newSteps = arr(await steps(id)).sort((x, y) => x.number - y.number);

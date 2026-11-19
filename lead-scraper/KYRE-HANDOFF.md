@@ -111,7 +111,7 @@ SalesHandy"*. What we built:
   node src/saleshandy-setup.mjs batch --csv <file> --title "Kyre · …" --from "Kyre · Free report · 19 Nov (33)" [--live] [--start]
   ```
   - It copies the template's steps, settings and schedule.
-  - It puts the attention line in the preheader (`{{Opener}}`).
+  - It puts the attention line first in the body (`{{Opener}}`). Not in the preheader: SalesHandy failed all 25 sends on 19 Nov with "Pre-Header line is too long".
   - It sends from Kyre inboxes only.
   - It skips shared inboxes, German and Austrian domains, and anyone already anywhere in SalesHandy. That
     check caught 17 duplicates on 19 Nov.
